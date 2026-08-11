@@ -427,7 +427,7 @@
   <div class="actions">
     <span class="hint" id="authUserEmail" style="margin-right:2px;"></span>
     <button class="icon-btn" id="themeToggle" title="Toggle dark mode">🌓</button>
-    <button class="icon-btn" id="logoutBtn" title="Log out">⏻</button>
+    <button class="icon-btn" id="logoutBtn" title="Log out">🚪</button>
   </div>
 </header>
 
@@ -457,6 +457,7 @@
 
     <div class="card">
       <h2>Budget vs. actual <span class="muted">for the month selected above</span></h2>
+      <p class="hint" style="margin-top:0;">Click any row to see exactly which transactions make up its total.</p>
       <div id="budgetVsActualWrap"></div>
     </div>
 
@@ -781,6 +782,17 @@
     <div class="dialog-actions">
       <button type="button" class="secondary" id="confirmCancel">Cancel</button>
       <button type="button" class="danger-text" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="categoryDrillDialog" class="wide-dialog">
+  <div class="dialog-body">
+    <h3 id="categoryDrillTitle">Category breakdown</h3>
+    <p class="hint" id="categoryDrillSummary" style="margin-top:0;"></p>
+    <div id="categoryDrillWrap" class="table-scroll"></div>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="categoryDrillClose">Close</button>
     </div>
   </div>
 </dialog>
@@ -2892,7 +2904,7 @@
       var pct = budget > 0 ? Math.round((actual / budget) * 100) : null;
       var over = budget > 0 && actual > budget;
       var color = categoryColorHex(c.id);
-      return '<tr>' +
+      return '<tr class="cal-clickable" data-cat-drill="' + c.id + '" tabindex="0" title="Click to see which transactions make up this total">' +
         '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span></td>' +
         '<td class="num">' + (budget > 0 ? fmtMoney(budget) : '—') + '</td>' +
         '<td class="num">' + fmtMoney(actual) + '</td>' +
@@ -2916,7 +2928,47 @@
         '<td class="num ' + (totalOver ? 'variance-over' : '') + '">' + (totalPct === null ? '—' : totalPct + '%') + '</td>' +
       '</tr></tfoot></table>';
     wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-cat-drill]").forEach(function(row) {
+      row.addEventListener("click", function() { openCategoryDrillDialog(row.dataset.catDrill, monthKey); });
+      row.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCategoryDrillDialog(row.dataset.catDrill, monthKey); }
+      });
+    });
   }
+
+  // Answers "what exactly makes up this number" -- every expense dated in
+  // the given month under the given category, regardless of which paycheck
+  // (if any) it's assigned to. This is the ground truth behind every total
+  // on the dashboard: if a category ever looks off, this is where to check.
+  function openCategoryDrillDialog(catId, monthKey) {
+    var cat = categoryById(catId);
+    var rows = state.expenses.filter(function(e) { return e.categoryId === catId && monthKeyOf(e.date) === monthKey; })
+                              .sort(function(a,b) { return a.date.localeCompare(b.date); });
+    document.getElementById("categoryDrillTitle").textContent = (cat ? cat.name : "(deleted category)") + " — " + monthLabel(monthKey);
+    var total = rows.reduce(function(s,e){ return s + e.amount; }, 0);
+    document.getElementById("categoryDrillSummary").textContent = rows.length + " transaction" + (rows.length === 1 ? "" : "s") + " totaling " + fmtMoney(total) + ".";
+    var wrap = document.getElementById("categoryDrillWrap");
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No transactions found.</div>';
+    } else {
+      var body = rows.map(function(e) {
+        var pc = e.paycheckId ? state.income.find(function(inc){ return inc.id === e.paycheckId; }) : null;
+        var pcLabel = pc ? (escapeHtml(pc.source) + " · " + escapeHtml(pc.date)) : '<span class="muted">Unassigned</span>';
+        var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
+        return '<tr>' +
+          '<td>' + escapeHtml(e.date) + '</td>' +
+          '<td>' + escapeHtml(e.note || "") + splitTag + '</td>' +
+          '<td class="num">' + fmtMoney(e.amount) + '</td>' +
+          '<td>' + pcLabel + '</td>' +
+        '</tr>';
+      }).join("");
+      wrap.innerHTML = '<table><thead><tr><th>Date</th><th>Note</th><th class="num">Amount</th><th>Paycheck</th></tr></thead><tbody>' + body + '</tbody></table>';
+    }
+    document.getElementById("categoryDrillDialog").showModal();
+  }
+  document.getElementById("categoryDrillClose").addEventListener("click", function() {
+    document.getElementById("categoryDrillDialog").close();
+  });
 
   var dashMonthPicker = document.getElementById("dashMonthPicker");
   dashMonthPicker.addEventListener("change", renderDashboard);
