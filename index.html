@@ -854,6 +854,10 @@
           <select id="csvDescCol"></select>
         </div>
         <div class="field">
+          <label for="csvCategoryCol">Category column (optional)</label>
+          <select id="csvCategoryCol"><option value="-1">None -- use the default below</option></select>
+        </div>
+        <div class="field">
           <label for="csvAmountMode">Amount format</label>
           <select id="csvAmountMode">
             <option value="single">Single amount column</option>
@@ -888,7 +892,7 @@
 
       <div class="inline-form" style="margin-bottom:10px;">
         <div class="field">
-          <label for="csvExpenseCategory">Import expenses into category</label>
+          <label for="csvExpenseCategory">Default category <span class="muted">(for rows that don't match one from the file)</span></label>
           <select id="csvExpenseCategory"></select>
         </div>
         <div class="field">
@@ -3219,6 +3223,13 @@
         guessColumn(lowerHeaders, [/^date$/, /post.*date/, /trans.*date/, /date/]));
       fillSelectWithHeaders(document.getElementById("csvDescCol"), headers,
         guessColumn(lowerHeaders, [/^description$/, /payee/, /merchant/, /name/, /description/]));
+
+      var catColIdx = guessColumn(lowerHeaders, [/^category$/, /category/]);
+      var catColSel = document.getElementById("csvCategoryCol");
+      catColSel.innerHTML = '<option value="-1">None -- use the default below</option>' +
+        headers.map(function(h, i) { return '<option value="' + i + '">' + escapeHtml(h || "(column " + (i+1) + ")") + '</option>'; }).join("");
+      catColSel.value = String(catColIdx >= 0 ? catColIdx : -1);
+
       var amountIdx = guessColumn(lowerHeaders, [/^amount$/, /amount/]);
       var debitIdx = guessColumn(lowerHeaders, [/debit/]);
       var creditIdx = guessColumn(lowerHeaders, [/credit/]);
@@ -3243,7 +3254,7 @@
     document.getElementById("csvSplitAmountFields").style.display = mode === "split" ? "flex" : "none";
   }
 
-  ["csvDateCol","csvDescCol","csvAmountMode","csvAmountCol","csvNegativeMeans","csvDebitCol","csvCreditCol"].forEach(function(id) {
+  ["csvDateCol","csvDescCol","csvCategoryCol","csvAmountMode","csvAmountCol","csvNegativeMeans","csvDebitCol","csvCreditCol","csvExpenseCategory"].forEach(function(id) {
     document.getElementById(id).addEventListener("change", function() {
       if (id === "csvAmountMode") toggleCsvAmountMode();
       renderCsvPreview();
@@ -3252,9 +3263,23 @@
 
   // Reads the current column-mapping controls and turns every raw CSV row into
   // { date, note, kind: "expense"|"income", amount } — or null if unreadable.
+  // Matches a raw category string from the file against your actual
+  // categories by name, ignoring case/spacing so "food", "Food ", "FOOD"
+  // all land the same place. No fuzzy guessing beyond that -- an unmatched
+  // name (e.g. a category you haven't created here yet) just falls back to
+  // the default category picked below, rather than silently inventing one.
+  function matchCategoryByName(raw) {
+    if (!raw) return null;
+    var norm = String(raw).trim().toLowerCase();
+    if (!norm) return null;
+    var found = state.categories.find(function(c) { return c.name.trim().toLowerCase() === norm; });
+    return found ? found.id : null;
+  }
+
   function mapCsvRows(rows) {
     var dateCol = parseInt(document.getElementById("csvDateCol").value, 10);
     var descCol = parseInt(document.getElementById("csvDescCol").value, 10);
+    var catCol = parseInt(document.getElementById("csvCategoryCol").value, 10);
     var mode = document.getElementById("csvAmountMode").value;
     var amountCol = parseInt(document.getElementById("csvAmountCol").value, 10);
     var negativeMeans = document.getElementById("csvNegativeMeans").value;
@@ -3265,17 +3290,18 @@
       var dateStr = parseDateCell(r[dateCol]);
       var note = (r[descCol] || "").toString().trim().slice(0, 140);
       if (!dateStr) return null;
+      var categoryId = catCol >= 0 ? matchCategoryByName(r[catCol]) : null;
 
       if (mode === "single") {
         var amt = parseMoneyCell(r[amountCol]);
         if (isNaN(amt) || amt === 0) return null;
         var isExpense = negativeMeans === "expense" ? amt < 0 : amt > 0;
-        return { date: dateStr, note: note, kind: isExpense ? "expense" : "income", amount: Math.abs(amt) };
+        return { date: dateStr, note: note, kind: isExpense ? "expense" : "income", amount: Math.abs(amt), categoryId: categoryId };
       } else {
         var debit = parseMoneyCell(r[debitCol]);
         var credit = parseMoneyCell(r[creditCol]);
-        if (!isNaN(debit) && debit !== 0) return { date: dateStr, note: note, kind: "expense", amount: Math.abs(debit) };
-        if (!isNaN(credit) && credit !== 0) return { date: dateStr, note: note, kind: "income", amount: Math.abs(credit) };
+        if (!isNaN(debit) && debit !== 0) return { date: dateStr, note: note, kind: "expense", amount: Math.abs(debit), categoryId: categoryId };
+        if (!isNaN(credit) && credit !== 0) return { date: dateStr, note: note, kind: "income", amount: Math.abs(credit), categoryId: categoryId };
         return null;
       }
     }).filter(function(x) { return x !== null; });
@@ -3287,15 +3313,28 @@
     var skipped = csvParsed.rows.length - mapped.length;
     var expenseCount = mapped.filter(function(m) { return m.kind === "expense"; }).length;
     var incomeCount = mapped.filter(function(m) { return m.kind === "income"; }).length;
+    var catColMapped = parseInt(document.getElementById("csvCategoryCol").value, 10) >= 0;
+    var matchedCount = mapped.filter(function(m) { return m.kind === "expense" && m.categoryId; }).length;
     document.getElementById("csvPreviewSummary").textContent =
       mapped.length + " transactions found (" + expenseCount + " expenses, " + incomeCount + " income)" +
       (skipped > 0 ? ", " + skipped + " row" + (skipped>1?"s":"") + " couldn't be read and will be skipped" : "") +
+      (catColMapped ? ". " + matchedCount + " of " + expenseCount + " expenses matched a category from the file -- the rest will use the default category" : "") +
       ". Preview of the first 8:";
 
+    var defaultCatId = document.getElementById("csvExpenseCategory").value;
     var preview = mapped.slice(0, 8);
-    var html = '<table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="num">Amount</th></tr></thead><tbody>';
+    var html = '<table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="num">Amount</th><th>Category</th></tr></thead><tbody>';
     preview.forEach(function(m) {
-      html += '<tr><td>' + escapeHtml(m.date) + '</td><td>' + escapeHtml(m.note) + '</td><td>' + (m.kind === "expense" ? "Expense" : "Income") + '</td><td class="num">' + fmtMoney(m.amount) + '</td></tr>';
+      var catLabel;
+      if (m.kind !== "expense") {
+        catLabel = '<span class="muted">--</span>';
+      } else if (m.categoryId) {
+        catLabel = escapeHtml(categoryById(m.categoryId).name);
+      } else {
+        var d = categoryById(defaultCatId);
+        catLabel = '<span class="muted">' + escapeHtml(d ? d.name : "?") + ' (default)</span>';
+      }
+      html += '<tr><td>' + escapeHtml(m.date) + '</td><td>' + escapeHtml(m.note) + '</td><td>' + (m.kind === "expense" ? "Expense" : "Income") + '</td><td class="num">' + fmtMoney(m.amount) + '</td><td>' + catLabel + '</td></tr>';
     });
     html += '</tbody></table>';
     document.getElementById("csvPreviewWrap").innerHTML = mapped.length ? html : '<div class="empty-state">No readable transactions with the current column choices — try a different mapping.</div>';
@@ -3312,7 +3351,7 @@
       if (m.kind === "expense") {
         var dupe = state.expenses.some(function(e) { return e.date === m.date && e.amount === m.amount && e.note === m.note; });
         if (dupe) { duplicates++; return; }
-        state.expenses.push({ id: uid(), date: m.date, amount: m.amount, categoryId: expenseCategory, note: m.note, paid: true, cleared: true });
+        state.expenses.push({ id: uid(), date: m.date, amount: m.amount, categoryId: m.categoryId || expenseCategory, note: m.note, paid: true, cleared: true });
         addedExpenses++;
       } else {
         var dupeInc = state.income.some(function(inc) { return inc.date === m.date && inc.amount === m.amount && inc.note === m.note; });
