@@ -1,0 +1,3308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Budget</title>
+
+<!-- Installable as a home-screen app: manifest + icons + platform meta tags.
+     Requires being served over http(s) (e.g. GitHub Pages) -- opening this
+     file directly (file://) still works exactly as before, these tags are
+     just inert in that case. -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2a78d6">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="My Budget">
+<meta name="mobile-web-app-capable" content="yes">
+
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:      #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --success:        #006300;
+    --good:           #0ca30c;
+    --warning:        #fab219;
+    --serious:        #ec835a;
+    --critical:       #d03b3b;
+    --track:          #eceae4;
+
+    --series-1: #2a78d6; /* blue      - Housing */
+    --series-2: #eb6834; /* orange    - Food */
+    --series-3: #1baf7a; /* aqua      - Transport */
+    --series-4: #eda100; /* yellow    - Utilities */
+    --series-5: #e87ba4; /* magenta   - Entertainment */
+    --series-6: #008300; /* green     - Health */
+    --series-7: #4a3aa7; /* violet    - Shopping */
+    --series-8: #e34948; /* red       - Other */
+    --series-muted: #a6a49c; /* fallback for categories beyond 8 */
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:      #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --success:        #0ca30c;
+    --track:          #2c2c2a;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:      #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --success:        #0ca30c;
+      --track:          #2c2c2a;
+
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+      --series-6: #008300;
+      --series-7: #9085e9;
+      --series-8: #e66767;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  body { padding-bottom: 60px; }
+
+  header {
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .actions { display: flex; gap: 8px; align-items: center; }
+
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .icon-btn:hover { background: var(--track); }
+
+  nav.tabs {
+    display: flex;
+    gap: 4px;
+    padding: 10px 20px 0 20px;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  nav.tabs button {
+    background: transparent;
+    border: none;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  nav.tabs button.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--series-1);
+    font-weight: 600;
+  }
+
+  main { max-width: 900px; margin: 0 auto; padding: 20px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 14px 0; font-size: 15px; font-weight: 600; }
+  .card h2 .muted { color: var(--text-muted); font-weight: 400; font-size: 13px; }
+  .card-header-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .card-header-row h2 { margin-bottom: 14px; }
+  .card-header-row input[type="month"] {
+    font-family: inherit; font-size: 13px; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface-1); color: var(--text-primary);
+  }
+  table.summary-table tfoot td { font-weight: 700; border-top: 2px solid var(--baseline); border-bottom: none; }
+  td.variance-over, .variance-over { color: var(--critical); font-weight: 600; }
+  td.variance-under, .variance-under { color: var(--success); }
+
+  .cal-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .cal-header h2 { flex: 1; text-align: center; min-width: 140px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-weekday { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; text-align: center; padding-bottom: 4px; }
+  .cal-day {
+    min-height: 84px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    background: var(--surface-1);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .cal-day.outside { opacity: 0.35; }
+  .cal-day.today { border-color: var(--series-1); border-width: 2px; padding: 5px; }
+  .cal-day .cal-daynum { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .cal-income-label {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cal-chip {
+    font-size: 10.5px;
+    line-height: 1.3;
+    padding: 2px 5px;
+    border-radius: 5px;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cal-chip.expense-chip { color: var(--text-primary); background: var(--surface-1); border-left: 3px solid; }
+  .cal-clickable { cursor: pointer; }
+  .cal-clickable:hover { filter: brightness(0.94); }
+  .cal-clickable:focus-visible { outline: 2px solid var(--series-1); outline-offset: 1px; }
+  @media (max-width: 640px) {
+    .cal-grid { grid-template-columns: repeat(7, minmax(0,1fr)); gap: 3px; }
+    .cal-day { min-height: 58px; padding: 3px; }
+    .cal-chip { font-size: 9px; padding: 1px 3px; }
+    .cal-income-label { font-size: 9px; }
+    .cal-weekday { font-size: 9px; }
+  }
+
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat-tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .stat-tile .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .stat-tile .value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-tile .value.over { color: var(--critical); }
+  .stat-tile .value.good { color: var(--success); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  td.actions-cell { text-align: right; white-space: nowrap; }
+  .row-btn {
+    background: transparent; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 13px; padding: 4px 6px;
+  }
+  .row-btn:hover { color: var(--text-primary); }
+  .row-btn.danger:hover { color: var(--critical); }
+
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; vertical-align: middle; }
+  .cat-label { display: flex; align-items: center; }
+
+  form.inline-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 4px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--text-secondary); }
+  .field input, .field select {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    min-width: 0;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid var(--series-1); outline-offset: -1px; }
+  .checkbox-field { flex-direction: row; align-items: center; padding-bottom: 8px; }
+  .checkbox-field label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-primary); cursor: pointer; }
+  .checkbox-field input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); }
+
+  .table-scroll { overflow-x: auto; }
+  td.check-cell, th.check-cell { text-align: center; }
+  input.row-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); vertical-align: middle; }
+  .paid-strike { text-decoration: line-through; color: var(--text-muted); }
+
+  .paycheck-block { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .paycheck-block:last-child { margin-bottom: 0; }
+  .paycheck-block.pending { border-style: dashed; background: var(--surface-2, transparent); opacity: 0.85; }
+  .paycheck-block.pending .pc-date { font-style: italic; }
+  .paycheck-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+  .paycheck-header .pc-title { font-weight: 700; font-size: 14px; }
+  .paycheck-header .pc-date { color: var(--text-secondary); font-size: 13px; margin-left: 6px; }
+  .paycheck-header .pc-amount { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .paycheck-summary-row { display: flex; justify-content: flex-end; gap: 20px; margin-top: 10px; font-size: 13px; padding-top: 10px; border-top: 1px solid var(--gridline); }
+  .paycheck-summary-row .leftover { font-weight: 700; }
+  .paycheck-assign-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .paycheck-assign-row select { flex: 1; min-width: 200px; font-family: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-1); color: var(--text-primary); }
+
+  .debt-fields-row { width: 100%; display: flex; gap: 16px; flex-wrap: wrap; }
+  .balance-block { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .balance-block:last-child { margin-bottom: 0; }
+  .balance-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .balance-header .bal-title { font-weight: 700; font-size: 14px; }
+  .balance-amount { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .balance-meta { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--gridline); }
+  .balance-meta strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .balance-total-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 2px 14px 2px; font-size: 14px; }
+  .balance-total-row .balance-amount { font-size: 20px; }
+
+  button.primary {
+    background: var(--series-1);
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button.primary:hover { filter: brightness(0.92); }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button.secondary:hover { background: var(--track); }
+  button.danger-text { color: var(--critical); background: transparent; border: 1px solid var(--border); padding: 9px 16px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+
+  .empty-state { color: var(--text-muted); font-size: 14px; padding: 20px 0; text-align: center; }
+
+  .budget-row { margin-bottom: 14px; }
+  .budget-row:last-child { margin-bottom: 0; }
+  .budget-row-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+  .budget-row-top .cat-name { display: flex; align-items: center; color: var(--text-primary); font-weight: 500; }
+  .budget-row-top .amounts { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .budget-row-top .amounts .over { color: var(--critical); font-weight: 600; }
+  .track { position: relative; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+  .fill { position: absolute; top:0; left:0; height: 100%; border-radius: 4px 0 0 4px; }
+  .fill.overflow { border-radius: 4px; }
+
+  .bars-chart { width: 100%; }
+  .bars-chart .bar-label { font-size: 12px; fill: var(--text-secondary); }
+  .bars-chart .bar-value { font-size: 12px; fill: var(--text-primary); font-weight: 600; }
+  .bars-chart .axis-line { stroke: var(--baseline); stroke-width: 1; }
+  .bars-chart rect.bar:hover { filter: brightness(0.9); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--text-secondary); }
+  .legend-item { display: flex; align-items: center; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text-primary); color: var(--surface-1);
+    padding: 10px 18px; border-radius: 8px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  .section-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  dialog { border: none; border-radius: 12px; padding: 0; max-width: 380px; width: 90%; }
+  dialog::backdrop { background: rgba(0,0,0,0.4); }
+  dialog .dialog-body { padding: 18px; }
+  dialog h3 { margin: 0 0 14px 0; font-size: 15px; }
+  dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  dialog.wide-dialog { max-width: 720px; }
+  dialog.wide-dialog table { font-size: 12.5px; }
+  dialog.wide-dialog th, dialog.wide-dialog td { padding: 6px; }
+
+  .auth-gate {
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--page-plane);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .auth-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    width: 100%; max-width: 360px;
+  }
+  .auth-logo { font-size: 20px; text-align: center; margin: 0 0 18px 0; }
+  .auth-tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .auth-tab {
+    flex: 1; background: transparent; border: none; padding: 10px;
+    font-size: 14px; color: var(--text-secondary); cursor: pointer;
+    border-bottom: 2px solid transparent; font-family: inherit;
+  }
+  .auth-tab.active { color: var(--text-primary); border-bottom-color: var(--series-1); font-weight: 600; }
+  #authForm { display: flex; flex-direction: column; gap: 12px; }
+  #authForm .field { width: 100%; }
+  #authForm input { width: 100%; }
+</style>
+</head>
+<body>
+
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <h1 class="auth-logo">💰 My Budget</h1>
+    <div class="auth-tabs">
+      <button type="button" class="auth-tab active" id="authTabLogin">Log in</button>
+      <button type="button" class="auth-tab" id="authTabSignup">Sign up</button>
+    </div>
+    <form id="authForm">
+      <div class="field">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" required autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" required autocomplete="current-password" minlength="6">
+      </div>
+      <p class="hint" id="authError" style="display:none; color:var(--critical);"></p>
+      <button type="submit" class="primary" id="authSubmitBtn" style="width:100%; margin-top:6px;">Log in</button>
+    </form>
+    <button type="button" class="row-btn" id="authForgotPassword" style="margin-top:8px;">Forgot password?</button>
+    <p class="hint" id="authStatus" style="margin-top:14px;"></p>
+  </div>
+</div>
+
+<div id="appShell" style="display:none;">
+
+<header>
+  <h1>💰 My Budget</h1>
+  <div class="actions">
+    <span class="hint" id="authUserEmail" style="margin-right:2px;"></span>
+    <button class="icon-btn" id="themeToggle" title="Toggle dark mode">🌓</button>
+    <button class="icon-btn" id="logoutBtn" title="Log out">⏻</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button data-panel="dashboard" class="active">Dashboard</button>
+  <button data-panel="calendar">Calendar</button>
+  <button data-panel="recurring">Recurring</button>
+  <button data-panel="paychecks">Paychecks</button>
+  <button data-panel="balances">Balances</button>
+  <button data-panel="categories">Categories &amp; Budgets</button>
+  <button data-panel="settings">Settings</button>
+</nav>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="panel active">
+    <div class="stat-row" id="statRow"></div>
+
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Spending by category <span class="muted" id="dashMonthLabel"></span></h2>
+        <input type="month" id="dashMonthPicker" aria-label="Month to view">
+      </div>
+      <div id="categoryChart"></div>
+    </div>
+
+    <div class="card">
+      <h2>Budget vs. actual <span class="muted">for the month selected above</span></h2>
+      <div id="budgetVsActualWrap"></div>
+    </div>
+
+    <div class="card">
+      <h2>Last 6 months</h2>
+      <div id="trendChart"></div>
+    </div>
+  </section>
+
+  <!-- RECURRING -->
+  <section id="recurring" class="panel">
+    <div class="card">
+      <h2>Recurring expenses <span class="muted">e.g. rent, subscriptions</span></h2>
+      <form class="inline-form" id="recurringForm">
+        <div class="field">
+          <label for="recName">Name</label>
+          <input type="text" id="recName" placeholder="e.g. Rent" required>
+        </div>
+        <div class="field">
+          <label for="recAmount">Amount</label>
+          <input type="number" id="recAmount" step="0.01" min="0" placeholder="0.00" required>
+        </div>
+        <div class="field">
+          <label for="recCategory">Category</label>
+          <select id="recCategory" required></select>
+        </div>
+        <div class="field">
+          <label for="recDay">Day of month</label>
+          <input type="number" id="recDay" min="1" max="28" value="1" required>
+        </div>
+        <div class="field">
+          <label for="recPaycheck">Default paycheck</label>
+          <select id="recPaycheck"><option value="">None</option></select>
+        </div>
+        <div class="field" id="recDebtTypeField" style="display:none;">
+          <label for="recDebtType">Charge or payment?</label>
+          <select id="recDebtType">
+            <option value="payment">Payment (reduces balance)</option>
+            <option value="charge">Charge (adds to balance)</option>
+          </select>
+        </div>
+        <input type="hidden" id="recEditId">
+        <button type="submit" class="primary" id="recurringSubmitBtn">Add recurring</button>
+        <button type="button" class="secondary" id="recurringCancelEdit" style="display:none;">Cancel</button>
+      </form>
+      <p class="hint">Recurring expenses are automatically logged once per month, on the day you set, next time you open the app. Default paycheck applies to the specific paycheck you pick — since each new paycheck is its own entry, you may need to repick it once that paycheck has passed. Day-to-day, the Paychecks tab is the easiest place to assign bills each pay period.</p>
+    </div>
+    <div class="card">
+      <h2>Active recurring expenses</h2>
+      <div id="recurringTableWrap"></div>
+    </div>
+
+    <div class="card">
+      <h2>Recurring income <span class="muted">e.g. payday</span></h2>
+      <form class="inline-form" id="recurringIncomeForm">
+        <div class="field">
+          <label for="recIncName">Name</label>
+          <input type="text" id="recIncName" placeholder="e.g. Payday" required>
+        </div>
+        <div class="field">
+          <label for="recIncAmount">Amount</label>
+          <input type="number" id="recIncAmount" step="0.01" min="0" placeholder="0.00" required>
+        </div>
+        <div class="field">
+          <label for="recIncFrequency">Frequency</label>
+          <select id="recIncFrequency">
+            <option value="monthly">Monthly (same day each month)</option>
+            <option value="biweekly">Every 2 weeks</option>
+          </select>
+        </div>
+        <div class="field" id="recIncDayField">
+          <label for="recIncDay">Day of month</label>
+          <input type="number" id="recIncDay" min="1" max="28" value="1">
+        </div>
+        <div class="field" id="recIncStartDateField" style="display:none;">
+          <label for="recIncStartDate">A date it landed on</label>
+          <input type="date" id="recIncStartDate">
+        </div>
+        <div class="field">
+          <label for="recIncColor">Calendar color</label>
+          <input type="color" id="recIncColor" value="#1baf7a">
+        </div>
+        <input type="hidden" id="recIncEditId">
+        <button type="submit" class="primary" id="recurringIncomeSubmitBtn">Add recurring income</button>
+        <button type="button" class="secondary" id="recurringIncomeCancelEdit" style="display:none;">Cancel</button>
+      </form>
+      <p class="hint">Monthly recurring income logs automatically on the day you set. Every-2-weeks income (like a biweekly paycheck that lands on a different date each cycle, e.g. every other Friday) logs every 14 days starting from any date you know it landed on — pick a recent or upcoming payday, past or future ones are all calculated from it. Either way it shows on the Calendar tab in the color you pick, and previews in the Paycheck planner before it's even logged.</p>
+    </div>
+    <div class="card">
+      <h2>Active recurring income</h2>
+      <div id="recurringIncomeTableWrap"></div>
+    </div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section id="calendar" class="panel">
+    <div class="card">
+      <div class="cal-header">
+        <button type="button" class="icon-btn" id="calPrev" title="Previous month">‹</button>
+        <h2 id="calMonthLabel" style="margin:0;"></h2>
+        <button type="button" class="icon-btn" id="calNext" title="Next month">›</button>
+        <button type="button" class="secondary" id="calToday" style="margin-left:8px;">Today</button>
+      </div>
+      <div id="calendarGrid"></div>
+      <div class="legend" id="calendarLegend"></div>
+      <p class="hint">Every income entry — recurring payday or one-time — highlights the whole day in the color you picked for it. Recurring bills show as labeled tags in their category color on the day they're due. Click any income or bill to open and edit it. One-time expenses aren't shown here — see the Paychecks tab for those.</p>
+    </div>
+  </section>
+
+  <!-- PAYCHECKS -->
+  <section id="paychecks" class="panel">
+    <div class="card">
+      <h2 id="incomeFormTitle">Add income</h2>
+      <form class="inline-form" id="incomeForm">
+        <div class="field">
+          <label for="incDate">Date</label>
+          <input type="date" id="incDate" required>
+        </div>
+        <div class="field">
+          <label for="incAmount">Amount</label>
+          <input type="number" id="incAmount" step="0.01" min="0" placeholder="0.00" required>
+        </div>
+        <div class="field">
+          <label for="incSource">Source</label>
+          <input type="text" id="incSource" list="incomeSources" placeholder="e.g. Salary" required>
+          <datalist id="incomeSources">
+            <option value="Salary"></option>
+            <option value="Freelance"></option>
+            <option value="Gift"></option>
+            <option value="Interest"></option>
+            <option value="Refund"></option>
+            <option value="Other"></option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="incColor">Calendar color</label>
+          <input type="color" id="incColor" value="#1baf7a">
+        </div>
+        <div class="field" style="flex:1; min-width:160px;">
+          <label for="incNote">Note</label>
+          <input type="text" id="incNote" placeholder="Optional">
+        </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="incCleared"> Cleared bank</label>
+        </div>
+        <input type="hidden" id="incEditId">
+        <button type="submit" class="primary" id="incomeSubmitBtn">Add income</button>
+        <button type="button" class="secondary" id="incomeCancelEdit" style="display:none;">Cancel</button>
+      </form>
+      <p class="hint">Every income entry shows on the Calendar tab on its date, in the color you pick here, and becomes a paycheck you can assign bills against below. For a paycheck that repeats every month, set it up once on the Recurring tab instead — it'll preview here automatically before its day even arrives.</p>
+    </div>
+
+    <div class="card">
+      <h2 id="expenseFormTitle">Add a one-time expense or payment</h2>
+      <form class="inline-form" id="expenseForm">
+        <div class="field">
+          <label for="expDate">Date</label>
+          <input type="date" id="expDate" required>
+        </div>
+        <div class="field">
+          <label for="expAmount">Amount</label>
+          <input type="number" id="expAmount" step="0.01" min="0" placeholder="0.00" required>
+        </div>
+        <div class="field">
+          <label for="expCategory">Category</label>
+          <select id="expCategory" required></select>
+        </div>
+        <div class="field" style="flex:1; min-width:160px;">
+          <label for="expNote">Note</label>
+          <input type="text" id="expNote" placeholder="Optional">
+        </div>
+        <div class="field">
+          <label for="expPaycheck">Pay from paycheck</label>
+          <select id="expPaycheck"><option value="">None</option></select>
+        </div>
+        <div class="field" id="expDebtTypeField" style="display:none;">
+          <label for="expDebtType">Charge or payment?</label>
+          <select id="expDebtType">
+            <option value="charge">Charge (adds to balance)</option>
+            <option value="payment">Payment (reduces balance)</option>
+          </select>
+        </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="expPaid"> Paid</label>
+        </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="expCleared"> Cleared bank</label>
+        </div>
+        <input type="hidden" id="expEditId">
+        <button type="submit" class="primary" id="expenseSubmitBtn">Add expense</button>
+        <button type="button" class="secondary" id="expenseCancelEdit" style="display:none;">Cancel</button>
+      </form>
+      <p class="hint">For bills that repeat every month, use the Recurring tab instead — this is for one-off purchases and payments. Picking a loan or credit card category here reveals a Charge/Payment field that keeps its balance on the Balances tab up to date.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Paycheck planner <span class="muted">assign bills to the paycheck that covers them</span></h2>
+        <input type="month" id="paycheckMonthPicker" aria-label="Month to view">
+      </div>
+      <p class="hint" style="margin-top:0;">For each paycheck below, assign the bills it needs to cover, check them off as you pay them, and see what's left over to spend. Paying more (or less) than the usual amount this time? Use <strong>Edit</strong> on that bill — for one not logged yet, use <strong>Log &amp; edit amount</strong> to log it and adjust before it's due; either way, it only changes that one occurrence, not the recurring template's default. Paying one bill from two different paychecks? Use its <strong>Split</strong> button (here or in the list below) to divide it into two linked entries with the amount and paycheck you choose for each.</p>
+      <div id="paycheckPlannerWrap"></div>
+    </div>
+
+    <div class="card">
+      <h2>Other income <span class="muted" id="incomeCount"></span></h2>
+      <p class="hint" style="margin-top:0;">Whichever month the paycheck planner above is showing is fully editable right there (Cleared, Edit, Delete on each paycheck) and won't be repeated here. Every other month's income shows below.</p>
+      <div id="incomeTableWrap" class="table-scroll"></div>
+    </div>
+
+    <div class="card">
+      <h2>Unassigned one-time expenses &amp; payments <span class="muted" id="expenseCount"></span></h2>
+      <p class="hint" style="margin-top:0;">Once you assign one to a paycheck above, it moves there and drops off this list — this is just what's still waiting to be assigned.</p>
+      <div class="inline-form" style="margin-bottom:12px;">
+        <div class="field">
+          <label for="filterMonth">Month</label>
+          <input type="month" id="filterMonth">
+        </div>
+        <div class="field">
+          <label for="filterCategory">Category</label>
+          <select id="filterCategory"><option value="">All</option></select>
+        </div>
+        <button type="button" class="secondary" id="clearFilters">Clear filters</button>
+      </div>
+      <div id="expenseTableWrap" class="table-scroll"></div>
+    </div>
+  </section>
+
+  <!-- CATEGORIES -->
+  <section id="categories" class="panel">
+    <div class="card">
+      <h2 id="categoryFormTitle">Add a category</h2>
+      <form class="inline-form" id="categoryForm">
+        <div class="field">
+          <label for="catName">Name</label>
+          <input type="text" id="catName" placeholder="e.g. Travel" required>
+        </div>
+        <div class="field">
+          <label for="catBudget">Monthly budget</label>
+          <input type="number" id="catBudget" step="0.01" min="0" placeholder="0.00 (optional)">
+        </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="catIsDebt"> This is a loan or credit card (track balance)</label>
+        </div>
+        <div id="catDebtFields" class="debt-fields-row" style="display:none;">
+          <div class="field">
+            <label for="catStartingBalance">Current balance owed</label>
+            <input type="number" id="catStartingBalance" step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div class="field">
+            <label for="catBalanceAsOf">As of</label>
+            <input type="date" id="catBalanceAsOf">
+          </div>
+        </div>
+        <input type="hidden" id="catEditId">
+        <button type="submit" class="primary" id="categorySubmitBtn">Add category</button>
+        <button type="button" class="secondary" id="categoryCancelEdit" style="display:none;">Cancel</button>
+      </form>
+      <p class="hint">The first 8 categories get their own chart color, in a fixed accessible order. Extra categories share a neutral gray in charts, but are always distinguished by name in tables and labels. For a loan or credit card, enter what you currently owe and today's date — every charge or payment you log afterward in that category updates the running balance on the Balances tab.</p>
+    </div>
+    <div class="card">
+      <h2>Your categories</h2>
+      <div id="categoryTableWrap"></div>
+    </div>
+  </section>
+
+  <!-- BALANCES -->
+  <section id="balances" class="panel">
+    <div class="card">
+      <h2>Loan &amp; credit card balances</h2>
+      <div id="balancesWrap"></div>
+      <p class="hint">Mark a category as a loan or credit card under Categories &amp; Budgets to see it here. Log expenses in that category as a <strong>charge</strong> (adds to what you owe) or a <strong>payment</strong> (reduces it) — the balance below updates automatically.</p>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings" class="panel">
+    <div class="card">
+      <h2>Currency</h2>
+      <div class="inline-form">
+        <div class="field">
+          <label for="currencySymbol">Symbol</label>
+          <input type="text" id="currencySymbol" maxlength="3" style="width:70px;">
+        </div>
+        <button type="button" class="secondary" id="saveCurrency">Save</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Import from your bank</h2>
+      <p class="hint" style="margin-top:0;">Most banks (including Bank of America) let you download recent transactions as a CSV from their website. Upload that file here to bulk-add them instead of typing each one in by hand. Nothing is sent anywhere — the file is only read in your browser.</p>
+      <button type="button" class="secondary" id="csvImportOpenBtn">Import bank transactions (CSV)</button>
+    </div>
+
+    <div class="card">
+      <h2>Backup &amp; export</h2>
+      <p class="hint" style="margin-top:0;">Your data lives only in this browser. Export regularly to avoid losing it, or to move it to another device.</p>
+      <div class="section-actions">
+        <button type="button" class="secondary" id="exportCsv">Export transactions as CSV (Excel)</button>
+        <button type="button" class="secondary" id="exportJson">Export full backup (JSON)</button>
+        <button type="button" class="secondary" id="importJsonBtn">Import backup (JSON)</button>
+        <input type="file" id="importJsonFile" accept="application/json" style="display:none;">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Reset</h2>
+      <p class="hint" style="margin-top:0;">Permanently deletes all expenses, categories, and recurring items in this browser.</p>
+      <button type="button" class="danger-text" id="resetAll">Erase all data</button>
+    </div>
+  </section>
+
+</main>
+
+</div><!-- #appShell -->
+
+<div class="toast" id="toast"></div>
+
+<dialog id="confirmDialog">
+  <div class="dialog-body">
+    <h3 id="confirmDialogText">Are you sure?</h3>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="confirmCancel">Cancel</button>
+      <button type="button" class="danger-text" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="splitDialog">
+  <div class="dialog-body">
+    <h3>Split this bill across paychecks</h3>
+    <p class="hint" id="splitDialogSummary" style="margin-top:0;"></p>
+    <div class="inline-form" style="margin-bottom:0;">
+      <div class="field">
+        <label for="splitAmountA">Amount from paycheck A</label>
+        <input type="number" id="splitAmountA" step="0.01" min="0.01">
+      </div>
+      <div class="field">
+        <label for="splitPaycheckA">Paycheck A</label>
+        <select id="splitPaycheckA"></select>
+      </div>
+      <div class="field">
+        <label for="splitAmountB">Amount from paycheck B</label>
+        <input type="number" id="splitAmountB" step="0.01" min="0.01">
+      </div>
+      <div class="field">
+        <label for="splitPaycheckB">Paycheck B</label>
+        <select id="splitPaycheckB"></select>
+      </div>
+    </div>
+    <p class="hint" id="splitDialogError" style="color:var(--critical); display:none;"></p>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="splitCancel">Cancel</button>
+      <button type="button" class="primary" id="splitConfirm">Split</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="csvImportDialog" class="wide-dialog">
+  <div class="dialog-body">
+    <h3>Import bank transactions</h3>
+
+    <div id="csvImportStep1">
+      <p class="hint" style="margin-top:0;">Choose the CSV file you downloaded from your bank's website (for Bank of America: Accounts → your account → "Download transactions" or "Export").</p>
+      <input type="file" id="csvFileInput" accept=".csv,text/csv">
+      <p class="hint" id="csvFileError" style="color:var(--critical); display:none;"></p>
+    </div>
+
+    <div id="csvImportStep2" style="display:none;">
+      <div class="inline-form" style="margin-bottom:10px;">
+        <div class="field">
+          <label for="csvDateCol">Date column</label>
+          <select id="csvDateCol"></select>
+        </div>
+        <div class="field">
+          <label for="csvDescCol">Description column</label>
+          <select id="csvDescCol"></select>
+        </div>
+        <div class="field">
+          <label for="csvAmountMode">Amount format</label>
+          <select id="csvAmountMode">
+            <option value="single">Single amount column</option>
+            <option value="split">Separate debit &amp; credit columns</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="inline-form" id="csvSingleAmountFields" style="margin-bottom:10px;">
+        <div class="field">
+          <label for="csvAmountCol">Amount column</label>
+          <select id="csvAmountCol"></select>
+        </div>
+        <div class="field">
+          <label for="csvNegativeMeans">Negative amounts are</label>
+          <select id="csvNegativeMeans">
+            <option value="expense">Expenses (money out)</option>
+            <option value="income">Income (money in)</option>
+          </select>
+        </div>
+      </div>
+      <div class="inline-form" id="csvSplitAmountFields" style="display:none; margin-bottom:10px;">
+        <div class="field">
+          <label for="csvDebitCol">Debit / money out column</label>
+          <select id="csvDebitCol"></select>
+        </div>
+        <div class="field">
+          <label for="csvCreditCol">Credit / money in column</label>
+          <select id="csvCreditCol"></select>
+        </div>
+      </div>
+
+      <div class="inline-form" style="margin-bottom:10px;">
+        <div class="field">
+          <label for="csvExpenseCategory">Import expenses into category</label>
+          <select id="csvExpenseCategory"></select>
+        </div>
+        <div class="field">
+          <label for="csvIncomeSource">Import income as source</label>
+          <input type="text" id="csvIncomeSource" value="Bank import">
+        </div>
+      </div>
+
+      <p class="hint" id="csvPreviewSummary"></p>
+      <div id="csvPreviewWrap" style="overflow-x:auto; max-height:220px; overflow-y:auto;"></div>
+    </div>
+
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="csvImportCancel">Cancel</button>
+      <button type="button" class="primary" id="csvImportConfirm" style="display:none;">Import</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Firebase: powers account login and syncing your data across devices.
+     Config values here are your app's public identifiers, not secrets --
+     access is controlled by the Firestore security rules on the project,
+     not by hiding these. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "budgetapp_state_v1";
+  var PALETTE = ["var(--series-1)","var(--series-2)","var(--series-3)","var(--series-4)",
+                 "var(--series-5)","var(--series-6)","var(--series-7)","var(--series-8)"];
+  var PALETTE_HEX_LIGHT = ["#2a78d6","#eb6834","#1baf7a","#eda100","#e87ba4","#008300","#4a3aa7","#e34948"];
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // Fills in the debt-tracking fields for categories saved before that
+  // feature existed, so older saved data never hits an undefined field.
+  function normalizeCategories(cats) {
+    return cats.map(function(c) {
+      return Object.assign({ debt: false, startingBalance: 0, balanceAsOf: null }, c);
+    });
+  }
+
+  function defaultState() {
+    var cats = [
+      { id: "housing", name: "Housing", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "food", name: "Food", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "transport", name: "Transport", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "utilities", name: "Utilities", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "entertainment", name: "Entertainment", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "health", name: "Health", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "shopping", name: "Shopping", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "other", name: "Other", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null }
+    ];
+    return {
+      categories: cats,
+      expenses: [],
+      income: [],
+      recurring: [],
+      recurringIncome: [],
+      settings: { currency: "$", theme: "auto" },
+      lastRecurringRun: null,
+      lastRecurringIncomeRun: null
+    };
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      var d = defaultState();
+      return {
+        categories: normalizeCategories(parsed.categories && parsed.categories.length ? parsed.categories : d.categories),
+        expenses: parsed.expenses || [],
+        income: parsed.income || [],
+        recurring: parsed.recurring || [],
+        recurringIncome: parsed.recurringIncome || [],
+        settings: Object.assign({}, d.settings, parsed.settings || {}),
+        lastRecurringRun: parsed.lastRecurringRun || null,
+        lastRecurringIncomeRun: parsed.lastRecurringIncomeRun || null
+      };
+    } catch (e) {
+      console.error("Failed to load saved data, starting fresh.", e);
+      return defaultState();
+    }
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    pushStateToCloud();
+  }
+
+  var state = loadState();
+
+  // ---------- account (Firebase login + cross-device sync) ----------
+  //
+  // Every device keeps its own instant, offline-first copy in localStorage
+  // (above) -- that never changes. On top of that, once signed in, this app
+  // also keeps a copy in Firestore under this account's own document, which:
+  //   - downloads and replaces local data the moment you sign in on a
+  //     device (so a phone and a laptop end up showing the same thing)
+  //   - re-uploads local data (debounced) any time saveState() runs
+  // There's no live multi-tab syncing while two devices are open at once --
+  // switching devices or reloading is what picks up the latest cloud copy.
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyA_NTYlVCoBfTRsuF3ljWbsgZBMDW959Nc",
+    authDomain: "my-budget-17573.firebaseapp.com",
+    projectId: "my-budget-17573",
+    storageBucket: "my-budget-17573.firebasestorage.app",
+    messagingSenderId: "576560493204",
+    appId: "1:576560493204:web:cc834c3bd6d0ab59057a81",
+    measurementId: "G-J45K1DCQX5"
+  };
+
+  var auth = null, db = null, currentUser = null, pushTimer = null, cloudReady = false;
+  var applyingRemoteUpdate = false;
+
+  try {
+    if (typeof firebase !== "undefined") {
+      firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      db = firebase.firestore();
+      db.enablePersistence().catch(function() { /* fine -- offline cache just won't be available, e.g. multiple tabs open */ });
+      cloudReady = true;
+    }
+  } catch (e) {
+    console.error("Firebase failed to initialize", e);
+  }
+
+  var authGateEl = document.getElementById("authGate");
+  var appShellEl = document.getElementById("appShell");
+  var authForm = document.getElementById("authForm");
+  var authEmailInput = document.getElementById("authEmail");
+  var authPasswordInput = document.getElementById("authPassword");
+  var authErrorEl = document.getElementById("authError");
+  var authStatusEl = document.getElementById("authStatus");
+  var authSubmitBtn = document.getElementById("authSubmitBtn");
+  var authTabLogin = document.getElementById("authTabLogin");
+  var authTabSignup = document.getElementById("authTabSignup");
+  var authMode = "login";
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    authTabLogin.classList.toggle("active", mode === "login");
+    authTabSignup.classList.toggle("active", mode === "signup");
+    authSubmitBtn.textContent = mode === "login" ? "Log in" : "Sign up";
+    authErrorEl.style.display = "none";
+  }
+  authTabLogin.addEventListener("click", function() { setAuthMode("login"); });
+  authTabSignup.addEventListener("click", function() { setAuthMode("signup"); });
+
+  function showAuthError(msg) {
+    authErrorEl.textContent = msg;
+    authErrorEl.style.display = "block";
+  }
+
+  function friendlyAuthError(err) {
+    var code = (err && err.code) || "";
+    if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") return "Incorrect email or password.";
+    if (code === "auth/email-already-in-use") return "An account already exists with that email. Try logging in instead.";
+    if (code === "auth/weak-password") return "Password should be at least 6 characters.";
+    if (code === "auth/invalid-email") return "That doesn't look like a valid email address.";
+    return (err && err.message) || "Something went wrong. Please try again.";
+  }
+
+  if (!cloudReady) {
+    showAuthError("Could not connect to the login service. Check your internet connection and reload the page.");
+  }
+
+  authForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    if (!cloudReady) return;
+    authErrorEl.style.display = "none";
+    authSubmitBtn.disabled = true;
+    var email = authEmailInput.value.trim();
+    var pw = authPasswordInput.value;
+    var task = authMode === "login"
+      ? auth.signInWithEmailAndPassword(email, pw)
+      : auth.createUserWithEmailAndPassword(email, pw);
+    task.catch(function(err) {
+      showAuthError(friendlyAuthError(err));
+    }).then(function() {
+      authSubmitBtn.disabled = false;
+    });
+  });
+
+  document.getElementById("authForgotPassword").addEventListener("click", function() {
+    if (!cloudReady) return;
+    var email = authEmailInput.value.trim();
+    if (!email) { showAuthError('Enter your email above first, then click "Forgot password?" again.'); return; }
+    auth.sendPasswordResetEmail(email).then(function() {
+      authStatusEl.textContent = "Password reset email sent to " + email + ".";
+    }).catch(function(err) {
+      showAuthError(friendlyAuthError(err));
+    });
+  });
+
+  var logoutBtn = document.getElementById("logoutBtn");
+  logoutBtn.addEventListener("click", function() {
+    confirmDialog("Log out?").then(function(ok) {
+      if (ok && auth) auth.signOut();
+    });
+  });
+
+  function pushStateToCloud() {
+    if (!cloudReady || !currentUser || applyingRemoteUpdate) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(function() {
+      db.collection("budgets").doc(currentUser.uid).set({ state: state, updatedAt: Date.now() })
+        .catch(function(e) { console.error("Cloud save failed", e); });
+    }, 800);
+  }
+
+  if (cloudReady) {
+    auth.onAuthStateChanged(function(user) {
+      currentUser = user;
+      if (user) {
+        authGateEl.style.display = "none";
+        appShellEl.style.display = "";
+        document.getElementById("authUserEmail").textContent = user.email || "";
+        db.collection("budgets").doc(user.uid).get().then(function(doc) {
+          if (doc.exists && doc.data().state) {
+            var incoming = doc.data().state;
+            var d = defaultState();
+            applyingRemoteUpdate = true;
+            state = {
+              categories: normalizeCategories(incoming.categories && incoming.categories.length ? incoming.categories : d.categories),
+              expenses: incoming.expenses || [],
+              income: incoming.income || [],
+              recurring: incoming.recurring || [],
+              recurringIncome: incoming.recurringIncome || [],
+              settings: Object.assign({}, d.settings, incoming.settings || {}),
+              lastRecurringRun: incoming.lastRecurringRun || null,
+              lastRecurringIncomeRun: incoming.lastRecurringIncomeRun || null
+            };
+            saveState();
+            applyingRemoteUpdate = false;
+          } else {
+            // First time this account has signed in anywhere -- seed the
+            // cloud with whatever's already in this browser (a fresh
+            // default state, unless it had local data before login existed).
+            pushStateToCloud();
+          }
+          document.getElementById("currencySymbol").value = state.settings.currency || "$";
+          applyTheme();
+          runRecurring();
+          runRecurringIncome();
+          renderAll();
+        }).catch(function(e) {
+          console.error("Could not load cloud data", e);
+          applyTheme();
+          runRecurring();
+          runRecurringIncome();
+          renderAll();
+          showToast("Could not reach the cloud -- showing your last saved data.");
+        });
+      } else {
+        appShellEl.style.display = "none";
+        authGateEl.style.display = "flex";
+        authForm.reset();
+      }
+    });
+  }
+
+  // ---------- helpers ----------
+
+  function fmtMoney(n) {
+    var sym = state.settings.currency || "$";
+    var neg = n < 0;
+    var v = Math.abs(n).toFixed(2);
+    var parts = v.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (neg ? "-" : "") + sym + parts.join(".");
+  }
+
+  function todayISO() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+
+  function currentMonthKey() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+  }
+
+  function monthKeyOf(dateStr) { return dateStr.slice(0,7); }
+
+  function monthLabel(monthKey) {
+    var parts = monthKey.split("-");
+    var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, 1);
+    return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  }
+
+  function categoryById(id) {
+    for (var i=0;i<state.categories.length;i++) if (state.categories[i].id === id) return state.categories[i];
+    return null;
+  }
+
+  function categoryColor(id) {
+    var idx = state.categories.findIndex(function(c){ return c.id === id; });
+    if (idx < 0 || idx >= 8) return "var(--series-muted)";
+    return PALETTE[idx];
+  }
+
+  function categoryColorHex(id) {
+    var idx = state.categories.findIndex(function(c){ return c.id === id; });
+    if (idx < 0 || idx >= 8) return "#a6a49c";
+    return PALETTE_HEX_LIGHT[idx];
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  // Since the user picks their own calendar colors, work out readable text
+  // (black or white) for whatever background they choose, using relative luminance.
+  function readableTextOn(hex) {
+    var h = String(hex || "").replace("#", "");
+    if (h.length === 3) h = h.split("").map(function(c){ return c+c; }).join("");
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) return "#ffffff";
+    var r = parseInt(h.slice(0,2),16)/255, g = parseInt(h.slice(2,4),16)/255, b = parseInt(h.slice(4,6),16)/255;
+    [r,g,b] = [r,g,b].map(function(v){ return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); });
+    var luminance = 0.2126*r + 0.7152*g + 0.0722*b;
+    return luminance > 0.5 ? "#0b0b0b" : "#ffffff";
+  }
+
+  // When a day has more than one recurring income color, split the cell into
+  // equal vertical stripes instead of picking just one and losing the others.
+  function stripeBackground(colors) {
+    if (colors.length === 1) return colors[0];
+    var stop = 100 / colors.length;
+    var parts = colors.map(function(c, i) {
+      return c + " " + (i*stop) + "%, " + c + " " + ((i+1)*stop) + "%";
+    });
+    return "linear-gradient(90deg, " + parts.join(", ") + ")";
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(showToast._tm);
+    showToast._tm = setTimeout(function(){ t.classList.remove("show"); }, 2200);
+  }
+
+  function confirmDialog(text) {
+    return new Promise(function(resolve) {
+      var dlg = document.getElementById("confirmDialog");
+      document.getElementById("confirmDialogText").textContent = text;
+      dlg.showModal();
+      function cleanup(result) {
+        dlg.close();
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        resolve(result);
+      }
+      var okBtn = document.getElementById("confirmOk");
+      var cancelBtn = document.getElementById("confirmCancel");
+      function onOk() { cleanup(true); }
+      function onCancel() { cleanup(false); }
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+    });
+  }
+
+  // ---------- recurring auto-log ----------
+
+  function runRecurring(silent) {
+    // Re-checked on every load and whenever a recurring item is added/edited.
+    // Idempotent: only ever logs one expense per recurring item per month,
+    // regardless of how many times it runs.
+    var mk = currentMonthKey();
+    var today = new Date();
+    var todayDay = today.getDate();
+    var added = 0;
+    state.recurring.forEach(function(r) {
+      var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === mk; });
+      if (already) return;
+      var day = Math.min(r.day || 1, 28);
+      if (todayDay < day) return; // wait until that day arrives this month
+      var y = today.getFullYear(), m = today.getMonth();
+      var dateStr = y + "-" + String(m+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+      // Only inherit the template's "default paycheck" if that paycheck
+      // actually falls in the same month as this occurrence. Otherwise it's
+      // a stale reference to a past paycheck, and blindly copying it here
+      // would silently mark this expense "assigned" while hiding it from
+      // every paycheck view that's actually visible this month. Leave it
+      // unassigned instead so it shows up in this month's assign dropdown.
+      var inheritedPaycheckId = null;
+      if (r.paycheckId) {
+        var defaultPcIncome = state.income.find(function(inc) { return inc.id === r.paycheckId; });
+        if (defaultPcIncome && monthKeyOf(defaultPcIncome.date) === mk) inheritedPaycheckId = r.paycheckId;
+      }
+      state.expenses.push({
+        id: uid(), date: dateStr, amount: r.amount, categoryId: r.categoryId,
+        note: r.name + " (recurring)", recurringId: r.id,
+        paid: false, cleared: false, paycheckId: inheritedPaycheckId,
+        debtType: r.debtType || null
+      });
+      added++;
+    });
+    state.lastRecurringRun = mk;
+    saveState();
+    if (added > 0 && !silent) showToast(added + " recurring expense" + (added>1?"s":"") + " logged for this month");
+    return added;
+  }
+
+  function runRecurringIncome(silent) {
+    var mk = currentMonthKey();
+    var todayStr = todayISO();
+    var added = 0;
+    state.recurringIncome.forEach(function(r) {
+      if (r.frequency === "biweekly") {
+        // A biweekly cycle can land on more than one date within a single
+        // month, so — unlike monthly — dedup and "has it happened yet"
+        // both need to be checked per exact date, not just per month.
+        biweeklyOccurrencesInMonth(r.startDate, mk).forEach(function(dateStr) {
+          if (dateStr > todayStr) return;
+          var already = state.income.some(function(inc) { return inc.recurringId === r.id && inc.date === dateStr; });
+          if (already) return;
+          state.income.push({
+            id: uid(), date: dateStr, amount: r.amount, source: r.name,
+            note: "(recurring)", recurringId: r.id, color: r.color || "#1baf7a", cleared: false
+          });
+          added++;
+        });
+      } else {
+        var already = state.income.some(function(inc) { return inc.recurringId === r.id && monthKeyOf(inc.date) === mk; });
+        if (already) return;
+        var dateStr = templateDueDateInMonth(r, mk);
+        if (dateStr > todayStr) return;
+        state.income.push({
+          id: uid(), date: dateStr, amount: r.amount, source: r.name,
+          note: "(recurring)", recurringId: r.id, color: r.color || "#1baf7a", cleared: false
+        });
+        added++;
+      }
+    });
+    state.lastRecurringIncomeRun = mk;
+    saveState();
+    if (added > 0 && !silent) showToast(added + " recurring income entr" + (added>1?"ies":"y") + " logged for this month");
+    return added;
+  }
+
+  // ---------- tabs ----------
+
+  var tabButtons = document.querySelectorAll("nav.tabs button");
+  tabButtons.forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      tabButtons.forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      document.querySelectorAll(".panel").forEach(function(p){ p.classList.remove("active"); });
+      document.getElementById(btn.dataset.panel).classList.add("active");
+      if (btn.dataset.panel === "dashboard") renderDashboard();
+    });
+  });
+
+  // ---------- theme ----------
+
+  function applyTheme() {
+    var t = state.settings.theme || "auto";
+    if (t === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+  }
+  document.getElementById("themeToggle").addEventListener("click", function() {
+    var cur = state.settings.theme || "auto";
+    var next = cur === "auto" ? "light" : (cur === "light" ? "dark" : "auto");
+    state.settings.theme = next;
+    saveState();
+    applyTheme();
+    showToast("Theme: " + next);
+  });
+
+  // ---------- category select population ----------
+
+  function populateCategorySelects() {
+    var selects = [document.getElementById("expCategory"), document.getElementById("recCategory")];
+    var filterSelect = document.getElementById("filterCategory");
+    selects.forEach(function(sel) {
+      var prev = sel.value;
+      sel.innerHTML = "";
+      state.categories.forEach(function(c) {
+        var opt = document.createElement("option");
+        opt.value = c.id; opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+      if (prev) sel.value = prev;
+    });
+    var prevF = filterSelect.value;
+    filterSelect.innerHTML = '<option value="">All</option>';
+    state.categories.forEach(function(c) {
+      var opt = document.createElement("option");
+      opt.value = c.id; opt.textContent = c.name;
+      filterSelect.appendChild(opt);
+    });
+    filterSelect.value = prevF;
+    if (typeof updateExpenseDebtTypeVisibility === "function") updateExpenseDebtTypeVisibility();
+    if (typeof updateRecurringDebtTypeVisibility === "function") updateRecurringDebtTypeVisibility();
+  }
+
+  function paycheckLabel(inc) {
+    var d = new Date(inc.date + "T00:00:00");
+    var short = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return short + " · " + inc.source + " · " + fmtMoney(inc.amount);
+  }
+
+  function populatePaycheckSelect() {
+    var sorted = state.income.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+    var optionsHtml = '<option value="">None</option>' + sorted.map(function(inc) {
+      return '<option value="' + inc.id + '">' + escapeHtml(paycheckLabel(inc)) + '</option>';
+    }).join("");
+    ["expPaycheck", "recPaycheck"].forEach(function(id) {
+      var sel = document.getElementById(id);
+      var prev = sel.value;
+      sel.innerHTML = optionsHtml;
+      if (prev) sel.value = prev;
+    });
+  }
+
+  function monthKeyOffset(mk, delta) {
+    var parts = mk.split("-");
+    var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1;
+    var d = new Date(y, m + delta, 1);
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2, "0");
+  }
+
+  function templateDueDateInMonth(r, mk) {
+    var parts = mk.split("-");
+    var day = Math.min(r.day || 1, 28);
+    return parts[0] + "-" + parts[1] + "-" + String(day).padStart(2, "0");
+  }
+
+  // Every date within monthKey that's an exact 14-day multiple from
+  // startDateStr (in either direction) — a biweekly paycheck's date shifts
+  // by day-of-month each cycle, so unlike a monthly bill it can't be
+  // pinned to a fixed "day of month". Usually returns one date, sometimes
+  // two (when a 4-week month lines up two cycles inside it), sometimes
+  // zero (when neither cycle in that month lands there — rare but possible
+  // depending on the month's length and where the cycle falls).
+  function biweeklyOccurrencesInMonth(startDateStr, mk) {
+    if (!startDateStr) return [];
+    var start = new Date(startDateStr + "T00:00:00");
+    var parts = mk.split("-");
+    var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1;
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var occurrences = [];
+    for (var d = 1; d <= daysInMonth; d++) {
+      var cur = new Date(y, m, d);
+      var diffDays = Math.round((cur - start) / 86400000);
+      if (diffDays % 14 === 0) occurrences.push(y + "-" + String(m+1).padStart(2,"0") + "-" + String(d).padStart(2,"0"));
+    }
+    return occurrences;
+  }
+
+  // Unified occurrence lookup for a recurring income template within a given
+  // month — one date for a monthly template, zero-to-two for a biweekly one.
+  function recurringIncomeOccurrencesInMonth(r, mk) {
+    if (r.frequency === "biweekly") return biweeklyOccurrencesInMonth(r.startDate, mk);
+    return [templateDueDateInMonth(r, mk)];
+  }
+
+  // ---------- EXPENSES ----------
+
+  var expenseForm = document.getElementById("expenseForm");
+  document.getElementById("expDate").value = todayISO();
+
+  function updateExpenseDebtTypeVisibility() {
+    var cat = categoryById(document.getElementById("expCategory").value);
+    document.getElementById("expDebtTypeField").style.display = (cat && cat.debt) ? "flex" : "none";
+  }
+  document.getElementById("expCategory").addEventListener("change", updateExpenseDebtTypeVisibility);
+
+  expenseForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    var editId = document.getElementById("expEditId").value;
+    var date = document.getElementById("expDate").value;
+    var amount = parseFloat(document.getElementById("expAmount").value);
+    var categoryId = document.getElementById("expCategory").value;
+    var note = document.getElementById("expNote").value.trim();
+    var paycheckId = document.getElementById("expPaycheck").value || null;
+    var paid = document.getElementById("expPaid").checked;
+    var cleared = document.getElementById("expCleared").checked;
+    var cat = categoryById(categoryId);
+    var debtType = cat && cat.debt ? (document.getElementById("expDebtType").value || "charge") : null;
+    if (!date || isNaN(amount) || amount < 0 || !categoryId) return;
+
+    if (editId) {
+      var ex = state.expenses.find(function(x){ return x.id === editId; });
+      if (ex) { ex.date = date; ex.amount = amount; ex.categoryId = categoryId; ex.note = note; ex.paycheckId = paycheckId; ex.paid = paid; ex.cleared = cleared; ex.debtType = debtType; }
+      showToast("Expense updated");
+    } else {
+      state.expenses.push({ id: uid(), date: date, amount: amount, categoryId: categoryId, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, debtType: debtType });
+      showToast("Expense added");
+    }
+    saveState();
+    resetExpenseForm();
+    renderExpenses();
+    renderDashboard();
+    renderPaycheckPlanner();
+    renderBalances();
+    renderCategories();
+  });
+
+  document.getElementById("expenseCancelEdit").addEventListener("click", resetExpenseForm);
+
+  function resetExpenseForm() {
+    document.getElementById("expEditId").value = "";
+    document.getElementById("expDate").value = todayISO();
+    document.getElementById("expAmount").value = "";
+    document.getElementById("expNote").value = "";
+    document.getElementById("expPaycheck").value = "";
+    document.getElementById("expPaid").checked = false;
+    document.getElementById("expCleared").checked = false;
+    document.getElementById("expDebtType").value = "charge";
+    document.getElementById("expenseFormTitle").textContent = "Add a one-time expense or payment";
+    document.getElementById("expenseSubmitBtn").textContent = "Add expense";
+    document.getElementById("expenseCancelEdit").style.display = "none";
+    updateExpenseDebtTypeVisibility();
+  }
+
+  function editExpense(id) {
+    var ex = state.expenses.find(function(x){ return x.id === id; });
+    if (!ex) return;
+    document.getElementById("expEditId").value = ex.id;
+    document.getElementById("expDate").value = ex.date;
+    document.getElementById("expAmount").value = ex.amount;
+    document.getElementById("expCategory").value = ex.categoryId;
+    document.getElementById("expNote").value = ex.note || "";
+    populatePaycheckSelect();
+    document.getElementById("expPaycheck").value = ex.paycheckId || "";
+    document.getElementById("expPaid").checked = !!ex.paid;
+    document.getElementById("expCleared").checked = !!ex.cleared;
+    document.getElementById("expDebtType").value = ex.debtType || "charge";
+    updateExpenseDebtTypeVisibility();
+    document.getElementById("expenseFormTitle").textContent = "Edit expense";
+    document.getElementById("expenseSubmitBtn").textContent = "Save changes";
+    document.getElementById("expenseCancelEdit").style.display = "inline-block";
+    document.querySelector('nav.tabs button[data-panel="paychecks"]').click();
+    document.getElementById("expDate").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function deleteExpense(id) {
+    confirmDialog("Delete this expense?").then(function(ok) {
+      if (!ok) return;
+      state.expenses = state.expenses.filter(function(x){ return x.id !== id; });
+      saveState();
+      renderExpenses();
+      renderDashboard();
+      renderPaycheckPlanner();
+      renderBalances();
+      renderCategories();
+      showToast("Expense deleted");
+    });
+  }
+
+  // ---------- SPLIT A BILL ACROSS TWO PAYCHECKS ----------
+  // Some bills (rent, a big irregular expense, etc.) get paid partly from
+  // one paycheck and partly from another. Rather than a single expense
+  // having more than one paycheck, splitting divides it into two linked
+  // expense rows — same date/category/note, amounts that add up to the
+  // original — each assignable to its own paycheck. They share a
+  // splitGroupId purely so the UI can label them "(split)"; nothing else
+  // treats them specially, so all existing totals/reports just add up the
+  // two rows like any other expenses.
+  function fillSplitPaycheckSelect(selectEl, selectedId) {
+    var sorted = state.income.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+    selectEl.innerHTML = '<option value="">None (leave unassigned)</option>' + sorted.map(function(inc) {
+      return '<option value="' + inc.id + '">' + escapeHtml(paycheckLabel(inc)) + '</option>';
+    }).join("");
+    selectEl.value = selectedId || "";
+  }
+
+  function openSplitDialog(expenseId) {
+    var ex = state.expenses.find(function(x){ return x.id === expenseId; });
+    if (!ex) return;
+    var cat = categoryById(ex.categoryId);
+    var dlg = document.getElementById("splitDialog");
+    document.getElementById("splitDialogSummary").textContent =
+      ex.date + " · " + (cat ? cat.name : "?") + (ex.note ? " · " + ex.note : "") + " · total " + fmtMoney(ex.amount);
+    document.getElementById("splitDialogError").style.display = "none";
+
+    var half = Math.round((ex.amount / 2) * 100) / 100;
+    var amountA = document.getElementById("splitAmountA");
+    var amountB = document.getElementById("splitAmountB");
+    amountA.value = half.toFixed(2);
+    amountB.value = (ex.amount - half).toFixed(2);
+
+    fillSplitPaycheckSelect(document.getElementById("splitPaycheckA"), ex.paycheckId);
+    fillSplitPaycheckSelect(document.getElementById("splitPaycheckB"), "");
+
+    function syncFromA() {
+      var a = parseFloat(amountA.value);
+      if (isNaN(a) || a < 0 || a > ex.amount) return;
+      amountB.value = (ex.amount - a).toFixed(2);
+    }
+    function syncFromB() {
+      var b = parseFloat(amountB.value);
+      if (isNaN(b) || b < 0 || b > ex.amount) return;
+      amountA.value = (ex.amount - b).toFixed(2);
+    }
+    amountA.addEventListener("input", syncFromA);
+    amountB.addEventListener("input", syncFromB);
+
+    dlg.showModal();
+
+    function cleanup() {
+      dlg.close();
+      amountA.removeEventListener("input", syncFromA);
+      amountB.removeEventListener("input", syncFromB);
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+    }
+    function onCancel() { cleanup(); }
+    function onConfirm() {
+      var a = parseFloat(amountA.value);
+      var b = parseFloat(amountB.value);
+      var errEl = document.getElementById("splitDialogError");
+      if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) {
+        errEl.textContent = "Both amounts must be greater than 0.";
+        errEl.style.display = "block";
+        return;
+      }
+      if (Math.abs((a + b) - ex.amount) > 0.01) {
+        errEl.textContent = "Those two amounts need to add up to " + fmtMoney(ex.amount) + " (currently " + fmtMoney(a + b) + ").";
+        errEl.style.display = "block";
+        return;
+      }
+      var paycheckA = document.getElementById("splitPaycheckA").value || null;
+      var paycheckB = document.getElementById("splitPaycheckB").value || null;
+      var groupId = ex.splitGroupId || uid();
+
+      ex.amount = Math.round(a * 100) / 100;
+      ex.paycheckId = paycheckA;
+      ex.splitGroupId = groupId;
+
+      state.expenses.push({
+        id: uid(), date: ex.date, amount: Math.round(b * 100) / 100, categoryId: ex.categoryId,
+        note: ex.note, paycheckId: paycheckB, paid: ex.paid, cleared: ex.cleared,
+        recurringId: ex.recurringId || null, debtType: ex.debtType || null, splitGroupId: groupId
+      });
+
+      saveState();
+      cleanup();
+      renderExpenses();
+      renderDashboard();
+      renderCalendar();
+      renderPaycheckPlanner();
+      renderBalances();
+      renderCategories();
+      showToast("Bill split across two paychecks");
+    }
+    var confirmBtn = document.getElementById("splitConfirm");
+    var cancelBtn = document.getElementById("splitCancel");
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+  }
+
+  function toggleExpensePaid(id) {
+    var ex = state.expenses.find(function(x){ return x.id === id; });
+    if (!ex) return;
+    ex.paid = !ex.paid;
+    saveState();
+    renderExpenses();
+    renderPaycheckPlanner();
+  }
+
+  function toggleExpenseCleared(id) {
+    var ex = state.expenses.find(function(x){ return x.id === id; });
+    if (!ex) return;
+    ex.cleared = !ex.cleared;
+    saveState();
+    renderExpenses();
+    renderPaycheckPlanner();
+  }
+
+  document.getElementById("filterMonth").addEventListener("change", renderExpenses);
+  document.getElementById("filterCategory").addEventListener("change", renderExpenses);
+  document.getElementById("clearFilters").addEventListener("click", function() {
+    document.getElementById("filterMonth").value = "";
+    document.getElementById("filterCategory").value = "";
+    renderExpenses();
+  });
+
+  // This list intentionally shows only UNASSIGNED expenses. Once an expense
+  // is assigned to a paycheck, it moves into that paycheck's block in the
+  // planner above (where it's still fully editable — Edit, Split, Unassign,
+  // Delete) and drops out of this list, so nothing is ever shown twice.
+  function renderExpenses() {
+    var monthFilter = document.getElementById("filterMonth").value;
+    var catFilter = document.getElementById("filterCategory").value;
+    var list = state.expenses.filter(function(e) { return !e.paycheckId; })
+                              .sort(function(a,b){ return b.date.localeCompare(a.date); });
+    if (monthFilter) list = list.filter(function(e){ return monthKeyOf(e.date) === monthFilter; });
+    if (catFilter) list = list.filter(function(e){ return e.categoryId === catFilter; });
+
+    document.getElementById("expenseCount").textContent = "(" + list.length + ")";
+
+    var wrap = document.getElementById("expenseTableWrap");
+    if (list.length === 0) {
+      var totalCount = state.expenses.length;
+      wrap.innerHTML = totalCount > 0
+        ? '<div class="empty-state">Nothing unassigned right now — everything is assigned to a paycheck above (or doesn\'t match the current filters).</div>'
+        : '<div class="empty-state">No expenses yet. Add your first one above.</div>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th><th class="check-cell">Paid</th><th class="check-cell">Cleared</th><th></th></tr></thead><tbody>';
+    list.forEach(function(e) {
+      var cat = categoryById(e.categoryId);
+      var catName = cat ? cat.name : "(deleted)";
+      var color = cat ? categoryColorHex(e.categoryId) : "#a6a49c";
+      var noteClass = e.paid ? "paid-strike" : "";
+      var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
+      html += '<tr>' +
+        '<td>' + escapeHtml(e.date) + '</td>' +
+        '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(catName) + '</span></td>' +
+        '<td class="' + noteClass + '">' + escapeHtml(e.note || "") + splitTag + '</td>' +
+        '<td class="num">' + fmtMoney(e.amount) + '</td>' +
+        '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-paid="' + e.id + '"' + (e.paid ? ' checked' : '') + '></td>' +
+        '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
+        '<td class="actions-cell">' +
+          '<button class="row-btn" data-edit="' + e.id + '">Edit</button>' +
+          '<button class="row-btn" data-split="' + e.id + '">Split</button>' +
+          '<button class="row-btn danger" data-del="' + e.id + '">Delete</button>' +
+        '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editExpense(b.dataset.edit); }); });
+    wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteExpense(b.dataset.del); }); });
+    wrap.querySelectorAll("[data-split]").forEach(function(b) { b.addEventListener("click", function(){ openSplitDialog(b.dataset.split); }); });
+    wrap.querySelectorAll("[data-paid]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpensePaid(b.dataset.paid); }); });
+    wrap.querySelectorAll("[data-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpenseCleared(b.dataset.cleared); }); });
+  }
+
+  // ---------- INCOME ----------
+
+  var incomeForm = document.getElementById("incomeForm");
+  document.getElementById("incDate").value = todayISO();
+
+  incomeForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    var editId = document.getElementById("incEditId").value;
+    var date = document.getElementById("incDate").value;
+    var amount = parseFloat(document.getElementById("incAmount").value);
+    var source = document.getElementById("incSource").value.trim();
+    var color = document.getElementById("incColor").value || "#1baf7a";
+    var note = document.getElementById("incNote").value.trim();
+    var cleared = document.getElementById("incCleared").checked;
+    if (!date || isNaN(amount) || amount < 0 || !source) return;
+
+    if (editId) {
+      var inc = state.income.find(function(x){ return x.id === editId; });
+      if (inc) { inc.date = date; inc.amount = amount; inc.source = source; inc.color = color; inc.note = note; inc.cleared = cleared; }
+      showToast("Income updated");
+    } else {
+      state.income.push({ id: uid(), date: date, amount: amount, source: source, color: color, note: note, cleared: cleared });
+      showToast("Income added");
+    }
+    saveState();
+    resetIncomeForm();
+    renderIncome();
+    renderDashboard();
+    renderCalendar();
+    populatePaycheckSelect();
+    renderPaycheckPlanner();
+  });
+
+  document.getElementById("incomeCancelEdit").addEventListener("click", resetIncomeForm);
+
+  function resetIncomeForm() {
+    document.getElementById("incEditId").value = "";
+    document.getElementById("incDate").value = todayISO();
+    document.getElementById("incAmount").value = "";
+    document.getElementById("incSource").value = "";
+    document.getElementById("incColor").value = "#1baf7a";
+    document.getElementById("incNote").value = "";
+    document.getElementById("incCleared").checked = false;
+    document.getElementById("incomeFormTitle").textContent = "Add income";
+    document.getElementById("incomeSubmitBtn").textContent = "Add income";
+    document.getElementById("incomeCancelEdit").style.display = "none";
+  }
+
+  function editIncome(id) {
+    var inc = state.income.find(function(x){ return x.id === id; });
+    if (!inc) return;
+    document.getElementById("incEditId").value = inc.id;
+    document.getElementById("incDate").value = inc.date;
+    document.getElementById("incAmount").value = inc.amount;
+    document.getElementById("incSource").value = inc.source;
+    document.getElementById("incColor").value = inc.color || "#1baf7a";
+    document.getElementById("incNote").value = inc.note || "";
+    document.getElementById("incCleared").checked = !!inc.cleared;
+    document.getElementById("incomeFormTitle").textContent = "Edit income";
+    document.getElementById("incomeSubmitBtn").textContent = "Save changes";
+    document.getElementById("incomeCancelEdit").style.display = "inline-block";
+    document.querySelector('nav.tabs button[data-panel="paychecks"]').click();
+    document.getElementById("incDate").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function toggleIncomeCleared(id) {
+    var inc = state.income.find(function(x){ return x.id === id; });
+    if (!inc) return;
+    inc.cleared = !inc.cleared;
+    saveState();
+    renderIncome();
+    renderPaycheckPlanner();
+  }
+
+  function deleteIncome(id) {
+    confirmDialog("Delete this income entry? Any expenses assigned to it will become unassigned.").then(function(ok) {
+      if (!ok) return;
+      state.income = state.income.filter(function(x){ return x.id !== id; });
+      state.expenses.forEach(function(e) { if (e.paycheckId === id) e.paycheckId = null; });
+      saveState();
+      renderIncome();
+      renderExpenses();
+      renderDashboard();
+      renderCalendar();
+      populatePaycheckSelect();
+      renderPaycheckPlanner();
+      showToast("Income entry deleted");
+    });
+  }
+
+  function renderIncome() {
+    // Whatever month the paycheck planner is currently showing is already
+    // fully editable up there as its own card (Cleared, Edit, Delete) --
+    // repeating those same entries down here would just be a second, less
+    // useful place to do the same thing. So this list is everything else:
+    // every other month's income, past or future.
+    var plannerMonthKey = (paycheckMonthPicker && paycheckMonthPicker.value) ? paycheckMonthPicker.value : currentMonthKey();
+    var totalCount = state.income.length;
+    var list = state.income.filter(function(inc) { return monthKeyOf(inc.date) !== plannerMonthKey; })
+                            .sort(function(a,b){ return b.date.localeCompare(a.date); });
+    document.getElementById("incomeCount").textContent = "(" + list.length + ")";
+
+    var wrap = document.getElementById("incomeTableWrap");
+    if (list.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">' + (totalCount === 0
+        ? "No income logged yet. Add your first entry above."
+        : "Everything is showing as a paycheck card above, for " + monthLabel(plannerMonthKey) + ".") + '</div>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Date</th><th>Source</th><th>Note</th><th class="num">Amount</th><th class="check-cell">Cleared</th><th></th></tr></thead><tbody>';
+    list.forEach(function(inc) {
+      html += '<tr>' +
+        '<td>' + escapeHtml(inc.date) + '</td>' +
+        '<td>' + escapeHtml(inc.source) + '</td>' +
+        '<td>' + escapeHtml(inc.note || "") + '</td>' +
+        '<td class="num">' + fmtMoney(inc.amount) + '</td>' +
+        '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-cleared="' + inc.id + '"' + (inc.cleared ? ' checked' : '') + '></td>' +
+        '<td class="actions-cell">' +
+          '<button class="row-btn" data-edit="' + inc.id + '">Edit</button>' +
+          '<button class="row-btn danger" data-del="' + inc.id + '">Delete</button>' +
+        '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editIncome(b.dataset.edit); }); });
+    wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteIncome(b.dataset.del); }); });
+    wrap.querySelectorAll("[data-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleIncomeCleared(b.dataset.cleared); }); });
+  }
+
+  // ---------- RECURRING ----------
+
+  var recurringForm = document.getElementById("recurringForm");
+
+  function updateRecurringDebtTypeVisibility() {
+    var cat = categoryById(document.getElementById("recCategory").value);
+    document.getElementById("recDebtTypeField").style.display = (cat && cat.debt) ? "flex" : "none";
+  }
+  document.getElementById("recCategory").addEventListener("change", updateRecurringDebtTypeVisibility);
+
+  recurringForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    var editId = document.getElementById("recEditId").value;
+    var name = document.getElementById("recName").value.trim();
+    var amount = parseFloat(document.getElementById("recAmount").value);
+    var categoryId = document.getElementById("recCategory").value;
+    var day = parseInt(document.getElementById("recDay").value, 10);
+    var paycheckId = document.getElementById("recPaycheck").value || null;
+    var cat = categoryById(categoryId);
+    var debtType = cat && cat.debt ? (document.getElementById("recDebtType").value || "payment") : null;
+    if (!name || isNaN(amount) || amount < 0 || !categoryId || !day) return;
+
+    if (editId) {
+      var r = state.recurring.find(function(x){ return x.id === editId; });
+      if (r) { r.name = name; r.amount = amount; r.categoryId = categoryId; r.day = day; r.paycheckId = paycheckId; r.debtType = debtType; }
+      showToast("Recurring item updated");
+    } else {
+      state.recurring.push({ id: uid(), name: name, amount: amount, categoryId: categoryId, day: day, paycheckId: paycheckId, debtType: debtType });
+      showToast("Recurring item added");
+    }
+    saveState();
+    resetRecurringForm();
+    runRecurring();
+    renderRecurring();
+    renderExpenses();
+    renderDashboard();
+    renderCalendar();
+    renderPaycheckPlanner();
+    renderBalances();
+    renderCategories();
+  });
+
+  document.getElementById("recurringCancelEdit").addEventListener("click", resetRecurringForm);
+
+  function resetRecurringForm() {
+    document.getElementById("recEditId").value = "";
+    recurringForm.reset();
+    document.getElementById("recDay").value = 1;
+    document.getElementById("recPaycheck").value = "";
+    document.getElementById("recDebtType").value = "payment";
+    document.getElementById("recurringSubmitBtn").textContent = "Add recurring";
+    document.getElementById("recurringCancelEdit").style.display = "none";
+    updateRecurringDebtTypeVisibility();
+  }
+
+  function editRecurring(id) {
+    var r = state.recurring.find(function(x){ return x.id === id; });
+    if (!r) return;
+    document.getElementById("recEditId").value = r.id;
+    document.getElementById("recName").value = r.name;
+    document.getElementById("recAmount").value = r.amount;
+    document.getElementById("recCategory").value = r.categoryId;
+    document.getElementById("recDay").value = r.day;
+    populatePaycheckSelect();
+    document.getElementById("recPaycheck").value = r.paycheckId || "";
+    document.getElementById("recDebtType").value = r.debtType || "payment";
+    updateRecurringDebtTypeVisibility();
+    document.getElementById("recurringSubmitBtn").textContent = "Save changes";
+    document.getElementById("recurringCancelEdit").style.display = "inline-block";
+    document.querySelector('nav.tabs button[data-panel="recurring"]').click();
+    document.getElementById("recName").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function deleteRecurring(id) {
+    confirmDialog("Delete this recurring expense? Past logged expenses will stay.").then(function(ok) {
+      if (!ok) return;
+      state.recurring = state.recurring.filter(function(x){ return x.id !== id; });
+      saveState();
+      renderRecurring();
+      renderCalendar();
+      renderPaycheckPlanner();
+      showToast("Recurring item deleted");
+    });
+  }
+
+  function renderRecurring() {
+    var wrap = document.getElementById("recurringTableWrap");
+    if (state.recurring.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No recurring expenses set up.</div>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Name</th><th>Category</th><th>Day</th><th>Default paycheck</th><th class="num">Amount</th><th></th></tr></thead><tbody>';
+    state.recurring.forEach(function(r) {
+      var cat = categoryById(r.categoryId);
+      var pc = r.paycheckId ? state.income.find(function(inc){ return inc.id === r.paycheckId; }) : null;
+      html += '<tr>' +
+        '<td>' + escapeHtml(r.name) + '</td>' +
+        '<td>' + escapeHtml(cat ? cat.name : "(deleted)") + '</td>' +
+        '<td>' + r.day + '</td>' +
+        '<td>' + (pc ? escapeHtml(pc.source) : "—") + '</td>' +
+        '<td class="num">' + fmtMoney(r.amount) + '</td>' +
+        '<td class="actions-cell">' +
+          '<button class="row-btn" data-edit="' + r.id + '">Edit</button>' +
+          '<button class="row-btn danger" data-del="' + r.id + '">Delete</button>' +
+        '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editRecurring(b.dataset.edit); }); });
+    wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteRecurring(b.dataset.del); }); });
+  }
+
+  // ---------- RECURRING INCOME (payday, etc.) ----------
+
+  var recurringIncomeForm = document.getElementById("recurringIncomeForm");
+
+  function updateRecIncFrequencyFields() {
+    var isBiweekly = document.getElementById("recIncFrequency").value === "biweekly";
+    document.getElementById("recIncDayField").style.display = isBiweekly ? "none" : "flex";
+    document.getElementById("recIncStartDateField").style.display = isBiweekly ? "flex" : "none";
+    document.getElementById("recIncDay").required = !isBiweekly;
+    document.getElementById("recIncStartDate").required = isBiweekly;
+  }
+  document.getElementById("recIncFrequency").addEventListener("change", updateRecIncFrequencyFields);
+
+  recurringIncomeForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    var editId = document.getElementById("recIncEditId").value;
+    var name = document.getElementById("recIncName").value.trim();
+    var amount = parseFloat(document.getElementById("recIncAmount").value);
+    var frequency = document.getElementById("recIncFrequency").value;
+    var day = parseInt(document.getElementById("recIncDay").value, 10);
+    var startDate = document.getElementById("recIncStartDate").value;
+    var color = document.getElementById("recIncColor").value || "#1baf7a";
+    if (!name || isNaN(amount) || amount < 0) return;
+    if (frequency === "biweekly" && !startDate) return;
+    if (frequency !== "biweekly" && !day) return;
+
+    if (editId) {
+      var r = state.recurringIncome.find(function(x){ return x.id === editId; });
+      if (r) {
+        r.name = name; r.amount = amount; r.color = color; r.frequency = frequency;
+        r.day = frequency === "biweekly" ? null : day;
+        r.startDate = frequency === "biweekly" ? startDate : null;
+      }
+      showToast("Recurring income updated");
+    } else {
+      state.recurringIncome.push({
+        id: uid(), name: name, amount: amount, color: color, frequency: frequency,
+        day: frequency === "biweekly" ? null : day,
+        startDate: frequency === "biweekly" ? startDate : null
+      });
+      showToast("Recurring income added");
+    }
+    saveState();
+    resetRecurringIncomeForm();
+    runRecurringIncome();
+    renderRecurringIncome();
+    renderIncome();
+    renderDashboard();
+    renderCalendar();
+    populatePaycheckSelect();
+    renderPaycheckPlanner();
+  });
+
+  document.getElementById("recurringIncomeCancelEdit").addEventListener("click", resetRecurringIncomeForm);
+
+  function resetRecurringIncomeForm() {
+    document.getElementById("recIncEditId").value = "";
+    recurringIncomeForm.reset();
+    document.getElementById("recIncFrequency").value = "monthly";
+    document.getElementById("recIncDay").value = 1;
+    document.getElementById("recIncStartDate").value = "";
+    document.getElementById("recIncColor").value = "#1baf7a";
+    document.getElementById("recurringIncomeSubmitBtn").textContent = "Add recurring income";
+    document.getElementById("recurringIncomeCancelEdit").style.display = "none";
+    updateRecIncFrequencyFields();
+  }
+
+  function editRecurringIncome(id) {
+    var r = state.recurringIncome.find(function(x){ return x.id === id; });
+    if (!r) return;
+    document.getElementById("recIncEditId").value = r.id;
+    document.getElementById("recIncName").value = r.name;
+    document.getElementById("recIncAmount").value = r.amount;
+    document.getElementById("recIncFrequency").value = r.frequency === "biweekly" ? "biweekly" : "monthly";
+    document.getElementById("recIncDay").value = r.day || 1;
+    document.getElementById("recIncStartDate").value = r.startDate || "";
+    document.getElementById("recIncColor").value = r.color || "#1baf7a";
+    updateRecIncFrequencyFields();
+    document.getElementById("recurringIncomeSubmitBtn").textContent = "Save changes";
+    document.getElementById("recurringIncomeCancelEdit").style.display = "inline-block";
+    document.querySelector('nav.tabs button[data-panel="recurring"]').click();
+    document.getElementById("recIncName").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function deleteRecurringIncome(id) {
+    confirmDialog("Delete this recurring income? Past logged income will stay.").then(function(ok) {
+      if (!ok) return;
+      state.recurringIncome = state.recurringIncome.filter(function(x){ return x.id !== id; });
+      saveState();
+      renderRecurringIncome();
+      renderCalendar();
+      renderPaycheckPlanner();
+      showToast("Recurring income deleted");
+    });
+  }
+
+  function recurringIncomeScheduleLabel(r) {
+    if (r.frequency === "biweekly") return "Every 2 weeks from " + (r.startDate || "?");
+    return "Day " + r.day + " of month";
+  }
+
+  function renderRecurringIncome() {
+    var wrap = document.getElementById("recurringIncomeTableWrap");
+    if (state.recurringIncome.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No recurring income set up yet.</div>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Name</th><th>Schedule</th><th class="num">Amount</th><th>Color</th><th></th></tr></thead><tbody>';
+    state.recurringIncome.forEach(function(r) {
+      html += '<tr>' +
+        '<td>' + escapeHtml(r.name) + '</td>' +
+        '<td>' + escapeHtml(recurringIncomeScheduleLabel(r)) + '</td>' +
+        '<td class="num">' + fmtMoney(r.amount) + '</td>' +
+        '<td><span class="swatch" style="background:' + escapeHtml(r.color || "#1baf7a") + '"></span></td>' +
+        '<td class="actions-cell">' +
+          '<button class="row-btn" data-edit="' + r.id + '">Edit</button>' +
+          '<button class="row-btn danger" data-del="' + r.id + '">Delete</button>' +
+        '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editRecurringIncome(b.dataset.edit); }); });
+    wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteRecurringIncome(b.dataset.del); }); });
+  }
+
+  // ---------- CALENDAR ----------
+
+  var calendarViewDate = new Date(); // first-of-month tracked via getFullYear()/getMonth()
+
+  document.getElementById("calPrev").addEventListener("click", function() {
+    calendarViewDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() - 1, 1);
+    renderCalendar();
+  });
+  document.getElementById("calNext").addEventListener("click", function() {
+    calendarViewDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + 1, 1);
+    renderCalendar();
+  });
+  document.getElementById("calToday").addEventListener("click", function() {
+    calendarViewDate = new Date();
+    renderCalendar();
+  });
+
+  function renderCalendar() {
+    var year = calendarViewDate.getFullYear();
+    var month = calendarViewDate.getMonth(); // 0-based
+    var monthKey = year + "-" + String(month+1).padStart(2,"0");
+    document.getElementById("calMonthLabel").textContent = calendarViewDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+    var firstOfMonth = new Date(year, month, 1);
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var startWeekday = firstOfMonth.getDay(); // 0 = Sunday
+    var todayStr = todayISO();
+
+    // group recurring items by day-of-month (capped at 28, matching the auto-log logic)
+    var billsByDay = {}; // day -> [{id, name, amount, color}]
+    state.recurring.forEach(function(r) {
+      var day = Math.min(r.day || 1, 28);
+      var cat = categoryById(r.categoryId);
+      (billsByDay[day] = billsByDay[day] || []).push({
+        id: r.id, name: r.name, amount: r.amount, color: cat ? categoryColorHex(r.categoryId) : "#a6a49c"
+      });
+    });
+    var incomeByDay = {};
+    state.recurringIncome.forEach(function(r) {
+      recurringIncomeOccurrencesInMonth(r, monthKey).forEach(function(dateStr) {
+        var day = parseInt(dateStr.slice(8, 10), 10);
+        (incomeByDay[day] = incomeByDay[day] || []).push({
+          kind: "income", recid: r.id, name: r.name, amount: r.amount, color: r.color || "#1baf7a"
+        });
+      });
+    });
+    // One-time (non-recurring) income shows too, on its actual date. Income
+    // generated BY a recurring template is skipped here since that template's
+    // day-of-month already represents it above — this avoids showing it twice.
+    state.income.forEach(function(inc) {
+      if (inc.recurringId) return;
+      if (monthKeyOf(inc.date) !== monthKey) return;
+      var day = parseInt(inc.date.slice(8, 10), 10);
+      (incomeByDay[day] = incomeByDay[day] || []).push({
+        kind: "income-onetime", id: inc.id, name: inc.source, amount: inc.amount, color: inc.color || "#1baf7a"
+      });
+    });
+
+    var weekdayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    var html = weekdayNames.map(function(w) { return '<div class="cal-weekday">' + w + '</div>'; }).join("");
+
+    // leading blanks from previous month
+    var prevMonthDays = new Date(year, month, 0).getDate();
+    for (var i = 0; i < startWeekday; i++) {
+      var d = prevMonthDays - startWeekday + i + 1;
+      html += '<div class="cal-day outside"><div class="cal-daynum">' + d + '</div></div>';
+    }
+
+    for (var day = 1; day <= daysInMonth; day++) {
+      var dateStr = year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+      var isToday = dateStr === todayStr;
+      var incomeItems = incomeByDay[day] || [];
+      var billItems = billsByDay[day] || [];
+
+      var cellStyleAttr = "";
+      var daynumStyleAttr = "";
+      var incomeLabels = "";
+      if (incomeItems.length > 0) {
+        var colors = incomeItems.map(function(it) { return it.color; });
+        var textColor = readableTextOn(colors[0]);
+        cellStyleAttr = ' style="background:' + stripeBackground(colors) + ';"';
+        daynumStyleAttr = ' style="color:' + textColor + ';"';
+        incomeLabels = incomeItems.map(function(item) {
+          var dataAttrs = item.kind === "income-onetime"
+            ? 'data-kind="income-onetime" data-id="' + item.id + '"'
+            : 'data-kind="income" data-recid="' + item.recid + '" data-date="' + dateStr + '"';
+          return '<div class="cal-income-label cal-clickable" ' + dataAttrs + ' style="color:' + textColor + ';" title="' + escapeHtml(item.name) + ': ' + fmtMoney(item.amount) + ' — click to view/edit" tabindex="0" role="button">' + escapeHtml(item.name) + '</div>';
+        }).join("");
+      }
+
+      var billChips = billItems.map(function(item) {
+        return '<div class="cal-chip expense-chip cal-clickable" data-kind="bill" data-recid="' + item.id + '" data-date="' + dateStr + '" style="border-left-color:' + escapeHtml(item.color) + '" title="' + escapeHtml(item.name) + ' due: ' + fmtMoney(item.amount) + ' — click to view/edit" tabindex="0" role="button">' + escapeHtml(item.name) + '</div>';
+      }).join("");
+
+      html += '<div class="cal-day' + (isToday ? ' today' : '') + (incomeItems.length ? ' has-income' : '') + '"' + cellStyleAttr + '>' +
+              '<div class="cal-daynum"' + daynumStyleAttr + '>' + day + '</div>' +
+              incomeLabels + billChips +
+            '</div>';
+    }
+
+    // trailing blanks to complete the last week
+    var totalCells = startWeekday + daysInMonth;
+    var trailing = (7 - (totalCells % 7)) % 7;
+    for (var t = 1; t <= trailing; t++) {
+      html += '<div class="cal-day outside"><div class="cal-daynum">' + t + '</div></div>';
+    }
+
+    document.getElementById("calendarGrid").innerHTML = '<div class="cal-grid">' + html + '</div>';
+
+    document.querySelectorAll("#calendarGrid .cal-clickable").forEach(function(el) {
+      el.addEventListener("click", function() { handleCalendarItemClick(el.dataset); });
+      el.addEventListener("keydown", function(ev) {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          handleCalendarItemClick(el.dataset);
+        }
+      });
+    });
+
+    // legend
+    var legendItems = [];
+    state.recurringIncome.forEach(function(r) {
+      var schedLabel = r.frequency === "biweekly" ? "every 2 weeks" : "day " + r.day;
+      legendItems.push('<span class="legend-item"><span class="swatch" style="background:' + escapeHtml(r.color || "#1baf7a") + '"></span>' + escapeHtml(r.name) + ' (' + schedLabel + ')</span>');
+    });
+    state.recurring.forEach(function(r) {
+      var cat = categoryById(r.categoryId);
+      var color = cat ? categoryColorHex(r.categoryId) : "#a6a49c";
+      legendItems.push('<span class="legend-item"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(r.name) + ' (day ' + r.day + ')</span>');
+    });
+    document.getElementById("calendarLegend").innerHTML = legendItems.join("");
+  }
+
+  // Clicking a bill or payday on the calendar opens that exact transaction for
+  // editing if it's already been logged for the displayed month, otherwise it
+  // falls back to editing the recurring template (since there's nothing to
+  // open yet for a date that hasn't happened). One-time entries go straight
+  // to their own edit form since there's no template involved.
+  function handleCalendarItemClick(data) {
+    if (data.kind === "bill") {
+      var expenseMatch = state.expenses.find(function(e) { return e.recurringId === data.recid && e.date === data.date; });
+      if (expenseMatch) editExpense(expenseMatch.id);
+      else editRecurring(data.recid);
+    } else if (data.kind === "income") {
+      var incomeMatch = state.income.find(function(inc) { return inc.recurringId === data.recid && inc.date === data.date; });
+      if (incomeMatch) editIncome(incomeMatch.id);
+      else editRecurringIncome(data.recid);
+    } else if (data.kind === "income-onetime") {
+      editIncome(data.id);
+    }
+  }
+
+  // ---------- PAYCHECK PLANNER ----------
+
+  var paycheckMonthPicker = document.getElementById("paycheckMonthPicker");
+  paycheckMonthPicker.addEventListener("change", function() { renderPaycheckPlanner(); renderIncome(); });
+
+  // Early-logs one occurrence of a recurring template (before its normal
+  // auto-log date) as a real expense assigned to the given paycheck, at the
+  // template's usual amount. Returns the new expense's id so callers can
+  // optionally jump straight into editing it (e.g. to bump the amount up
+  // for a one-off bigger payment, without changing the recurring template's
+  // default amount for future months).
+  function logRecurringNow(r, mk, incId) {
+    var newExpense = {
+      id: uid(), date: templateDueDateInMonth(r, mk), amount: r.amount, categoryId: r.categoryId,
+      note: r.name + " (recurring)", recurringId: r.id,
+      paid: false, cleared: false, paycheckId: incId, debtType: r.debtType || null
+    };
+    state.expenses.push(newExpense);
+    saveState();
+    renderExpenses();
+    renderDashboard();
+    renderCalendar();
+    renderPaycheckPlanner();
+    renderBalances();
+    renderCategories();
+    showToast(r.name + " logged for " + monthLabel(mk));
+    return newExpense.id;
+  }
+
+  // Same idea as logRecurringNow, but for an upcoming recurring paycheck —
+  // creates the real income entry early so it becomes a normal, assignable
+  // paycheck block instead of just a preview.
+  function logRecurringIncomeNow(r, dateStr) {
+    var newIncome = {
+      id: uid(), date: dateStr, amount: r.amount, source: r.name,
+      note: "(recurring)", recurringId: r.id, color: r.color || "#1baf7a", cleared: false
+    };
+    state.income.push(newIncome);
+    saveState();
+    renderIncome();
+    renderDashboard();
+    renderCalendar();
+    renderPaycheckPlanner();
+    populatePaycheckSelect();
+    showToast(r.name + " logged for " + dateStr);
+    return newIncome.id;
+  }
+
+  function renderPaycheckPlanner() {
+    if (!paycheckMonthPicker.value) paycheckMonthPicker.value = currentMonthKey();
+    var monthKey = paycheckMonthPicker.value;
+    var nextMonthKey = monthKeyOffset(monthKey, 1);
+    var wrap = document.getElementById("paycheckPlannerWrap");
+
+    var incomes = state.income.filter(function(inc) { return monthKeyOf(inc.date) === monthKey; })
+                               .sort(function(a,b) { return a.date.localeCompare(b.date); });
+
+    // Recurring paychecks that haven't been logged yet this month — same idea
+    // as pending bills below, so a biweekly or monthly payday previews here
+    // as soon as it's due to arrive, instead of staying invisible until the
+    // app happens to auto-log it.
+    var pendingIncome = [];
+    state.recurringIncome.forEach(function(r) {
+      recurringIncomeOccurrencesInMonth(r, monthKey).forEach(function(dateStr) {
+        var already = state.income.some(function(inc) { return inc.recurringId === r.id && inc.date === dateStr; });
+        if (already) return;
+        pendingIncome.push({ template: r, dueDate: dateStr });
+      });
+    });
+
+    if (incomes.length === 0 && pendingIncome.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No income logged or scheduled for ' + monthLabel(monthKey) + ' yet — add it above, then come back here to plan against it.</div>';
+      return;
+    }
+
+    var unassigned = state.expenses.filter(function(e) { return !e.paycheckId; })
+                                    .sort(function(a,b) { return a.date.localeCompare(b.date); });
+
+    // Recurring bills that haven't been logged yet for the current planner
+    // month OR the next one — this is what lets you assign next month's rent
+    // (not due, not logged, doesn't exist as a real expense yet) to a
+    // paycheck landing at the end of this month.
+    var pending = [];
+    state.recurring.forEach(function(r) {
+      [monthKey, nextMonthKey].forEach(function(mk) {
+        var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === mk; });
+        if (already) return;
+        pending.push({ template: r, monthKey: mk, dueDate: templateDueDateInMonth(r, mk) });
+      });
+    });
+
+    function renderRealPaycheckBlock(inc) {
+      var assigned = state.expenses.filter(function(e) { return e.paycheckId === inc.id; })
+                                    .sort(function(a,b) { return a.date.localeCompare(b.date); });
+      // Only auto-schedule the occurrence that falls in the month actually being
+      // viewed — a default assignment must not double-count the same bill's
+      // next-month occurrence too (that one stays a manual pick in the dropdown).
+      var scheduled = pending.filter(function(p) { return p.monthKey === monthKey && p.template.paycheckId === inc.id; })
+                              .sort(function(a,b) { return a.dueDate.localeCompare(b.dueDate); });
+
+      var assignedTotal = assigned.reduce(function(s,e){ return s + e.amount; }, 0) +
+                           scheduled.reduce(function(s,p){ return s + p.template.amount; }, 0);
+      var leftover = inc.amount - assignedTotal;
+      var d = new Date(inc.date + "T00:00:00");
+      var dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+
+      var assignedRowsHtml = assigned.map(function(e) {
+        var cat = categoryById(e.categoryId);
+        var color = cat ? categoryColorHex(e.categoryId) : "#a6a49c";
+        var noteClass = e.paid ? "paid-strike" : "";
+        var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
+        return '<tr>' +
+          '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-pc-paid="' + e.id + '"' + (e.paid ? ' checked' : '') + '></td>' +
+          '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-pc-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
+          '<td>' + escapeHtml(e.date) + '</td>' +
+          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(cat ? cat.name : "(deleted)") + '</span></td>' +
+          '<td class="' + noteClass + '">' + escapeHtml(e.note || "") + splitTag + '</td>' +
+          '<td class="num">' + fmtMoney(e.amount) + '</td>' +
+          '<td class="actions-cell"><button class="row-btn" data-pc-edit="' + e.id + '">Edit</button> <button class="row-btn" data-split="' + e.id + '">Split</button> <button class="row-btn" data-unassign="' + e.id + '">Unassign</button> <button class="row-btn danger" data-pc-del="' + e.id + '">Delete</button></td>' +
+        '</tr>';
+      }).join("");
+
+      var scheduledRowsHtml = scheduled.map(function(p) {
+        var cat = categoryById(p.template.categoryId);
+        var color = cat ? categoryColorHex(p.template.categoryId) : "#a6a49c";
+        return '<tr>' +
+          '<td class="check-cell">—</td>' +
+          '<td class="check-cell">—</td>' +
+          '<td>' + escapeHtml(p.dueDate) + '</td>' +
+          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(cat ? cat.name : "(deleted)") + '</span></td>' +
+          '<td><em>' + escapeHtml(p.template.name) + ' — not logged yet</em></td>' +
+          '<td class="num">' + fmtMoney(p.template.amount) + '</td>' +
+          '<td class="actions-cell"><button class="row-btn" data-log-now="' + p.template.id + '" data-log-month="' + p.monthKey + '" data-log-paycheck="' + inc.id + '">Log now</button> <button class="row-btn" data-log-edit="' + p.template.id + '" data-log-month="' + p.monthKey + '" data-log-paycheck="' + inc.id + '" title="Log it, then open it for editing (e.g. to pay more than usual this time)">Log &amp; edit amount</button></td>' +
+        '</tr>';
+      }).join("");
+
+      var rows = (assigned.length === 0 && scheduled.length === 0)
+        ? '<div class="empty-state" style="padding:10px 0;">No bills assigned to this paycheck yet.</div>'
+        : '<table><thead><tr><th class="check-cell">Paid</th><th class="check-cell">Cleared</th><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
+          assignedRowsHtml + scheduledRowsHtml +
+          '</tbody></table>';
+
+      var assignOptions = unassigned.map(function(e) {
+        var cat = categoryById(e.categoryId);
+        var label = e.date + " · " + (cat ? cat.name : "?") + (e.note ? " · " + e.note : "") + " · " + fmtMoney(e.amount);
+        return '<option value="expense:' + e.id + '">' + escapeHtml(label) + '</option>';
+      }).join("");
+
+      var pendingOptions = pending.filter(function(p) {
+          // Exclude only what's already auto-scheduled above for this exact
+          // paycheck+month — a next-month occurrence stays pickable even if
+          // its default happens to point at this same paycheck, since that
+          // default won't apply automatically outside its own month.
+          var alreadyScheduled = p.monthKey === monthKey && p.template.paycheckId === inc.id;
+          return !alreadyScheduled;
+        })
+        .map(function(p) {
+          var cat = categoryById(p.template.categoryId);
+          var label = p.dueDate + " (not logged yet) · " + (cat ? cat.name : "?") + " · " + p.template.name + " · " + fmtMoney(p.template.amount);
+          return '<option value="template:' + p.template.id + ":" + p.monthKey + '">' + escapeHtml(label) + '</option>';
+        }).join("");
+
+      var hasOptions = unassigned.length > 0 || pendingOptions.length > 0;
+
+      return '<div class="paycheck-block">' +
+        '<div class="paycheck-header">' +
+          '<div><span class="pc-title">' + escapeHtml(inc.source) + '</span><span class="pc-date">' + escapeHtml(dateLabel) + '</span></div>' +
+          '<div style="display:flex; align-items:center; gap:12px;">' +
+            '<div class="pc-amount">' + fmtMoney(inc.amount) + '</div>' +
+            '<label style="display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-secondary); cursor:pointer;">' +
+              '<input type="checkbox" class="row-checkbox" data-inc-cleared="' + inc.id + '"' + (inc.cleared ? ' checked' : '') + '> Cleared</label>' +
+            '<button class="row-btn" data-inc-edit="' + inc.id + '">Edit</button>' +
+            '<button class="row-btn danger" data-inc-del="' + inc.id + '">Delete</button>' +
+          '</div>' +
+        '</div>' +
+        rows +
+        '<div class="paycheck-summary-row">' +
+          '<span>Assigned: ' + fmtMoney(assignedTotal) + '</span>' +
+          '<span class="leftover ' + (leftover < 0 ? "variance-over" : "variance-under") + '">Leftover to spend: ' + fmtMoney(leftover) + '</span>' +
+        '</div>' +
+        '<div class="paycheck-assign-row">' +
+          (hasOptions
+            ? '<select data-assign-select="' + inc.id + '"><option value="">Choose a bill (this or next month)…</option>' + assignOptions + pendingOptions + '</select>' +
+              '<button type="button" class="secondary" data-assign-btn="' + inc.id + '">Assign</button>'
+            : '<span class="hint" style="margin:0;">No unassigned bills left to add.</span>') +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderPendingIncomeBlock(p) {
+      var d = new Date(p.dueDate + "T00:00:00");
+      var dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      return '<div class="paycheck-block pending">' +
+        '<div class="paycheck-header">' +
+          '<div><span class="pc-title">' + escapeHtml(p.template.name) + '</span><span class="pc-date">' + escapeHtml(dateLabel) + ' — upcoming, not logged yet</span></div>' +
+          '<div class="pc-amount">' + fmtMoney(p.template.amount) + '</div>' +
+        '</div>' +
+        '<div class="paycheck-assign-row">' +
+          '<button type="button" class="secondary" data-log-income-now="' + p.template.id + '" data-log-income-date="' + p.dueDate + '">Log now</button> ' +
+          '<button type="button" class="secondary" data-log-income-edit="' + p.template.id + '" data-log-income-date="' + p.dueDate + '" title="Log it, then open it for editing (e.g. this paycheck came in different than usual)">Log &amp; edit amount</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // Real (already-logged) paychecks and previews of upcoming recurring
+    // ones, interleaved in date order so the planner reads chronologically
+    // top to bottom rather than "all real, then all upcoming".
+    var blocks = incomes.map(function(inc) { return { date: inc.date, html: renderRealPaycheckBlock(inc) }; })
+      .concat(pendingIncome.map(function(p) { return { date: p.dueDate, html: renderPendingIncomeBlock(p) }; }))
+      .sort(function(a, b) { return a.date.localeCompare(b.date); });
+
+    var html = blocks.map(function(b) { return b.html; }).join("");
+
+    wrap.innerHTML = html;
+
+    wrap.querySelectorAll("[data-pc-paid]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpensePaid(b.dataset.pcPaid); }); });
+    wrap.querySelectorAll("[data-pc-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpenseCleared(b.dataset.pcCleared); }); });
+    wrap.querySelectorAll("[data-inc-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleIncomeCleared(b.dataset.incCleared); }); });
+    wrap.querySelectorAll("[data-inc-edit]").forEach(function(b) { b.addEventListener("click", function(){ editIncome(b.dataset.incEdit); }); });
+    wrap.querySelectorAll("[data-inc-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteIncome(b.dataset.incDel); }); });
+    wrap.querySelectorAll("[data-split]").forEach(function(b) { b.addEventListener("click", function(){ openSplitDialog(b.dataset.split); }); });
+    wrap.querySelectorAll("[data-unassign]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var ex = state.expenses.find(function(x){ return x.id === b.dataset.unassign; });
+        if (!ex) return;
+        ex.paycheckId = null;
+        saveState();
+        renderExpenses();
+        renderPaycheckPlanner();
+      });
+    });
+    wrap.querySelectorAll("[data-pc-edit]").forEach(function(b) {
+      b.addEventListener("click", function(){ editExpense(b.dataset.pcEdit); });
+    });
+    wrap.querySelectorAll("[data-pc-del]").forEach(function(b) {
+      b.addEventListener("click", function(){ deleteExpense(b.dataset.pcDel); });
+    });
+    wrap.querySelectorAll("[data-log-now]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var r = state.recurring.find(function(x){ return x.id === b.dataset.logNow; });
+        if (!r) return;
+        logRecurringNow(r, b.dataset.logMonth, b.dataset.logPaycheck);
+      });
+    });
+    wrap.querySelectorAll("[data-log-edit]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var r = state.recurring.find(function(x){ return x.id === b.dataset.logEdit; });
+        if (!r) return;
+        var newId = logRecurringNow(r, b.dataset.logMonth, b.dataset.logPaycheck);
+        if (newId) editExpense(newId);
+      });
+    });
+    wrap.querySelectorAll("[data-log-income-now]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var r = state.recurringIncome.find(function(x){ return x.id === b.dataset.logIncomeNow; });
+        if (!r) return;
+        logRecurringIncomeNow(r, b.dataset.logIncomeDate);
+      });
+    });
+    wrap.querySelectorAll("[data-log-income-edit]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var r = state.recurringIncome.find(function(x){ return x.id === b.dataset.logIncomeEdit; });
+        if (!r) return;
+        var newId = logRecurringIncomeNow(r, b.dataset.logIncomeDate);
+        if (newId) editIncome(newId);
+      });
+    });
+    wrap.querySelectorAll("[data-assign-btn]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var incId = b.dataset.assignBtn;
+        var sel = wrap.querySelector('[data-assign-select="' + incId + '"]');
+        if (!sel || !sel.value) return;
+        var parts = sel.value.split(":");
+        if (parts[0] === "expense") {
+          var ex = state.expenses.find(function(x){ return x.id === parts[1]; });
+          if (!ex) return;
+          ex.paycheckId = incId;
+        } else if (parts[0] === "template") {
+          var templateId = parts[1], mk = parts[2];
+          var r = state.recurring.find(function(x){ return x.id === templateId; });
+          if (!r) return;
+          state.expenses.push({
+            id: uid(), date: templateDueDateInMonth(r, mk), amount: r.amount, categoryId: r.categoryId,
+            note: r.name + " (recurring)", recurringId: r.id,
+            paid: false, cleared: false, paycheckId: incId, debtType: r.debtType || null
+          });
+        }
+        saveState();
+        renderExpenses();
+        renderDashboard();
+        renderCalendar();
+        renderPaycheckPlanner();
+        renderBalances();
+        renderCategories();
+        showToast("Bill assigned to this paycheck");
+      });
+    });
+  }
+
+  // ---------- CATEGORIES ----------
+
+  var categoryForm = document.getElementById("categoryForm");
+
+  function updateCatDebtFieldsVisibility() {
+    var isDebt = document.getElementById("catIsDebt").checked;
+    document.getElementById("catDebtFields").style.display = isDebt ? "flex" : "none";
+  }
+  document.getElementById("catIsDebt").addEventListener("change", updateCatDebtFieldsVisibility);
+
+  categoryForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    var editId = document.getElementById("catEditId").value;
+    var name = document.getElementById("catName").value.trim();
+    var budgetRaw = document.getElementById("catBudget").value;
+    var budget = budgetRaw === "" ? 0 : parseFloat(budgetRaw);
+    var isDebt = document.getElementById("catIsDebt").checked;
+    var startingBalanceRaw = document.getElementById("catStartingBalance").value;
+    var startingBalance = startingBalanceRaw === "" ? 0 : parseFloat(startingBalanceRaw);
+    var balanceAsOf = document.getElementById("catBalanceAsOf").value || todayISO();
+    if (!name || isNaN(budget) || budget < 0) return;
+    if (isDebt && (isNaN(startingBalance) || startingBalance < 0)) return;
+
+    if (editId) {
+      var c = categoryById(editId);
+      if (c) {
+        c.name = name; c.budget = budget; c.debt = isDebt;
+        c.startingBalance = isDebt ? startingBalance : 0;
+        c.balanceAsOf = isDebt ? balanceAsOf : null;
+      }
+      showToast("Category updated");
+    } else {
+      state.categories.push({
+        id: uid(), name: name, budget: budget, debt: isDebt,
+        startingBalance: isDebt ? startingBalance : 0,
+        balanceAsOf: isDebt ? balanceAsOf : null
+      });
+      showToast("Category added");
+    }
+    saveState();
+    resetCategoryForm();
+    populateCategorySelects();
+    renderCategories();
+    renderDashboard();
+    renderExpenses();
+    renderCalendar();
+    renderPaycheckPlanner();
+    renderBalances();
+  });
+
+  document.getElementById("categoryCancelEdit").addEventListener("click", resetCategoryForm);
+
+  function resetCategoryForm() {
+    document.getElementById("catEditId").value = "";
+    categoryForm.reset();
+    document.getElementById("categoryFormTitle").textContent = "Add a category";
+    document.getElementById("categorySubmitBtn").textContent = "Add category";
+    document.getElementById("categoryCancelEdit").style.display = "none";
+    updateCatDebtFieldsVisibility();
+  }
+
+  function editCategoryUI(id) {
+    var c = categoryById(id);
+    if (!c) return;
+    document.getElementById("catEditId").value = c.id;
+    document.getElementById("catName").value = c.name;
+    document.getElementById("catBudget").value = c.budget || "";
+    document.getElementById("catIsDebt").checked = !!c.debt;
+    document.getElementById("catStartingBalance").value = c.debt ? (c.startingBalance || 0) : "";
+    document.getElementById("catBalanceAsOf").value = c.debt ? (c.balanceAsOf || todayISO()) : "";
+    updateCatDebtFieldsVisibility();
+    document.getElementById("categoryFormTitle").textContent = "Edit category";
+    document.getElementById("categorySubmitBtn").textContent = "Save changes";
+    document.getElementById("categoryCancelEdit").style.display = "inline-block";
+    document.querySelector('nav.tabs button[data-panel="categories"]').click();
+    document.getElementById("catName").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function deleteCategory(id) {
+    var inUse = state.expenses.some(function(e){ return e.categoryId === id; }) ||
+                state.recurring.some(function(r){ return r.categoryId === id; });
+    var msg = inUse
+      ? "This category has expenses linked to it. Delete anyway? Those expenses will show as \"(deleted)\"."
+      : "Delete this category?";
+    confirmDialog(msg).then(function(ok) {
+      if (!ok) return;
+      state.categories = state.categories.filter(function(c){ return c.id !== id; });
+      saveState();
+      populateCategorySelects();
+      renderCategories();
+      renderDashboard();
+      renderExpenses();
+      renderCalendar();
+      renderPaycheckPlanner();
+      renderBalances();
+      showToast("Category deleted");
+    });
+  }
+
+  // Sums charges/payments logged in a debt category since its balance
+  // anchor date, and returns the running current balance.
+  function computeDebtBalance(cat) {
+    var asOf = cat.balanceAsOf || "0000-00-00";
+    var relevant = state.expenses.filter(function(e) { return e.categoryId === cat.id && e.date >= asOf; });
+    var totalCharges = relevant.filter(function(e) { return e.debtType === "charge"; })
+                                .reduce(function(s,e){ return s + e.amount; }, 0);
+    var totalPayments = relevant.filter(function(e) { return e.debtType === "payment"; })
+                                 .reduce(function(s,e){ return s + e.amount; }, 0);
+    var startingBalance = cat.startingBalance || 0;
+    return {
+      startingBalance: startingBalance,
+      totalCharges: totalCharges,
+      totalPayments: totalPayments,
+      currentBalance: startingBalance + totalCharges - totalPayments
+    };
+  }
+
+  function renderCategories() {
+    var wrap = document.getElementById("categoryTableWrap");
+    if (state.categories.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No categories yet.</div>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Category</th><th class="num">Monthly budget</th><th>Type</th><th class="num">Balance</th><th></th></tr></thead><tbody>';
+    state.categories.forEach(function(c, idx) {
+      var color = idx < 8 ? PALETTE_HEX_LIGHT[idx] : "#a6a49c";
+      var balanceCell = "—";
+      if (c.debt) {
+        var b = computeDebtBalance(c);
+        balanceCell = fmtMoney(b.currentBalance);
+      }
+      html += '<tr>' +
+        '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span></td>' +
+        '<td class="num">' + (c.budget ? fmtMoney(c.budget) : "—") + '</td>' +
+        '<td>' + (c.debt ? "Loan/Card" : "—") + '</td>' +
+        '<td class="num">' + balanceCell + '</td>' +
+        '<td class="actions-cell">' +
+          '<button class="row-btn" data-edit="' + c.id + '">Edit</button>' +
+          '<button class="row-btn danger" data-del="' + c.id + '">Delete</button>' +
+        '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editCategoryUI(b.dataset.edit); }); });
+    wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteCategory(b.dataset.del); }); });
+  }
+
+  function renderBalances() {
+    var wrap = document.getElementById("balancesWrap");
+    var debtCats = state.categories.filter(function(c) { return c.debt; });
+    if (debtCats.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No loans or credit cards tracked yet — mark a category as one under Categories &amp; Budgets.</div>';
+      return;
+    }
+    var totalBalance = 0;
+    var html = debtCats.map(function(c, idx) {
+      var colorIdx = state.categories.indexOf(c);
+      var color = colorIdx >= 0 && colorIdx < 8 ? PALETTE_HEX_LIGHT[colorIdx] : "#a6a49c";
+      var b = computeDebtBalance(c);
+      totalBalance += b.currentBalance;
+      var asOfLabel = c.balanceAsOf ? escapeHtml(c.balanceAsOf) : "—";
+      return '<div class="balance-block">' +
+        '<div class="balance-header">' +
+          '<span class="bal-title"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
+        '</div>' +
+        '<div class="balance-amount ' + (b.currentBalance > 0 ? "variance-over" : "") + '">' + fmtMoney(b.currentBalance) + '</div>' +
+        '<div class="balance-meta">' +
+          '<span>Starting balance: <strong>' + fmtMoney(b.startingBalance) + '</strong> (as of ' + asOfLabel + ')</span>' +
+          '<span>Charges since: <strong>+' + fmtMoney(b.totalCharges) + '</strong></span>' +
+          '<span>Payments since: <strong>-' + fmtMoney(b.totalPayments) + '</strong></span>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+
+    wrap.innerHTML =
+      '<div class="balance-total-row"><span>Total across all loans &amp; cards</span><span class="balance-amount">' + fmtMoney(totalBalance) + '</span></div>' +
+      html;
+  }
+
+  // ---------- DASHBOARD ----------
+
+  function totalsForMonth(monthKey) {
+    var totals = {};
+    state.categories.forEach(function(c) { totals[c.id] = 0; });
+    state.expenses.forEach(function(e) {
+      if (monthKeyOf(e.date) === monthKey) {
+        totals[e.categoryId] = (totals[e.categoryId] || 0) + e.amount;
+      }
+    });
+    return totals;
+  }
+
+  function incomeForMonth(monthKey) {
+    return state.income.filter(function(inc) { return monthKeyOf(inc.date) === monthKey; })
+                        .reduce(function(s, inc) { return s + inc.amount; }, 0);
+  }
+
+  function renderStatTiles(monthKey, totals) {
+    var totalSpent = Object.keys(totals).reduce(function(s,k){ return s + totals[k]; }, 0);
+    var totalIncome = incomeForMonth(monthKey);
+    var totalBudget = state.categories.reduce(function(s,c){ return s + (c.budget || 0); }, 0);
+    var remaining = totalBudget - totalSpent;
+    var net = totalIncome - totalSpent;
+    var daysLeft = (function() {
+      var now = new Date();
+      var end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+      return end.getDate() - now.getDate();
+    })();
+
+    var tiles = [
+      { label: "Income this month", value: fmtMoney(totalIncome), cls: "" },
+      { label: "Spent this month", value: fmtMoney(totalSpent), cls: "" },
+      { label: "Net this month", value: fmtMoney(net), cls: net < 0 ? "over" : "good" }
+    ];
+    if (totalBudget > 0) {
+      tiles.push({ label: "Budget remaining", value: fmtMoney(remaining), cls: remaining < 0 ? "over" : "good" });
+    }
+    tiles.push({ label: "Days left in month", value: String(daysLeft), cls: "" });
+
+    document.getElementById("statRow").innerHTML = tiles.map(function(t) {
+      return '<div class="stat-tile"><div class="label">' + t.label + '</div><div class="value ' + t.cls + '">' + t.value + '</div></div>';
+    }).join("");
+  }
+
+  function renderCategoryChart(monthKey, totals) {
+    var el = document.getElementById("categoryChart");
+    var cats = state.categories.filter(function(c) { return (totals[c.id] || 0) > 0 || c.budget > 0; });
+    if (cats.length === 0) {
+      el.innerHTML = '<div class="empty-state">No spending yet this month.</div>';
+      return;
+    }
+    var maxScale = Math.max.apply(null, cats.map(function(c) {
+      return Math.max(totals[c.id] || 0, c.budget || 0);
+    }).concat([1]));
+
+    var rows = cats.map(function(c) {
+      var spent = totals[c.id] || 0;
+      var budget = c.budget || 0;
+      var color = categoryColorHex(c.id);
+      var pctOfScale = Math.min(100, (spent / maxScale) * 100);
+      var isOver = budget > 0 && spent > budget;
+      var budgetPct = budget > 0 ? Math.min(100, (budget / maxScale) * 100) : null;
+
+      var amountsHtml = budget > 0
+        ? '<span class="amounts">' + fmtMoney(spent) + ' / ' + fmtMoney(budget) + (isOver ? ' <span class="over">over</span>' : '') + '</span>'
+        : '<span class="amounts">' + fmtMoney(spent) + '</span>';
+
+      var fillColor = isOver ? "var(--critical)" : color;
+      var fillWidth = isOver ? 100 : pctOfScale;
+
+      return '<div class="budget-row">' +
+        '<div class="budget-row-top">' +
+          '<span class="cat-name"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
+          amountsHtml +
+        '</div>' +
+        '<div class="track" title="' + escapeHtml(c.name) + ': ' + fmtMoney(spent) + (budget ? ' of ' + fmtMoney(budget) + ' budget' : '') + '">' +
+          '<div class="fill" style="width:' + fillWidth + '%; background:' + fillColor + ';"></div>' +
+          (budgetPct !== null ? '<div style="position:absolute; top:0; left:' + budgetPct + '%; width:2px; height:100%; background:var(--baseline);"></div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join("");
+
+    el.innerHTML = rows;
+  }
+
+  function renderTrendChart() {
+    var el = document.getElementById("trendChart");
+    var now = new Date();
+    var months = [];
+    for (var i = 5; i >= 0; i--) {
+      var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"));
+    }
+    var expenseTotals = months.map(function(mk) {
+      return state.expenses.filter(function(e){ return monthKeyOf(e.date) === mk; })
+                            .reduce(function(s,e){ return s + e.amount; }, 0);
+    });
+    var incomeTotals = months.map(function(mk) { return incomeForMonth(mk); });
+    var hasIncome = incomeTotals.some(function(v){ return v > 0; });
+    var max = Math.max.apply(null, expenseTotals.concat(incomeTotals).concat([1]));
+
+    var W = 640, H = 220, padBottom = 34, padTop = 20, padSide = 10;
+    var chartH = H - padBottom - padTop;
+    var barSlot = (W - padSide*2) / months.length;
+    var groupW = Math.min(70, barSlot * 0.72);
+    var barW = hasIncome ? (groupW - 4) / 2 : Math.min(46, groupW);
+
+    var bars = "";
+    months.forEach(function(mk, i) {
+      var groupX = padSide + i * barSlot + (barSlot - groupW) / 2;
+      var isCurrent = mk === currentMonthKey();
+      var opacity = isCurrent ? "1" : "0.55";
+
+      if (hasIncome) {
+        var incVal = incomeTotals[i];
+        var incH = max > 0 ? (incVal / max) * chartH : 0;
+        var incX = groupX;
+        var incY = padTop + (chartH - incH);
+        bars += '<rect class="bar" x="' + incX + '" y="' + incY + '" width="' + barW + '" height="' + Math.max(incH,1) +
+                '" rx="3" fill="var(--series-3)" opacity="' + opacity + '"><title>' + monthLabel(mk) + ' income: ' + fmtMoney(incVal) + '</title></rect>';
+
+        var expVal = expenseTotals[i];
+        var expH = max > 0 ? (expVal / max) * chartH : 0;
+        var expX = groupX + barW + 4;
+        var expY = padTop + (chartH - expH);
+        bars += '<rect class="bar" x="' + expX + '" y="' + expY + '" width="' + barW + '" height="' + Math.max(expH,1) +
+                '" rx="3" fill="var(--series-1)" opacity="' + opacity + '"><title>' + monthLabel(mk) + ' expenses: ' + fmtMoney(expVal) + '</title></rect>';
+      } else {
+        var val = expenseTotals[i];
+        var barH = max > 0 ? (val / max) * chartH : 0;
+        var x = groupX + (groupW - barW) / 2;
+        var y = padTop + (chartH - barH);
+        bars += '<rect class="bar" x="' + x + '" y="' + y + '" width="' + barW + '" height="' + Math.max(barH,1) +
+                '" rx="4" fill="var(--series-1)" opacity="' + opacity + '"><title>' + monthLabel(mk) + ': ' + fmtMoney(val) + '</title></rect>';
+      }
+      bars += '<text class="bar-label" x="' + (groupX + groupW/2) + '" y="' + (H - padBottom + 18) + '" text-anchor="middle">' + monthLabel(mk).split(" ")[0] + '</text>';
+    });
+
+    var legend = hasIncome
+      ? '<div class="legend">' +
+          '<span class="legend-item"><span class="swatch" style="background:var(--series-3)"></span>Income</span>' +
+          '<span class="legend-item"><span class="swatch" style="background:var(--series-1)"></span>Expenses</span>' +
+        '</div>'
+      : '';
+
+    var svg = '<svg class="bars-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" style="width:100%; height:auto;">' +
+      '<line class="axis-line" x1="' + padSide + '" y1="' + (H - padBottom) + '" x2="' + (W - padSide) + '" y2="' + (H - padBottom) + '"></line>' +
+      bars +
+      '</svg>' + legend;
+    el.innerHTML = svg;
+  }
+
+  function renderBudgetVsActualTable(monthKey, totals) {
+    var wrap = document.getElementById("budgetVsActualWrap");
+    var cats = state.categories.filter(function(c) { return (totals[c.id] || 0) > 0 || c.budget > 0; });
+    if (cats.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Set a budget on a category, or log an expense, to see this table.</div>';
+      return;
+    }
+    var totalBudget = 0, totalActual = 0;
+    var rows = cats.map(function(c) {
+      var actual = totals[c.id] || 0;
+      var budget = c.budget || 0;
+      totalBudget += budget;
+      totalActual += actual;
+      var remaining = budget - actual;
+      var pct = budget > 0 ? Math.round((actual / budget) * 100) : null;
+      var over = budget > 0 && actual > budget;
+      var color = categoryColorHex(c.id);
+      return '<tr>' +
+        '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span></td>' +
+        '<td class="num">' + (budget > 0 ? fmtMoney(budget) : '—') + '</td>' +
+        '<td class="num">' + fmtMoney(actual) + '</td>' +
+        '<td class="num ' + (over ? 'variance-over' : (budget > 0 ? 'variance-under' : '')) + '">' + (budget > 0 ? fmtMoney(remaining) : '—') + '</td>' +
+        '<td class="num ' + (over ? 'variance-over' : '') + '">' + (pct === null ? '—' : pct + '%') + '</td>' +
+      '</tr>';
+    }).join("");
+
+    var totalRemaining = totalBudget - totalActual;
+    var totalOver = totalBudget > 0 && totalActual > totalBudget;
+    var totalPct = totalBudget > 0 ? Math.round((totalActual / totalBudget) * 100) : null;
+
+    var html = '<table class="summary-table"><thead><tr>' +
+      '<th>Category</th><th class="num">Budgeted</th><th class="num">Actual</th><th class="num">Remaining</th><th class="num">% used</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody>' +
+      '<tfoot><tr>' +
+        '<td>Total</td>' +
+        '<td class="num">' + (totalBudget > 0 ? fmtMoney(totalBudget) : '—') + '</td>' +
+        '<td class="num">' + fmtMoney(totalActual) + '</td>' +
+        '<td class="num ' + (totalOver ? 'variance-over' : (totalBudget > 0 ? 'variance-under' : '')) + '">' + (totalBudget > 0 ? fmtMoney(totalRemaining) : '—') + '</td>' +
+        '<td class="num ' + (totalOver ? 'variance-over' : '') + '">' + (totalPct === null ? '—' : totalPct + '%') + '</td>' +
+      '</tr></tfoot></table>';
+    wrap.innerHTML = html;
+  }
+
+  var dashMonthPicker = document.getElementById("dashMonthPicker");
+  dashMonthPicker.addEventListener("change", renderDashboard);
+
+  function renderDashboard() {
+    var todayMonthKey = currentMonthKey();
+    renderStatTiles(todayMonthKey, totalsForMonth(todayMonthKey));
+
+    if (!dashMonthPicker.value) dashMonthPicker.value = todayMonthKey;
+    var monthKey = dashMonthPicker.value;
+    document.getElementById("dashMonthLabel").textContent = "· " + monthLabel(monthKey);
+    var totals = totalsForMonth(monthKey);
+    renderCategoryChart(monthKey, totals);
+    renderBudgetVsActualTable(monthKey, totals);
+    renderTrendChart();
+  }
+
+  // ---------- SETTINGS ----------
+
+  document.getElementById("currencySymbol").value = state.settings.currency || "$";
+  document.getElementById("saveCurrency").addEventListener("click", function() {
+    var v = document.getElementById("currencySymbol").value.trim() || "$";
+    state.settings.currency = v;
+    saveState();
+    renderAll();
+    showToast("Currency saved");
+  });
+
+  document.getElementById("exportCsv").addEventListener("click", function() {
+    var rows = [["Date","Type","Category / Source","Note","Amount"]];
+    state.expenses.forEach(function(e) {
+      var cat = categoryById(e.categoryId);
+      rows.push([e.date, "Expense", cat ? cat.name : "", e.note || "", e.amount.toFixed(2)]);
+    });
+    state.income.forEach(function(inc) {
+      rows.push([inc.date, "Income", inc.source, inc.note || "", inc.amount.toFixed(2)]);
+    });
+    rows = [rows[0]].concat(rows.slice(1).sort(function(a,b){ return a[0].localeCompare(b[0]); }));
+    var csv = rows.map(function(r) {
+      return r.map(function(cell) {
+        var s = String(cell).replace(/"/g, '""');
+        return /[",\n]/.test(s) ? '"' + s + '"' : s;
+      }).join(",");
+    }).join("\n");
+    downloadFile("transactions.csv", csv, "text/csv");
+    showToast("CSV exported");
+  });
+
+  document.getElementById("exportJson").addEventListener("click", function() {
+    downloadFile("budget-backup.json", JSON.stringify(state, null, 2), "application/json");
+    showToast("Backup exported");
+  });
+
+  document.getElementById("importJsonBtn").addEventListener("click", function() {
+    document.getElementById("importJsonFile").click();
+  });
+  document.getElementById("importJsonFile").addEventListener("change", function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function() {
+      confirmDialog("Import this backup? It will replace all current data.").then(function(ok) {
+        if (!ok) { e.target.value = ""; return; }
+        try {
+          var parsed = JSON.parse(reader.result);
+          var d = defaultState();
+          state = {
+            categories: normalizeCategories(parsed.categories && parsed.categories.length ? parsed.categories : d.categories),
+            expenses: parsed.expenses || [],
+            income: parsed.income || [],
+            recurring: parsed.recurring || [],
+            recurringIncome: parsed.recurringIncome || [],
+            settings: Object.assign({}, d.settings, parsed.settings || {}),
+            lastRecurringRun: parsed.lastRecurringRun || null,
+            lastRecurringIncomeRun: parsed.lastRecurringIncomeRun || null
+          };
+          saveState();
+          document.getElementById("currencySymbol").value = state.settings.currency || "$";
+          populateCategorySelects();
+          renderAll();
+          showToast("Backup imported");
+        } catch (err) {
+          alert("Could not read that file. Make sure it's a JSON backup exported from this app.");
+        }
+        e.target.value = "";
+      });
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById("resetAll").addEventListener("click", function() {
+    confirmDialog("Erase ALL data? This cannot be undone. Export a backup first if you're not sure.").then(function(ok) {
+      if (!ok) return;
+      state = defaultState();
+      saveState();
+      document.getElementById("currencySymbol").value = state.settings.currency;
+      populateCategorySelects();
+      renderAll();
+      showToast("All data erased");
+    });
+  });
+
+  function downloadFile(filename, content, mime) {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- CSV BANK IMPORT ----------
+
+  var csvParsed = null; // { headers: [...], rows: [[...], ...] }
+
+  function parseCSV(text) {
+    var rows = [];
+    var row = [];
+    var field = "";
+    var inQuotes = false;
+    var i = 0, len = text.length;
+    while (i < len) {
+      var c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i+1] === '"') { field += '"'; i += 2; continue; }
+          inQuotes = false; i++; continue;
+        }
+        field += c; i++; continue;
+      } else {
+        if (c === '"') { inQuotes = true; i++; continue; }
+        if (c === ',') { row.push(field); field = ""; i++; continue; }
+        if (c === '\r') { i++; continue; }
+        if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; i++; continue; }
+        field += c; i++; continue;
+      }
+    }
+    if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  function detectHeaderRowIndex(rows) {
+    for (var i = 0; i < rows.length; i++) {
+      var cells = rows[i].map(function(c){ return String(c).trim().toLowerCase(); });
+      var hasDate = cells.some(function(c){ return /date/.test(c); });
+      var hasAmount = cells.some(function(c){ return /amount|debit|credit/.test(c); });
+      if (hasDate && hasAmount) return i;
+    }
+    return 0;
+  }
+
+  function guessColumn(headers, patterns) {
+    for (var p = 0; p < patterns.length; p++) {
+      for (var h = 0; h < headers.length; h++) {
+        if (patterns[p].test(headers[h])) return h;
+      }
+    }
+    return -1;
+  }
+
+  function parseMoneyCell(raw) {
+    if (raw == null) return NaN;
+    var s = String(raw).trim();
+    if (s === "") return NaN;
+    var neg = false;
+    if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); }
+    if (/^-/.test(s)) neg = true;
+    s = s.replace(/[^0-9.]/g, "");
+    if (s === "") return NaN;
+    var n = parseFloat(s);
+    if (isNaN(n)) return NaN;
+    return neg ? -Math.abs(n) : n;
+  }
+
+  function parseDateCell(raw) {
+    if (!raw) return null;
+    var s = String(raw).trim();
+    var isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return isoMatch[1] + "-" + isoMatch[2] + "-" + isoMatch[3];
+    var usMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (usMatch) {
+      var mm = usMatch[1].padStart(2, "0");
+      var dd = usMatch[2].padStart(2, "0");
+      var yyyy = usMatch[3];
+      if (yyyy.length === 2) yyyy = (parseInt(yyyy, 10) > 50 ? "19" : "20") + yyyy;
+      return yyyy + "-" + mm + "-" + dd;
+    }
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+    return null;
+  }
+
+  function fillSelectWithHeaders(selectEl, headers, guessIndex) {
+    selectEl.innerHTML = headers.map(function(h, i) {
+      return '<option value="' + i + '">' + escapeHtml(h || "(column " + (i+1) + ")") + '</option>';
+    }).join("");
+    if (guessIndex >= 0) selectEl.value = String(guessIndex);
+  }
+
+  function openCsvImportDialog() {
+    csvParsed = null;
+    document.getElementById("csvFileInput").value = "";
+    document.getElementById("csvFileError").style.display = "none";
+    document.getElementById("csvImportStep2").style.display = "none";
+    document.getElementById("csvImportConfirm").style.display = "none";
+    var catSel = document.getElementById("csvExpenseCategory");
+    catSel.innerHTML = state.categories.map(function(c) { return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>'; }).join("");
+    document.getElementById("csvImportDialog").showModal();
+  }
+
+  document.getElementById("csvImportOpenBtn").addEventListener("click", openCsvImportDialog);
+  document.getElementById("csvImportCancel").addEventListener("click", function() {
+    document.getElementById("csvImportDialog").close();
+  });
+
+  document.getElementById("csvFileInput").addEventListener("change", function(e) {
+    var file = e.target.files[0];
+    var errEl = document.getElementById("csvFileError");
+    errEl.style.display = "none";
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function() {
+      var allRows = parseCSV(String(reader.result));
+      var headerIdx = detectHeaderRowIndex(allRows);
+      var headers = (allRows[headerIdx] || []).map(function(h) { return String(h).trim(); });
+      var dataRows = allRows.slice(headerIdx + 1).filter(function(r) {
+        return r.some(function(c) { return String(c).trim() !== ""; });
+      });
+      if (headers.length === 0 || dataRows.length === 0) {
+        errEl.textContent = "Couldn't find any transaction rows in that file. Make sure it's a CSV export from your bank.";
+        errEl.style.display = "block";
+        return;
+      }
+      var lowerHeaders = headers.map(function(h) { return h.toLowerCase(); });
+      csvParsed = { headers: headers, rows: dataRows };
+
+      fillSelectWithHeaders(document.getElementById("csvDateCol"), headers,
+        guessColumn(lowerHeaders, [/^date$/, /post.*date/, /trans.*date/, /date/]));
+      fillSelectWithHeaders(document.getElementById("csvDescCol"), headers,
+        guessColumn(lowerHeaders, [/^description$/, /payee/, /merchant/, /name/, /description/]));
+      var amountIdx = guessColumn(lowerHeaders, [/^amount$/, /amount/]);
+      var debitIdx = guessColumn(lowerHeaders, [/debit/]);
+      var creditIdx = guessColumn(lowerHeaders, [/credit/]);
+      fillSelectWithHeaders(document.getElementById("csvAmountCol"), headers, amountIdx >= 0 ? amountIdx : 0);
+      fillSelectWithHeaders(document.getElementById("csvDebitCol"), headers, debitIdx >= 0 ? debitIdx : 0);
+      fillSelectWithHeaders(document.getElementById("csvCreditCol"), headers, creditIdx >= 0 ? creditIdx : 0);
+
+      var mode = (amountIdx < 0 && debitIdx >= 0 && creditIdx >= 0) ? "split" : "single";
+      document.getElementById("csvAmountMode").value = mode;
+      toggleCsvAmountMode();
+
+      document.getElementById("csvImportStep2").style.display = "block";
+      document.getElementById("csvImportConfirm").style.display = "inline-block";
+      renderCsvPreview();
+    };
+    reader.readAsText(file);
+  });
+
+  function toggleCsvAmountMode() {
+    var mode = document.getElementById("csvAmountMode").value;
+    document.getElementById("csvSingleAmountFields").style.display = mode === "single" ? "flex" : "none";
+    document.getElementById("csvSplitAmountFields").style.display = mode === "split" ? "flex" : "none";
+  }
+
+  ["csvDateCol","csvDescCol","csvAmountMode","csvAmountCol","csvNegativeMeans","csvDebitCol","csvCreditCol"].forEach(function(id) {
+    document.getElementById(id).addEventListener("change", function() {
+      if (id === "csvAmountMode") toggleCsvAmountMode();
+      renderCsvPreview();
+    });
+  });
+
+  // Reads the current column-mapping controls and turns every raw CSV row into
+  // { date, note, kind: "expense"|"income", amount } — or null if unreadable.
+  function mapCsvRows(rows) {
+    var dateCol = parseInt(document.getElementById("csvDateCol").value, 10);
+    var descCol = parseInt(document.getElementById("csvDescCol").value, 10);
+    var mode = document.getElementById("csvAmountMode").value;
+    var amountCol = parseInt(document.getElementById("csvAmountCol").value, 10);
+    var negativeMeans = document.getElementById("csvNegativeMeans").value;
+    var debitCol = parseInt(document.getElementById("csvDebitCol").value, 10);
+    var creditCol = parseInt(document.getElementById("csvCreditCol").value, 10);
+
+    return rows.map(function(r) {
+      var dateStr = parseDateCell(r[dateCol]);
+      var note = (r[descCol] || "").toString().trim().slice(0, 140);
+      if (!dateStr) return null;
+
+      if (mode === "single") {
+        var amt = parseMoneyCell(r[amountCol]);
+        if (isNaN(amt) || amt === 0) return null;
+        var isExpense = negativeMeans === "expense" ? amt < 0 : amt > 0;
+        return { date: dateStr, note: note, kind: isExpense ? "expense" : "income", amount: Math.abs(amt) };
+      } else {
+        var debit = parseMoneyCell(r[debitCol]);
+        var credit = parseMoneyCell(r[creditCol]);
+        if (!isNaN(debit) && debit !== 0) return { date: dateStr, note: note, kind: "expense", amount: Math.abs(debit) };
+        if (!isNaN(credit) && credit !== 0) return { date: dateStr, note: note, kind: "income", amount: Math.abs(credit) };
+        return null;
+      }
+    }).filter(function(x) { return x !== null; });
+  }
+
+  function renderCsvPreview() {
+    if (!csvParsed) return;
+    var mapped = mapCsvRows(csvParsed.rows);
+    var skipped = csvParsed.rows.length - mapped.length;
+    var expenseCount = mapped.filter(function(m) { return m.kind === "expense"; }).length;
+    var incomeCount = mapped.filter(function(m) { return m.kind === "income"; }).length;
+    document.getElementById("csvPreviewSummary").textContent =
+      mapped.length + " transactions found (" + expenseCount + " expenses, " + incomeCount + " income)" +
+      (skipped > 0 ? ", " + skipped + " row" + (skipped>1?"s":"") + " couldn't be read and will be skipped" : "") +
+      ". Preview of the first 8:";
+
+    var preview = mapped.slice(0, 8);
+    var html = '<table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="num">Amount</th></tr></thead><tbody>';
+    preview.forEach(function(m) {
+      html += '<tr><td>' + escapeHtml(m.date) + '</td><td>' + escapeHtml(m.note) + '</td><td>' + (m.kind === "expense" ? "Expense" : "Income") + '</td><td class="num">' + fmtMoney(m.amount) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById("csvPreviewWrap").innerHTML = mapped.length ? html : '<div class="empty-state">No readable transactions with the current column choices — try a different mapping.</div>';
+  }
+
+  document.getElementById("csvImportConfirm").addEventListener("click", function() {
+    if (!csvParsed) return;
+    var mapped = mapCsvRows(csvParsed.rows);
+    var expenseCategory = document.getElementById("csvExpenseCategory").value;
+    var incomeSource = document.getElementById("csvIncomeSource").value.trim() || "Bank import";
+
+    var addedExpenses = 0, addedIncome = 0, duplicates = 0;
+    mapped.forEach(function(m) {
+      if (m.kind === "expense") {
+        var dupe = state.expenses.some(function(e) { return e.date === m.date && e.amount === m.amount && e.note === m.note; });
+        if (dupe) { duplicates++; return; }
+        state.expenses.push({ id: uid(), date: m.date, amount: m.amount, categoryId: expenseCategory, note: m.note, paid: true, cleared: true });
+        addedExpenses++;
+      } else {
+        var dupeInc = state.income.some(function(inc) { return inc.date === m.date && inc.amount === m.amount && inc.note === m.note; });
+        if (dupeInc) { duplicates++; return; }
+        state.income.push({ id: uid(), date: m.date, amount: m.amount, source: incomeSource, note: m.note, color: "#1baf7a", cleared: true });
+        addedIncome++;
+      }
+    });
+
+    saveState();
+    document.getElementById("csvImportDialog").close();
+    renderAll();
+    showToast("Imported " + addedExpenses + " expense" + (addedExpenses===1?"":"s") + " and " + addedIncome + " income entr" + (addedIncome===1?"y":"ies") +
+      (duplicates > 0 ? " (" + duplicates + " duplicate" + (duplicates>1?"s":"") + " skipped)" : ""));
+  });
+
+  // ---------- init ----------
+
+  function renderAll() {
+    populateCategorySelects();
+    populatePaycheckSelect();
+    renderExpenses();
+    renderIncome();
+    renderRecurring();
+    renderRecurringIncome();
+    renderCategories();
+    renderDashboard();
+    renderCalendar();
+    renderPaycheckPlanner();
+    renderBalances();
+  }
+
+  // Note: the app used to initialize itself right here on every load. Now
+  // that a login is required, that same startup sequence (applyTheme,
+  // runRecurring, runRecurringIncome, renderAll) instead runs inside the
+  // auth.onAuthStateChanged handler above, once we know who's signed in and
+  // have that account's data loaded -- see the "account" section near the
+  // top of this script.
+
+})();
+</script>
+
+<script>
+  // Registers the service worker so the app can be added to your phone's
+  // home screen and keep working offline. Browsers only allow this on a
+  // secure origin (https, or localhost/127.0.0.1 for local dev) -- opening
+  // this file directly from disk (file://) makes registration fail, which
+  // the catch() below absorbs quietly so local double-click usage is
+  // completely unaffected either way.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function() {
+      navigator.serviceWorker.register("sw.js").catch(function() {
+        // Offline support just won't be available this time around --
+        // the app itself still works fine without it.
+      });
+    });
+  }
+</script>
+</body>
+</html>
