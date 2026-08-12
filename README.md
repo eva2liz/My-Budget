@@ -51,7 +51,8 @@ for exactly how that works.
 - Paycheck summary on the dashboard — a quick-glance totals table for the
   same month: payday, income, what's assigned against it, and what's left
   over, per paycheck. Click a row to drill into exactly which bills make up
-  that "assigned" total
+  that "assigned" total, and click any bill's note there to jump straight
+  to editing it
 - Savings goals — set aside money for something specific (an emergency
   fund, a trip, a car), separate from bills and budgets. Give it a name,
   target amount, and starting balance; log **Add money** each time you set

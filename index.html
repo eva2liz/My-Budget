@@ -3597,11 +3597,19 @@
         return '<tr>' +
           '<td>' + escapeHtml(e.date) + '</td>' +
           '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(cat ? cat.name : "(deleted)") + '</span></td>' +
-          '<td>' + escapeHtml(e.note || "") + splitTag + '</td>' +
+          '<td class="drill-note-cell" data-drill-edit="' + e.id + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(e.note || "(no note)") + splitTag + '</td>' +
           '<td class="num">' + fmtMoney(e.amount) + '</td>' +
         '</tr>';
       }).join("");
       wrap.innerHTML = '<table><thead><tr><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th></tr></thead><tbody>' + body + '</tbody></table>';
+      wrap.querySelectorAll("[data-drill-edit]").forEach(function(cell) {
+        function openEdit() {
+          document.getElementById("paycheckDrillDialog").close();
+          editExpense(cell.dataset.drillEdit);
+        }
+        cell.addEventListener("click", openEdit);
+        cell.addEventListener("keydown", function(e) { if (e.key === "Enter") openEdit(); });
+      });
     }
     document.getElementById("paycheckDrillDialog").showModal();
   }
