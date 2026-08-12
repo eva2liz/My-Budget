@@ -271,6 +271,9 @@
   .checkbox-field input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); }
 
   .table-scroll { overflow-x: auto; }
+  tr.search-result-row { cursor: pointer; }
+  tr.search-result-row:hover { background: var(--track); }
+  tr.search-result-row:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
   td.check-cell, th.check-cell { text-align: center; }
   input.row-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); vertical-align: middle; }
   .paid-strike { text-decoration: line-through; color: var(--text-muted); }
@@ -368,6 +371,29 @@
   dialog.wide-dialog table { font-size: 12.5px; }
   dialog.wide-dialog th, dialog.wide-dialog td { padding: 6px; }
 
+  @media (max-width: 640px) {
+    header { padding: 12px 14px; }
+    header h1 { font-size: 16px; }
+    header .actions { gap: 6px; }
+    main { padding: 12px; }
+    .card { padding: 14px; }
+    nav.tabs { padding: 8px 14px 0 14px; }
+    nav.tabs button { padding: 9px 10px; font-size: 13px; }
+    .stat-row { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .stat-tile { padding: 10px 12px; }
+    .stat-tile .value { font-size: 18px; }
+    form.inline-form { gap: 10px; }
+    form.inline-form .field { flex: 1 1 100%; }
+    .paycheck-block, .balance-block { padding: 10px; }
+    .paycheck-header .pc-title { font-size: 13px; }
+    .paycheck-assign-row select { min-width: 0; flex-basis: 100%; }
+    .row-btn { padding: 7px 8px; font-size: 12.5px; }
+    th, td { padding: 8px 6px; font-size: 13px; }
+    dialog { width: 94%; max-height: 88vh; overflow-y: auto; }
+    dialog.wide-dialog { max-width: 94vw; }
+    .balance-meta, .paycheck-summary-row { gap: 10px; }
+  }
+
   .auth-gate {
     position: fixed; inset: 0; z-index: 999;
     background: var(--page-plane);
@@ -426,6 +452,12 @@
   <h1>💰 My Budget</h1>
   <div class="actions">
     <span class="hint" id="authUserEmail" style="margin-right:2px;"></span>
+    <button class="icon-btn" id="searchBtn" title="Search transactions">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+    </button>
     <button class="icon-btn" id="themeToggle" title="Toggle dark mode">🌓</button>
     <button class="icon-btn" id="logoutBtn" title="Log out">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -458,18 +490,46 @@
         <h2>Spending by category <span class="muted" id="dashMonthLabel"></span></h2>
         <input type="month" id="dashMonthPicker" aria-label="Month to view">
       </div>
+      <p class="hint" style="margin-top:0;">For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other.</p>
       <div id="categoryChart"></div>
     </div>
 
     <div class="card">
       <h2>Budget vs. actual <span class="muted">for the month selected above</span></h2>
       <p class="hint" style="margin-top:0;">Click any row to see exactly which transactions make up its total.</p>
-      <div id="budgetVsActualWrap"></div>
+      <div id="budgetVsActualWrap" class="table-scroll"></div>
     </div>
 
     <div class="card">
       <h2>Last 6 months</h2>
       <div id="trendChart"></div>
+    </div>
+
+    <div class="card">
+      <h2>Savings goals <span class="muted">e.g. emergency fund, a car, a trip</span></h2>
+      <form class="inline-form" id="goalForm">
+        <div class="field">
+          <label for="goalName">Name</label>
+          <input type="text" id="goalName" placeholder="e.g. Emergency fund" required>
+        </div>
+        <div class="field">
+          <label for="goalTarget">Target amount</label>
+          <input type="number" id="goalTarget" step="0.01" min="0.01" placeholder="0.00" required>
+        </div>
+        <div class="field">
+          <label for="goalCurrent">Already saved <span class="muted">(optional)</span></label>
+          <input type="number" id="goalCurrent" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="field">
+          <label for="goalColor">Color</label>
+          <input type="color" id="goalColor" value="#1baf7a">
+        </div>
+        <input type="hidden" id="goalEditId">
+        <button type="submit" class="primary" id="goalSubmitBtn">Add goal</button>
+        <button type="button" class="secondary" id="goalCancelEdit" style="display:none;">Cancel</button>
+      </form>
+      <p class="hint" style="margin-top:8px;">Track money you're setting aside for something specific, separate from bills and debt. Use <strong>Add money</strong> on a goal each time you set some aside.</p>
+      <div id="savingsGoalsWrap" style="margin-top:14px;"></div>
     </div>
   </section>
 
@@ -513,7 +573,7 @@
     </div>
     <div class="card">
       <h2>Active recurring expenses</h2>
-      <div id="recurringTableWrap"></div>
+      <div id="recurringTableWrap" class="table-scroll"></div>
     </div>
 
     <div class="card">
@@ -554,7 +614,7 @@
     </div>
     <div class="card">
       <h2>Active recurring income</h2>
-      <div id="recurringIncomeTableWrap"></div>
+      <div id="recurringIncomeTableWrap" class="table-scroll"></div>
     </div>
   </section>
 
@@ -726,7 +786,7 @@
     </div>
     <div class="card">
       <h2>Your categories</h2>
-      <div id="categoryTableWrap"></div>
+      <div id="categoryTableWrap" class="table-scroll"></div>
     </div>
   </section>
 
@@ -788,6 +848,37 @@
     <div class="dialog-actions">
       <button type="button" class="secondary" id="confirmCancel">Cancel</button>
       <button type="button" class="danger-text" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="searchDialog" class="wide-dialog">
+  <div class="dialog-body">
+    <h3>Search transactions</h3>
+    <p class="hint" style="margin-top:0;">Search every expense and income entry -- any month, assigned or not -- by note, source, category, amount, or date.</p>
+    <div class="field">
+      <label for="searchInput" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);">Search</label>
+      <input type="text" id="searchInput" placeholder="e.g. groceries, rent, 42.10, 2026-08" style="width:100%;">
+    </div>
+    <p class="hint" id="searchSummary"></p>
+    <div id="searchResultsWrap" class="table-scroll"></div>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="searchClose">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="goalContributeDialog">
+  <div class="dialog-body">
+    <h3 id="goalContributeTitle">Add money to goal</h3>
+    <div class="field">
+      <label for="goalContributeAmount">Amount</label>
+      <input type="number" id="goalContributeAmount" step="0.01" min="0.01" placeholder="0.00">
+    </div>
+    <p class="hint">Enter a negative number to take money back out (e.g. -50).</p>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="goalContributeCancel">Cancel</button>
+      <button type="button" class="primary" id="goalContributeConfirm">Add</button>
     </div>
   </div>
 </dialog>
@@ -956,6 +1047,7 @@
       income: [],
       recurring: [],
       recurringIncome: [],
+      savingsGoals: [],
       settings: { currency: "$", theme: "auto" },
       lastRecurringRun: null,
       lastRecurringIncomeRun: null
@@ -974,6 +1066,7 @@
         income: parsed.income || [],
         recurring: parsed.recurring || [],
         recurringIncome: parsed.recurringIncome || [],
+        savingsGoals: parsed.savingsGoals || [],
         settings: Object.assign({}, d.settings, parsed.settings || {}),
         lastRecurringRun: parsed.lastRecurringRun || null,
         lastRecurringIncomeRun: parsed.lastRecurringIncomeRun || null
@@ -1134,6 +1227,7 @@
               income: incoming.income || [],
               recurring: incoming.recurring || [],
               recurringIncome: incoming.recurringIncome || [],
+              savingsGoals: incoming.savingsGoals || [],
               settings: Object.assign({}, d.settings, incoming.settings || {}),
               lastRecurringRun: incoming.lastRecurringRun || null,
               lastRecurringIncomeRun: incoming.lastRecurringIncomeRun || null
@@ -2409,9 +2503,9 @@
 
       var rows = (assigned.length === 0 && scheduled.length === 0)
         ? '<div class="empty-state" style="padding:10px 0;">No bills assigned to this paycheck yet.</div>'
-        : '<table><thead><tr><th class="check-cell">Paid</th><th class="check-cell">Cleared</th><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
+        : '<div class="table-scroll"><table><thead><tr><th class="check-cell">Paid</th><th class="check-cell">Cleared</th><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
           assignedRowsHtml + scheduledRowsHtml +
-          '</tbody></table>';
+          '</tbody></table></div>';
 
       var assignOptions = unassigned.map(function(e) {
         var cat = categoryById(e.categoryId);
@@ -2750,6 +2844,226 @@
       html;
   }
 
+  // ---------- SAVINGS GOALS ----------
+
+  var goalForm = document.getElementById("goalForm");
+
+  goalForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    var editId = document.getElementById("goalEditId").value;
+    var name = document.getElementById("goalName").value.trim();
+    var target = parseFloat(document.getElementById("goalTarget").value);
+    var current = parseFloat(document.getElementById("goalCurrent").value) || 0;
+    var color = document.getElementById("goalColor").value;
+    if (!name || isNaN(target) || target <= 0) return;
+
+    if (editId) {
+      var g = state.savingsGoals.find(function(x){ return x.id === editId; });
+      if (g) { g.name = name; g.target = target; g.current = current; g.color = color; }
+    } else {
+      state.savingsGoals.push({ id: uid(), name: name, target: target, current: current, color: color });
+    }
+    saveState();
+    goalForm.reset();
+    document.getElementById("goalColor").value = "#1baf7a";
+    document.getElementById("goalEditId").value = "";
+    document.getElementById("goalSubmitBtn").textContent = "Add goal";
+    document.getElementById("goalCancelEdit").style.display = "none";
+    renderSavingsGoals();
+    showToast(editId ? "Goal updated" : "Goal added");
+  });
+
+  document.getElementById("goalCancelEdit").addEventListener("click", function() {
+    goalForm.reset();
+    document.getElementById("goalColor").value = "#1baf7a";
+    document.getElementById("goalEditId").value = "";
+    document.getElementById("goalSubmitBtn").textContent = "Add goal";
+    document.getElementById("goalCancelEdit").style.display = "none";
+  });
+
+  function editGoal(id) {
+    var g = state.savingsGoals.find(function(x){ return x.id === id; });
+    if (!g) return;
+    document.getElementById("goalEditId").value = g.id;
+    document.getElementById("goalName").value = g.name;
+    document.getElementById("goalTarget").value = g.target;
+    document.getElementById("goalCurrent").value = g.current;
+    document.getElementById("goalColor").value = g.color || "#1baf7a";
+    document.getElementById("goalSubmitBtn").textContent = "Save changes";
+    document.getElementById("goalCancelEdit").style.display = "inline-block";
+    document.querySelector('nav.tabs button[data-panel="dashboard"]').click();
+    document.getElementById("goalName").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function deleteGoal(id) {
+    confirmDialog("Delete this savings goal? This won't affect any expenses or income.").then(function(ok) {
+      if (!ok) return;
+      state.savingsGoals = state.savingsGoals.filter(function(x){ return x.id !== id; });
+      saveState();
+      renderSavingsGoals();
+      showToast("Goal deleted");
+    });
+  }
+
+  var goalContributeGoalId = null;
+  function openGoalContributeDialog(id) {
+    var g = state.savingsGoals.find(function(x){ return x.id === id; });
+    if (!g) return;
+    goalContributeGoalId = id;
+    document.getElementById("goalContributeTitle").textContent = "Add money to \"" + g.name + "\"";
+    document.getElementById("goalContributeAmount").value = "";
+    document.getElementById("goalContributeDialog").showModal();
+  }
+  document.getElementById("goalContributeCancel").addEventListener("click", function() {
+    document.getElementById("goalContributeDialog").close();
+  });
+  document.getElementById("goalContributeConfirm").addEventListener("click", function() {
+    var amt = parseFloat(document.getElementById("goalContributeAmount").value);
+    if (isNaN(amt) || amt === 0) { document.getElementById("goalContributeDialog").close(); return; }
+    var g = state.savingsGoals.find(function(x){ return x.id === goalContributeGoalId; });
+    if (g) {
+      g.current = Math.max(0, g.current + amt);
+      saveState();
+      renderSavingsGoals();
+      showToast((amt > 0 ? "Added " : "Removed ") + fmtMoney(Math.abs(amt)) + (amt > 0 ? " to" : " from") + " \"" + g.name + "\"");
+    }
+    document.getElementById("goalContributeDialog").close();
+  });
+
+  function renderSavingsGoals() {
+    var wrap = document.getElementById("savingsGoalsWrap");
+    if (state.savingsGoals.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No savings goals yet. Add one above.</div>';
+      return;
+    }
+    var html = state.savingsGoals.map(function(g) {
+      var pct = g.target > 0 ? Math.min(100, (g.current / g.target) * 100) : 0;
+      var reached = g.current >= g.target;
+      var color = g.color || "#1baf7a";
+      return '<div class="balance-block">' +
+        '<div class="balance-header">' +
+          '<span class="bal-title"><span class="swatch" style="background:' + escapeHtml(color) + '"></span>' + escapeHtml(g.name) + '</span>' +
+          '<span class="balance-amount" style="' + (reached ? "color:var(--success);" : "") + '">' + fmtMoney(g.current) + ' <span class="muted" style="font-size:14px; font-weight:400;">/ ' + fmtMoney(g.target) + '</span></span>' +
+        '</div>' +
+        '<div class="track"><div class="fill' + (pct >= 100 ? ' overflow' : '') + '" style="width:' + pct + '%; background:' + (reached ? "var(--success)" : escapeHtml(color)) + ';"></div></div>' +
+        '<div class="balance-meta">' +
+          '<span>' + Math.round(pct) + '% saved' + (reached ? ' -- goal reached!' : '') + '</span>' +
+        '</div>' +
+        '<div class="section-actions" style="margin-top:10px;">' +
+          '<button type="button" class="secondary" data-goal-contribute="' + g.id + '">Add money</button>' +
+          '<button type="button" class="secondary" data-goal-edit="' + g.id + '">Edit</button>' +
+          '<button type="button" class="danger-text" data-goal-del="' + g.id + '">Delete</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-goal-contribute]").forEach(function(b) { b.addEventListener("click", function(){ openGoalContributeDialog(b.dataset.goalContribute); }); });
+    wrap.querySelectorAll("[data-goal-edit]").forEach(function(b) { b.addEventListener("click", function(){ editGoal(b.dataset.goalEdit); }); });
+    wrap.querySelectorAll("[data-goal-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteGoal(b.dataset.goalDel); }); });
+  }
+
+  // ---------- SEARCH ----------
+  // Searches across every expense and income entry regardless of month or
+  // assignment status -- the paycheck planner and unassigned lists only ever
+  // show a slice of your data at once, so this is the one place to find any
+  // single transaction by note, source, category, amount, or date.
+
+  var searchDialog = document.getElementById("searchDialog");
+  var searchInput = document.getElementById("searchInput");
+
+  document.getElementById("searchBtn").addEventListener("click", function() {
+    searchInput.value = "";
+    renderSearchResults("");
+    searchDialog.showModal();
+    setTimeout(function() { searchInput.focus(); }, 50);
+  });
+  document.getElementById("searchClose").addEventListener("click", function() {
+    searchDialog.close();
+  });
+  searchInput.addEventListener("input", function() {
+    renderSearchResults(searchInput.value);
+  });
+
+  function renderSearchResults(query) {
+    var wrap = document.getElementById("searchResultsWrap");
+    var summary = document.getElementById("searchSummary");
+    var q = query.trim().toLowerCase();
+
+    if (q === "") {
+      summary.textContent = "Start typing to search across every expense and income entry, any month.";
+      wrap.innerHTML = "";
+      return;
+    }
+
+    var expenseRows = state.expenses.map(function(e) {
+      var cat = categoryById(e.categoryId);
+      var catName = cat ? cat.name : "(deleted category)";
+      return {
+        type: "expense",
+        id: e.id,
+        date: e.date,
+        amount: e.amount,
+        note: e.note || "",
+        label: catName,
+        paycheckId: e.paycheckId,
+        searchable: [e.date, e.note || "", catName, String(e.amount), fmtMoney(e.amount)].join(" ").toLowerCase()
+      };
+    });
+    var incomeRows = state.income.map(function(inc) {
+      return {
+        type: "income",
+        id: inc.id,
+        date: inc.date,
+        amount: inc.amount,
+        note: inc.note || "",
+        label: inc.source,
+        paycheckId: null,
+        searchable: [inc.date, inc.note || "", inc.source, String(inc.amount), fmtMoney(inc.amount)].join(" ").toLowerCase()
+      };
+    });
+
+    var matches = expenseRows.concat(incomeRows).filter(function(r) { return r.searchable.indexOf(q) !== -1; });
+    matches.sort(function(a, b) { return b.date.localeCompare(a.date); });
+
+    if (matches.length === 0) {
+      summary.textContent = "No matches.";
+      wrap.innerHTML = '<div class="empty-state">Nothing found for "' + escapeHtml(query.trim()) + '".</div>';
+      return;
+    }
+
+    var shown = matches.slice(0, 100);
+    summary.textContent = matches.length + " match" + (matches.length === 1 ? "" : "es") +
+      (matches.length > shown.length ? " -- showing the first " + shown.length : "") + ".";
+
+    var body = shown.map(function(r) {
+      var pcLabel = '<span class="muted">—</span>';
+      if (r.type === "expense") {
+        var pc = r.paycheckId ? state.income.find(function(inc) { return inc.id === r.paycheckId; }) : null;
+        pcLabel = pc ? escapeHtml(pc.source) : '<span class="muted">Unassigned</span>';
+      }
+      return '<tr class="search-result-row" data-search-type="' + r.type + '" data-search-id="' + r.id + '" tabindex="0">' +
+        '<td>' + escapeHtml(r.date) + '</td>' +
+        '<td>' + (r.type === "expense" ? "Expense" : "Income") + '</td>' +
+        '<td>' + escapeHtml(r.label) + '</td>' +
+        '<td>' + escapeHtml(r.note) + '</td>' +
+        '<td class="num">' + fmtMoney(r.amount) + '</td>' +
+        '<td>' + pcLabel + '</td>' +
+      '</tr>';
+    }).join("");
+    wrap.innerHTML = '<table><thead><tr><th>Date</th><th>Type</th><th>Category/Source</th><th>Note</th><th class="num">Amount</th><th>Paycheck</th></tr></thead><tbody>' + body + '</tbody></table>';
+
+    wrap.querySelectorAll(".search-result-row").forEach(function(row) {
+      row.addEventListener("click", function() {
+        searchDialog.close();
+        if (row.dataset.searchType === "expense") editExpense(row.dataset.searchId);
+        else editIncome(row.dataset.searchId);
+      });
+      row.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") row.click();
+      });
+    });
+  }
+
   // ---------- DASHBOARD ----------
 
   function totalsForMonth(monthKey) {
@@ -2802,33 +3116,44 @@
       el.innerHTML = '<div class="empty-state">No spending yet this month.</div>';
       return;
     }
-    var maxScale = Math.max.apply(null, cats.map(function(c) {
-      return Math.max(totals[c.id] || 0, c.budget || 0);
-    }).concat([1]));
+    // Each budgeted category's bar fills relative to ITS OWN budget --
+    // 100% width means you've spent exactly your budget, and it turns red
+    // and stays at 100% once you go over. (A row scaled against the whole
+    // month's biggest category, instead of its own budget, made a
+    // right-on-budget category look nearly empty next to a bigger one --
+    // that's the bug being fixed here.) Categories with no budget set have
+    // no "full" to reach, so those are shown relative to each other instead
+    // (scaled against whichever no-budget category spent the most this
+    // month), purely so bigger and smaller amounts are still visually
+    // distinguishable.
+    var maxUnbudgetedSpend = Math.max.apply(null, cats
+      .filter(function(c) { return !(c.budget > 0); })
+      .map(function(c) { return totals[c.id] || 0; })
+      .concat([1]));
 
     var rows = cats.map(function(c) {
       var spent = totals[c.id] || 0;
       var budget = c.budget || 0;
       var color = categoryColorHex(c.id);
-      var pctOfScale = Math.min(100, (spent / maxScale) * 100);
       var isOver = budget > 0 && spent > budget;
-      var budgetPct = budget > 0 ? Math.min(100, (budget / maxScale) * 100) : null;
 
       var amountsHtml = budget > 0
         ? '<span class="amounts">' + fmtMoney(spent) + ' / ' + fmtMoney(budget) + (isOver ? ' <span class="over">over</span>' : '') + '</span>'
         : '<span class="amounts">' + fmtMoney(spent) + '</span>';
 
       var fillColor = isOver ? "var(--critical)" : color;
-      var fillWidth = isOver ? 100 : pctOfScale;
+      var fillWidth = budget > 0
+        ? Math.min(100, (spent / budget) * 100)
+        : Math.min(100, (spent / maxUnbudgetedSpend) * 100);
+      var fillClass = "fill" + (fillWidth >= 100 ? " overflow" : "");
 
       return '<div class="budget-row">' +
         '<div class="budget-row-top">' +
           '<span class="cat-name"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
           amountsHtml +
         '</div>' +
-        '<div class="track" title="' + escapeHtml(c.name) + ': ' + fmtMoney(spent) + (budget ? ' of ' + fmtMoney(budget) + ' budget' : '') + '">' +
-          '<div class="fill" style="width:' + fillWidth + '%; background:' + fillColor + ';"></div>' +
-          (budgetPct !== null ? '<div style="position:absolute; top:0; left:' + budgetPct + '%; width:2px; height:100%; background:var(--baseline);"></div>' : '') +
+        '<div class="track" title="' + escapeHtml(c.name) + ': ' + fmtMoney(spent) + (budget ? ' of ' + fmtMoney(budget) + ' budget (' + Math.round((spent/budget)*100) + '%)' : ' (no budget set)') + '">' +
+          '<div class="' + fillClass + '" style="width:' + fillWidth + '%; background:' + fillColor + ';"></div>' +
         '</div>' +
       '</div>';
     }).join("");
@@ -3057,6 +3382,7 @@
             income: parsed.income || [],
             recurring: parsed.recurring || [],
             recurringIncome: parsed.recurringIncome || [],
+            savingsGoals: parsed.savingsGoals || [],
             settings: Object.assign({}, d.settings, parsed.settings || {}),
             lastRecurringRun: parsed.lastRecurringRun || null,
             lastRecurringIncomeRun: parsed.lastRecurringIncomeRun || null
@@ -3388,6 +3714,7 @@
     renderCalendar();
     renderPaycheckPlanner();
     renderBalances();
+    renderSavingsGoals();
   }
 
   // Note: the app used to initialize itself right here on every load. Now

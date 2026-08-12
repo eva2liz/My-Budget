@@ -23,8 +23,25 @@ Your data is saved locally on whatever device/browser you open it in
   occurrences are calculated from there
 - Dashboard with income, spending, and net totals for the month, plus a
   6-month income-vs-expenses trend chart
+- "Spending by category" chart — each category's bar fills toward its own
+  budget (full means right at budget, red means over); categories with no
+  budget set are just compared to each other, so one big category no longer
+  makes every other bar look emptier than it really is
 - Budget vs. actual table on the dashboard — pick any month and see
-  budgeted vs. actual vs. remaining vs. % used, per category and in total
+  budgeted vs. actual vs. remaining vs. % used, per category and in total.
+  Click any row to open a breakdown of every transaction that makes up that
+  total, with date, note, amount, and which paycheck (or "Unassigned") it
+  belongs to
+- Savings goals — set aside money for something specific (an emergency
+  fund, a trip, a car), separate from bills and budgets. Give it a name,
+  target amount, and starting balance; log **Add money** each time you set
+  more aside (or a negative amount to pull some back out); the progress bar
+  fills as you go and turns green with a "goal reached!" note once you hit
+  the target
+- **Search** (magnifying-glass icon, top right) — find any expense or
+  income entry by note, source, category, amount, or date, no matter what
+  month it's in or whether it's been assigned to a paycheck yet. Click a
+  result to jump straight to editing it
 - Calendar view showing when recurring bills are due (as labeled tags in
   their category color) and every income entry — recurring payday or
   one-time — highlighted across the whole day in a color you choose
@@ -45,7 +62,15 @@ Your data is saved locally on whatever device/browser you open it in
   paycheck. The expense list further down shows only what's still
   **unassigned** — the moment you assign one to a paycheck it moves up
   into that paycheck's card (fully editable there: Edit, Split, Unassign,
-  Delete) and drops off the list below, so nothing is ever shown twice
+  Delete) and drops off the list below, so nothing is ever shown twice.
+  Income works the same way in reverse: whichever month the planner is
+  showing appears as full paycheck cards (with their own Cleared, Edit, and
+  Delete right on the card) — the **Other income** list further down only
+  shows paychecks logged ahead of time for months *after* whichever one's
+  open above. The moment you move the planner on to a new month, whatever
+  came before drops off that list for good instead of resurfacing every
+  time you check a later month — it's still there in full on the Calendar
+  tab and in your exports
   - Recurring bills that haven't come due yet still show up here as
     "pending" options you can assign ahead of time, with a **Log now**
     button to record them early if you want them off your plate
@@ -91,6 +116,8 @@ Your data is saved locally on whatever device/browser you open it in
 - Export everything (income + expenses) to CSV (opens directly in
   Excel/Google Sheets) or export a full JSON backup you can re-import later
   or on another device
+- Polished for mobile — tables scroll horizontally instead of squishing,
+  and forms, cards, and buttons tighten up and stack on narrow phone screens
 
 ## Using it right now
 
