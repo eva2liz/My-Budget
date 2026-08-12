@@ -670,7 +670,7 @@
 
     <div class="card">
       <h2>Other income <span class="muted" id="incomeCount"></span></h2>
-      <p class="hint" style="margin-top:0;">Whichever month the paycheck planner above is showing is fully editable right there (Cleared, Edit, Delete on each paycheck) and won't be repeated here. Every other month's income shows below.</p>
+      <p class="hint" style="margin-top:0;">Whichever month the paycheck planner above is showing is fully editable right there (Cleared, Edit, Delete on each paycheck). This list only shows paychecks you've logged ahead for months after that one -- once you move the planner past a month, it drops off this list for good (still fully there on the Calendar tab and in your exports).</p>
       <div id="incomeTableWrap" class="table-scroll"></div>
     </div>
 
@@ -1838,11 +1838,17 @@
     // Whatever month the paycheck planner is currently showing is already
     // fully editable up there as its own card (Cleared, Edit, Delete) --
     // repeating those same entries down here would just be a second, less
-    // useful place to do the same thing. So this list is everything else:
-    // every other month's income, past or future.
+    // useful place to do the same thing. And once you've moved the planner
+    // on to a later month, whatever came before is done -- it shouldn't
+    // keep resurfacing here every time you check a new month. So this list
+    // is only income dated AFTER whichever month the planner above is
+    // showing (paychecks you've logged ahead of time); anything at or
+    // before that month, past or present, is considered handled and won't
+    // show here again -- it's still fully there on the Calendar tab and in
+    // your exports, just not cluttering this list.
     var plannerMonthKey = (paycheckMonthPicker && paycheckMonthPicker.value) ? paycheckMonthPicker.value : currentMonthKey();
     var totalCount = state.income.length;
-    var list = state.income.filter(function(inc) { return monthKeyOf(inc.date) !== plannerMonthKey; })
+    var list = state.income.filter(function(inc) { return monthKeyOf(inc.date) > plannerMonthKey; })
                             .sort(function(a,b){ return b.date.localeCompare(a.date); });
     document.getElementById("incomeCount").textContent = "(" + list.length + ")";
 
@@ -1850,7 +1856,7 @@
     if (list.length === 0) {
       wrap.innerHTML = '<div class="empty-state">' + (totalCount === 0
         ? "No income logged yet. Add your first entry above."
-        : "Everything is showing as a paycheck card above, for " + monthLabel(plannerMonthKey) + ".") + '</div>';
+        : "Nothing else to show -- past paychecks drop off this list once their month has passed (they're still on the Calendar tab and in your exports).") + '</div>';
       return;
     }
     var html = '<table><thead><tr><th>Date</th><th>Source</th><th>Note</th><th class="num">Amount</th><th class="check-cell">Cleared</th><th></th></tr></thead><tbody>';
