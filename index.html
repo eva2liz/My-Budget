@@ -272,6 +272,15 @@
   .checkbox-field input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); }
 
   .table-scroll { overflow-x: auto; }
+  .cat-inline-color { width: 30px; height: 30px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: none; }
+  .cat-inline-input {
+    width: 100%; min-width: 90px; font-family: inherit; font-size: 13px;
+    padding: 6px 7px; border: 1px solid transparent; border-radius: 6px;
+    background: transparent; color: var(--text-primary);
+  }
+  .cat-inline-input:hover { border-color: var(--border); }
+  .cat-inline-input:focus { border-color: var(--series-1); background: var(--surface-1); outline: none; }
+  .cat-inline-budget { text-align: right; font-variant-numeric: tabular-nums; }
   tr.search-result-row { cursor: pointer; }
   tr.search-result-row:hover { background: var(--track); }
   tr.search-result-row:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
@@ -795,7 +804,7 @@
         <button type="submit" class="primary" id="categorySubmitBtn">Add category</button>
         <button type="button" class="secondary" id="categoryCancelEdit" style="display:none;">Cancel</button>
       </form>
-      <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. For a loan or credit card, enter what you currently owe and today's date — every charge or payment you log afterward in that category updates the running balance on the Balances tab.</p>
+      <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. Color, name, and monthly budget can also all be changed right in the table below -- no need to open this form unless you're marking something as a loan or credit card. For a loan or credit card, enter what you currently owe and today's date — every charge or payment you log afterward in that category updates the running balance on the Balances tab.</p>
     </div>
     <div class="card">
       <h2>Your categories</h2>
@@ -2759,6 +2768,16 @@
     }
     saveState();
     resetCategoryForm();
+    refreshAfterCategoryChange();
+  });
+
+  document.getElementById("categoryCancelEdit").addEventListener("click", resetCategoryForm);
+
+  // Everything that needs to re-render after any category field changes --
+  // shared by the Add/Edit form above and by the inline table edits below,
+  // since a category's name, budget, and color all show up in several other
+  // places (charts, the calendar, expense lists, category dropdowns).
+  function refreshAfterCategoryChange() {
     populateCategorySelects();
     renderCategories();
     renderDashboard();
@@ -2766,9 +2785,7 @@
     renderCalendar();
     renderPaycheckPlanner();
     renderBalances();
-  });
-
-  document.getElementById("categoryCancelEdit").addEventListener("click", resetCategoryForm);
+  }
 
   function resetCategoryForm() {
     document.getElementById("catEditId").value = "";
@@ -2843,7 +2860,7 @@
       wrap.innerHTML = '<div class="empty-state">No categories yet.</div>';
       return;
     }
-    var html = '<table><thead><tr><th>Category</th><th class="num">Monthly budget</th><th>Type</th><th class="num">Balance</th><th></th></tr></thead><tbody>';
+    var html = '<table><thead><tr><th>Color</th><th>Category</th><th class="num">Monthly budget</th><th>Type</th><th class="num">Balance</th><th></th></tr></thead><tbody>';
     state.categories.forEach(function(c) {
       var color = categoryColorHex(c.id);
       var balanceCell = "—";
@@ -2852,8 +2869,9 @@
         balanceCell = fmtMoney(b.currentBalance);
       }
       html += '<tr>' +
-        '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span></td>' +
-        '<td class="num">' + (c.budget ? fmtMoney(c.budget) : "—") + '</td>' +
+        '<td><input type="color" class="cat-inline-color" data-cat-color="' + c.id + '" value="' + escapeHtml(color) + '" title="Change ' + escapeHtml(c.name) + '\'s color"></td>' +
+        '<td><input type="text" class="cat-inline-input" data-cat-name="' + c.id + '" value="' + escapeHtml(c.name) + '" aria-label="Category name"></td>' +
+        '<td class="num"><input type="number" class="cat-inline-input cat-inline-budget" data-cat-budget="' + c.id + '" value="' + (c.budget || "") + '" step="0.01" min="0" placeholder="0.00" aria-label="Monthly budget"></td>' +
         '<td>' + (c.debt ? "Loan/Card" : "—") + '</td>' +
         '<td class="num">' + balanceCell + '</td>' +
         '<td class="actions-cell">' +
@@ -2866,6 +2884,53 @@
     wrap.innerHTML = html;
     wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editCategoryUI(b.dataset.edit); }); });
     wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteCategory(b.dataset.del); }); });
+
+    // Inline editing -- color, name, and budget can all be changed right in
+    // the table, with no need to open the Edit form and scroll up to it.
+    // Color saves the moment you pick one (the picker's own "change" event
+    // only fires once you close it); name and budget save when you leave
+    // the field or press Enter, and only if the value actually changed.
+    wrap.querySelectorAll("[data-cat-color]").forEach(function(inp) {
+      inp.addEventListener("change", function() {
+        var c = categoryById(inp.dataset.catColor);
+        if (!c || inp.value === c.color) return;
+        c.color = inp.value;
+        saveState();
+        refreshAfterCategoryChange();
+        showToast("Color updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cat-name]").forEach(function(inp) {
+      function commit() {
+        var c = categoryById(inp.dataset.catName);
+        if (!c) return;
+        var val = inp.value.trim();
+        if (!val) { inp.value = c.name; return; }
+        if (val === c.name) return;
+        c.name = val;
+        saveState();
+        refreshAfterCategoryChange();
+        showToast("Category updated");
+      }
+      inp.addEventListener("blur", commit);
+      inp.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    });
+    wrap.querySelectorAll("[data-cat-budget]").forEach(function(inp) {
+      function commit() {
+        var c = categoryById(inp.dataset.catBudget);
+        if (!c) return;
+        var raw = inp.value;
+        var val = raw === "" ? 0 : parseFloat(raw);
+        if (isNaN(val) || val < 0) { inp.value = c.budget || ""; return; }
+        if (val === (c.budget || 0)) return;
+        c.budget = val;
+        saveState();
+        refreshAfterCategoryChange();
+        showToast("Category updated");
+      }
+      inp.addEventListener("blur", commit);
+      inp.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    });
   }
 
   function renderBalances() {

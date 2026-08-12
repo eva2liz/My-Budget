@@ -19,12 +19,17 @@ for exactly how that works.
 - Set a monthly budget per category and see progress bars (with an "over
   budget" warning) on the dashboard. The first 8 categories you create get
   their own chart color automatically; pick your own color for any
-  category at any time with the color swatch on its form under
-  **Categories & Budgets** — it shows up everywhere that category does
+  category at any time — it shows up everywhere that category does
   (charts, the calendar, expense lists, and more). Drag the handle on any
   row of the dashboard's "Spending by category" list to reorder your
   categories — the new order applies everywhere (this list, Budget vs.
   actual, Categories & Budgets, and every category dropdown)
+- **Categories & Budgets table is directly editable** — change a
+  category's color, name, or monthly budget right in the table (color
+  saves the moment you pick one; name and budget save when you click
+  away or press Enter), no need to open the form and scroll up. The
+  **Edit** button is still there for marking a category as a loan or
+  credit card and setting its balance
 - Recurring expenses (rent, subscriptions, etc.) that auto-log once a month
 - Recurring income can be **monthly** (same day every month, like a fixed
   salary date) or **every 2 weeks** (like a biweekly paycheck that lands
