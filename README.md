@@ -17,7 +17,11 @@ for exactly how that works.
   note — also right from the **Paychecks** tab, alongside expenses,
   since the two are so closely tied together
 - Set a monthly budget per category and see progress bars (with an "over
-  budget" warning) on the dashboard
+  budget" warning) on the dashboard. The first 8 categories you create get
+  their own chart color automatically; pick your own color for any
+  category at any time with the color swatch on its form under
+  **Categories & Budgets** — it shows up everywhere that category does
+  (charts, the calendar, expense lists, and more)
 - Recurring expenses (rent, subscriptions, etc.) that auto-log once a month
 - Recurring income can be **monthly** (same day every month, like a fixed
   salary date) or **every 2 weeks** (like a biweekly paycheck that lands

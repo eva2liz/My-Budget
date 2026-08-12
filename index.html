@@ -768,6 +768,10 @@
           <label for="catBudget">Monthly budget</label>
           <input type="number" id="catBudget" step="0.01" min="0" placeholder="0.00 (optional)">
         </div>
+        <div class="field">
+          <label for="catColor">Color</label>
+          <input type="color" id="catColor" value="#a6a49c">
+        </div>
         <div class="field checkbox-field">
           <label><input type="checkbox" id="catIsDebt"> This is a loan or credit card (track balance)</label>
         </div>
@@ -785,7 +789,7 @@
         <button type="submit" class="primary" id="categorySubmitBtn">Add category</button>
         <button type="button" class="secondary" id="categoryCancelEdit" style="display:none;">Cancel</button>
       </form>
-      <p class="hint">The first 8 categories get their own chart color, in a fixed accessible order. Extra categories share a neutral gray in charts, but are always distinguished by name in tables and labels. For a loan or credit card, enter what you currently owe and today's date — every charge or payment you log afterward in that category updates the running balance on the Balances tab.</p>
+      <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. For a loan or credit card, enter what you currently owe and today's date — every charge or payment you log afterward in that category updates the running balance on the Balances tab.</p>
     </div>
     <div class="card">
       <h2>Your categories</h2>
@@ -1040,20 +1044,20 @@
   // feature existed, so older saved data never hits an undefined field.
   function normalizeCategories(cats) {
     return cats.map(function(c) {
-      return Object.assign({ debt: false, startingBalance: 0, balanceAsOf: null }, c);
+      return Object.assign({ debt: false, startingBalance: 0, balanceAsOf: null, color: null }, c);
     });
   }
 
   function defaultState() {
     var cats = [
-      { id: "housing", name: "Housing", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
-      { id: "food", name: "Food", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
-      { id: "transport", name: "Transport", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
-      { id: "utilities", name: "Utilities", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
-      { id: "entertainment", name: "Entertainment", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
-      { id: "health", name: "Health", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
-      { id: "shopping", name: "Shopping", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null },
-      { id: "other", name: "Other", budget: 0, debt: false, startingBalance: 0, balanceAsOf: null }
+      { id: "housing", name: "Housing", budget: 0, color: null, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "food", name: "Food", budget: 0, color: null, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "transport", name: "Transport", budget: 0, color: null, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "utilities", name: "Utilities", budget: 0, color: null, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "entertainment", name: "Entertainment", budget: 0, color: null, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "health", name: "Health", budget: 0, color: null, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "shopping", name: "Shopping", budget: 0, color: null, debt: false, startingBalance: 0, balanceAsOf: null },
+      { id: "other", name: "Other", budget: 0, color: null, debt: false, startingBalance: 0, balanceAsOf: null }
     ];
     return {
       categories: cats,
@@ -1311,15 +1315,32 @@
   }
 
   function categoryColor(id) {
+    var cat = categoryById(id);
+    if (cat && cat.color) return cat.color;
     var idx = state.categories.findIndex(function(c){ return c.id === id; });
     if (idx < 0 || idx >= 8) return "var(--series-muted)";
     return PALETTE[idx];
   }
 
+  // A category's color is whatever was explicitly picked for it (in the
+  // Categories & Budgets form); categories that have never had a color
+  // chosen fall back to the original automatic assignment -- the first 8
+  // (by creation order) each get their own color from a fixed palette,
+  // everything after that shares a neutral gray.
   function categoryColorHex(id) {
+    var cat = categoryById(id);
+    if (cat && cat.color) return cat.color;
     var idx = state.categories.findIndex(function(c){ return c.id === id; });
     if (idx < 0 || idx >= 8) return "#a6a49c";
     return PALETTE_HEX_LIGHT[idx];
+  }
+
+  // What color a brand-new category would get if left on the automatic
+  // assignment -- used only to pre-fill the color picker with a sensible
+  // default when adding one, not as a stored value until actually saved.
+  function nextAutoCategoryColor() {
+    var idx = state.categories.length;
+    return idx < 8 ? PALETTE_HEX_LIGHT[idx] : "#a6a49c";
   }
 
   function escapeHtml(s) {
@@ -2706,6 +2727,7 @@
     var name = document.getElementById("catName").value.trim();
     var budgetRaw = document.getElementById("catBudget").value;
     var budget = budgetRaw === "" ? 0 : parseFloat(budgetRaw);
+    var color = document.getElementById("catColor").value || "#a6a49c";
     var isDebt = document.getElementById("catIsDebt").checked;
     var startingBalanceRaw = document.getElementById("catStartingBalance").value;
     var startingBalance = startingBalanceRaw === "" ? 0 : parseFloat(startingBalanceRaw);
@@ -2716,14 +2738,14 @@
     if (editId) {
       var c = categoryById(editId);
       if (c) {
-        c.name = name; c.budget = budget; c.debt = isDebt;
+        c.name = name; c.budget = budget; c.color = color; c.debt = isDebt;
         c.startingBalance = isDebt ? startingBalance : 0;
         c.balanceAsOf = isDebt ? balanceAsOf : null;
       }
       showToast("Category updated");
     } else {
       state.categories.push({
-        id: uid(), name: name, budget: budget, debt: isDebt,
+        id: uid(), name: name, budget: budget, color: color, debt: isDebt,
         startingBalance: isDebt ? startingBalance : 0,
         balanceAsOf: isDebt ? balanceAsOf : null
       });
@@ -2745,6 +2767,7 @@
   function resetCategoryForm() {
     document.getElementById("catEditId").value = "";
     categoryForm.reset();
+    document.getElementById("catColor").value = nextAutoCategoryColor();
     document.getElementById("categoryFormTitle").textContent = "Add a category";
     document.getElementById("categorySubmitBtn").textContent = "Add category";
     document.getElementById("categoryCancelEdit").style.display = "none";
@@ -2757,6 +2780,7 @@
     document.getElementById("catEditId").value = c.id;
     document.getElementById("catName").value = c.name;
     document.getElementById("catBudget").value = c.budget || "";
+    document.getElementById("catColor").value = categoryColorHex(c.id);
     document.getElementById("catIsDebt").checked = !!c.debt;
     document.getElementById("catStartingBalance").value = c.debt ? (c.startingBalance || 0) : "";
     document.getElementById("catBalanceAsOf").value = c.debt ? (c.balanceAsOf || todayISO()) : "";
@@ -2814,8 +2838,8 @@
       return;
     }
     var html = '<table><thead><tr><th>Category</th><th class="num">Monthly budget</th><th>Type</th><th class="num">Balance</th><th></th></tr></thead><tbody>';
-    state.categories.forEach(function(c, idx) {
-      var color = idx < 8 ? PALETTE_HEX_LIGHT[idx] : "#a6a49c";
+    state.categories.forEach(function(c) {
+      var color = categoryColorHex(c.id);
       var balanceCell = "—";
       if (c.debt) {
         var b = computeDebtBalance(c);
@@ -2846,9 +2870,8 @@
       return;
     }
     var totalBalance = 0;
-    var html = debtCats.map(function(c, idx) {
-      var colorIdx = state.categories.indexOf(c);
-      var color = colorIdx >= 0 && colorIdx < 8 ? PALETTE_HEX_LIGHT[colorIdx] : "#a6a49c";
+    var html = debtCats.map(function(c) {
+      var color = categoryColorHex(c.id);
       var b = computeDebtBalance(c);
       totalBalance += b.currentBalance;
       var asOfLabel = c.balanceAsOf ? escapeHtml(c.balanceAsOf) : "—";
