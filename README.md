@@ -1,9 +1,12 @@
 # My Budget
 
-A simple, single-file personal budget tracker. No sign-up, no server, no
-build step — just one `index.html` file that runs entirely in your browser.
-Your data is saved locally on whatever device/browser you open it in
-(using `localStorage`), so it works fully offline.
+A simple, single-file personal budget tracker — just one `index.html` file,
+no separate server or build step to run it. Sign in with an email and
+password (created right in the app) and your data syncs automatically to
+your own private account, so it's there whether you open the app on your
+phone, a laptop, or any other device. It also keeps a local copy on each
+device so it keeps working offline — see **Notes on the data model** below
+for exactly how that works.
 
 ## Features
 
@@ -124,18 +127,24 @@ Your data is saved locally on whatever device/browser you open it in
 ## Using it right now
 
 Just open `index.html` in any browser (double-click the file, or drag it
-into a browser tab). That's it — nothing to install.
+into a browser tab), then sign up with an email and password the first
+time. That's it — nothing to install, and no separate account-creation
+website involved (see **Notes on the data model** below for where the
+account itself actually lives).
 
-**Heads up:** because data is stored in the browser, it's tied to that one
-browser on that one device. Use **Settings → Export full backup (JSON)**
-regularly, especially before clearing your browser data, and use
-**Import backup** to restore it (or move it to another device/browser).
+**Heads up:** even though your data syncs to your account, it's still a
+good habit to use **Settings → Export full backup (JSON)** occasionally —
+it's a real safety net if you ever need to recover an accidental "Erase
+all data," want an offline copy, or want to move data into a *different*
+account.
 
 ## Hosting it on GitHub Pages (optional)
 
 If you'd like a permanent link you can open from your phone or any
-computer (data still stays local to whichever browser you use it in — this
-doesn't add cloud sync), you can host it for free with GitHub Pages:
+computer, you can host it for free with GitHub Pages. This is just about
+giving the app a stable web address to open — your account and data sync
+the same way (via Firebase, see below) whether you open it from a GitHub
+Pages link, straight off your own computer, or anywhere else:
 
 1. Create a new repository on GitHub (e.g. `my-budget`).
 2. Upload the whole `budget-app` folder as-is — `index.html`, `manifest.json`,
@@ -158,8 +167,10 @@ doesn't add cloud sync), you can host it for free with GitHub Pages:
    `https://<your-username>.github.io/my-budget/` within a minute or two —
    bookmark it.
 
-Since everything runs client-side, GitHub Pages (which only serves static
-files) is all you need — no server or database required.
+The app's code itself is entirely static files, so GitHub Pages (which only
+serves static files) is all you need to host it — no server of your own
+required. (Firebase, mentioned below, is what handles your account and
+data — GitHub Pages just serves the app that talks to it.)
 
 ## Installing it as a mobile app
 
@@ -173,19 +184,37 @@ opens full-screen with its own icon, like a real app:
   Home Screen** or **Install app** (Chrome sometimes offers this
   automatically via a small install banner).
 
-It also works fully offline after the first visit — since all your data is
-already local to the browser, the app itself has nothing to fetch from the
-network once it's loaded, so a service worker (`sw.js`) caches the handful
-of small files it needs (this page, the icons) so it opens instantly with no
-signal at all. Whenever you're back online, it quietly checks for anything
-newer you've pushed to GitHub and updates in the background.
+It also works fully offline after the first visit — a service worker
+(`sw.js`) caches the handful of small files the app itself needs (this
+page, the icons), and your data has its own local cache (see below), so
+the whole thing opens instantly and stays usable with no signal at all.
+Whenever you're back online, it quietly checks for anything newer you've
+pushed to GitHub and updates in the background, and syncs up any changes
+you made offline.
 
 ## Notes on the data model
 
-Everything lives in one `localStorage` key as JSON: your categories,
-expenses, recurring templates, and settings. There's no tracking, no
-analytics, and nothing ever leaves your browser except when you explicitly
-export a file.
+Your data lives in two places at once, kept in sync automatically:
+
+- **Your account, in the cloud.** Signing in creates an account through
+  [Firebase](https://console.firebase.google.com) (Google's app-backend
+  service) — specifically Firebase Authentication (for the email/password
+  login itself) and Firestore (a database) for the data. Everything you
+  enter — categories, expenses, income, recurring templates, savings
+  goals, settings — is saved as one document tied to your account, a
+  couple seconds after each change. That's what makes it show up on every
+  device you sign into.
+- **A local cache, in the browser.** The app also keeps a copy in
+  `localStorage` on whatever device you're using, so it keeps working
+  (and stays fast) even with no signal — anything you do offline quietly
+  syncs up to your account the next time you're back online.
+
+There's no tracking, no analytics, and no ad network involved. Nobody but
+you can see your data — it's private to your account, governed by the
+Firestore security rules on the project, not by the data being hidden
+somewhere. (If you're the one who originally set up the Firebase project,
+you could technically view the raw data for your own account by logging
+into the Firebase console — but there's no way for anyone else to.)
 
 ## About bank account linking
 
