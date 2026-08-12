@@ -501,6 +501,12 @@
     </div>
 
     <div class="card">
+      <h2>Paycheck summary <span class="muted">for the month selected above</span></h2>
+      <p class="hint" style="margin-top:0;">Click any row to see exactly which bills are assigned to that paycheck.</p>
+      <div id="paycheckSummaryWrap" class="table-scroll"></div>
+    </div>
+
+    <div class="card">
       <h2>Last 6 months</h2>
       <div id="trendChart"></div>
     </div>
@@ -890,6 +896,17 @@
     <div id="categoryDrillWrap" class="table-scroll"></div>
     <div class="dialog-actions">
       <button type="button" class="secondary" id="categoryDrillClose">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="paycheckDrillDialog" class="wide-dialog">
+  <div class="dialog-body">
+    <h3 id="paycheckDrillTitle">Paycheck breakdown</h3>
+    <p class="hint" id="paycheckDrillSummary" style="margin-top:0;"></p>
+    <div id="paycheckDrillWrap" class="table-scroll"></div>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="paycheckDrillClose">Close</button>
     </div>
   </div>
 </dialog>
@@ -3311,6 +3328,80 @@
     document.getElementById("categoryDrillDialog").close();
   });
 
+  // Condensed, per-paycheck view of the same month shown above: just payday,
+  // income, what's assigned against it, and what's left -- click a row for
+  // the full list of bills behind that total. Complements (doesn't replace)
+  // the fully-detailed paycheck cards on the Paychecks tab.
+  function renderPaycheckSummaryCard(monthKey) {
+    var wrap = document.getElementById("paycheckSummaryWrap");
+    var rows = state.income.filter(function(inc) { return monthKeyOf(inc.date) === monthKey; })
+                            .sort(function(a,b) { return a.date.localeCompare(b.date); });
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No paychecks logged for ' + monthLabel(monthKey) + ' yet.</div>';
+      return;
+    }
+    var totalIncome = 0, totalAssigned = 0;
+    var body = rows.map(function(inc) {
+      var assigned = state.expenses.filter(function(e) { return e.paycheckId === inc.id; })
+                                    .reduce(function(s,e){ return s + e.amount; }, 0);
+      var leftover = inc.amount - assigned;
+      totalIncome += inc.amount;
+      totalAssigned += assigned;
+      return '<tr class="cal-clickable" data-paycheck-drill="' + inc.id + '" tabindex="0" title="Click to see the bills assigned to this paycheck">' +
+        '<td>' + escapeHtml(inc.date) + '</td>' +
+        '<td>' + escapeHtml(inc.source) + '</td>' +
+        '<td class="num">' + fmtMoney(inc.amount) + '</td>' +
+        '<td class="num">' + fmtMoney(assigned) + '</td>' +
+        '<td class="num ' + (leftover < 0 ? "variance-over" : "variance-under") + '">' + fmtMoney(leftover) + '</td>' +
+      '</tr>';
+    }).join("");
+    var totalLeftover = totalIncome - totalAssigned;
+    var footer = '<tfoot><tr><td colspan="2"><strong>Total</strong></td>' +
+      '<td class="num"><strong>' + fmtMoney(totalIncome) + '</strong></td>' +
+      '<td class="num"><strong>' + fmtMoney(totalAssigned) + '</strong></td>' +
+      '<td class="num ' + (totalLeftover < 0 ? "variance-over" : "variance-under") + '"><strong>' + fmtMoney(totalLeftover) + '</strong></td></tr></tfoot>';
+    wrap.innerHTML = '<table class="summary-table"><thead><tr><th>Payday</th><th>Source</th><th class="num">Income</th><th class="num">Assigned</th><th class="num">Leftover</th></tr></thead><tbody>' +
+      body + '</tbody>' + footer + '</table>';
+    wrap.querySelectorAll("[data-paycheck-drill]").forEach(function(row) {
+      row.addEventListener("click", function() { openPaycheckDrillDialog(row.dataset.paycheckDrill); });
+      row.addEventListener("keydown", function(e) { if (e.key === "Enter") row.click(); });
+    });
+  }
+
+  function openPaycheckDrillDialog(incomeId) {
+    var inc = state.income.find(function(x){ return x.id === incomeId; });
+    if (!inc) return;
+    var rows = state.expenses.filter(function(e) { return e.paycheckId === incomeId; })
+                              .sort(function(a,b) { return a.date.localeCompare(b.date); });
+    document.getElementById("paycheckDrillTitle").textContent = inc.source + " — " + inc.date;
+    var assignedTotal = rows.reduce(function(s,e){ return s + e.amount; }, 0);
+    var leftover = inc.amount - assignedTotal;
+    document.getElementById("paycheckDrillSummary").textContent =
+      "Income " + fmtMoney(inc.amount) + " · " + rows.length + " bill" + (rows.length === 1 ? "" : "s") +
+      " assigned totaling " + fmtMoney(assignedTotal) + " · Leftover " + fmtMoney(leftover) + ".";
+    var wrap = document.getElementById("paycheckDrillWrap");
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No bills assigned to this paycheck.</div>';
+    } else {
+      var body = rows.map(function(e) {
+        var cat = categoryById(e.categoryId);
+        var color = cat ? categoryColorHex(e.categoryId) : "#a6a49c";
+        var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
+        return '<tr>' +
+          '<td>' + escapeHtml(e.date) + '</td>' +
+          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(cat ? cat.name : "(deleted)") + '</span></td>' +
+          '<td>' + escapeHtml(e.note || "") + splitTag + '</td>' +
+          '<td class="num">' + fmtMoney(e.amount) + '</td>' +
+        '</tr>';
+      }).join("");
+      wrap.innerHTML = '<table><thead><tr><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th></tr></thead><tbody>' + body + '</tbody></table>';
+    }
+    document.getElementById("paycheckDrillDialog").showModal();
+  }
+  document.getElementById("paycheckDrillClose").addEventListener("click", function() {
+    document.getElementById("paycheckDrillDialog").close();
+  });
+
   var dashMonthPicker = document.getElementById("dashMonthPicker");
   dashMonthPicker.addEventListener("change", renderDashboard);
 
@@ -3324,6 +3415,7 @@
     var totals = totalsForMonth(monthKey);
     renderCategoryChart(monthKey, totals);
     renderBudgetVsActualTable(monthKey, totals);
+    renderPaycheckSummaryCard(monthKey);
     renderTrendChart();
   }
 

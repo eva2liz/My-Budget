@@ -32,6 +32,10 @@ Your data is saved locally on whatever device/browser you open it in
   Click any row to open a breakdown of every transaction that makes up that
   total, with date, note, amount, and which paycheck (or "Unassigned") it
   belongs to
+- Paycheck summary on the dashboard — a quick-glance totals table for the
+  same month: payday, income, what's assigned against it, and what's left
+  over, per paycheck. Click a row to drill into exactly which bills make up
+  that "assigned" total
 - Savings goals — set aside money for something specific (an emergency
   fund, a trip, a car), separate from bills and budgets. Give it a name,
   target amount, and starting balance; log **Add money** each time you set
