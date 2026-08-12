@@ -330,12 +330,18 @@
 
   .empty-state { color: var(--text-muted); font-size: 14px; padding: 20px 0; text-align: center; }
 
-  .budget-row { margin-bottom: 14px; }
+  .budget-row { margin-bottom: 14px; border-top: 2px solid transparent; border-bottom: 2px solid transparent; padding: 2px 4px; border-radius: 8px; touch-action: pan-y; }
   .budget-row:last-child { margin-bottom: 0; }
+  .budget-row.dragging { position: relative; z-index: 20; opacity: 0.85; background: var(--surface-1); box-shadow: 0 6px 18px rgba(0,0,0,0.18); cursor: grabbing; }
+  .budget-row.drop-target-above { border-top-color: var(--series-1); }
+  .budget-row.drop-target-below { border-bottom-color: var(--series-1); }
   .budget-row-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
   .budget-row-top .cat-name { display: flex; align-items: center; color: var(--text-primary); font-weight: 500; }
   .budget-row-top .amounts { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
   .budget-row-top .amounts .over { color: var(--critical); font-weight: 600; }
+  .cat-drag-handle { display: inline-flex; align-items: center; margin-right: 6px; color: var(--text-muted); cursor: grab; touch-action: none; }
+  .cat-drag-handle:hover { color: var(--text-secondary); }
+  .cat-drag-handle:active { cursor: grabbing; }
   .track { position: relative; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
   .fill { position: absolute; top:0; left:0; height: 100%; border-radius: 4px 0 0 4px; }
   .fill.overflow { border-radius: 4px; }
@@ -491,7 +497,7 @@
         <h2>Spending by category <span class="muted" id="dashMonthLabel"></span></h2>
         <input type="month" id="dashMonthPicker" aria-label="Month to view">
       </div>
-      <p class="hint" style="margin-top:0;">For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other.</p>
+      <p class="hint" style="margin-top:0;">For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. Drag the handle on the left of any row to reorder your categories -- the new order applies everywhere (this list, Budget vs. actual, Categories &amp; Budgets, and dropdowns).</p>
       <div id="categoryChart"></div>
     </div>
 
@@ -3196,9 +3202,15 @@
         : Math.min(100, (spent / maxUnbudgetedSpend) * 100);
       var fillClass = "fill" + (fillWidth >= 100 ? " overflow" : "");
 
-      return '<div class="budget-row">' +
+      var handle = cats.length > 1
+        ? '<span class="cat-drag-handle" data-drag-handle="' + c.id + '" title="Drag to reorder" aria-hidden="true">' +
+            '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.5"></circle><circle cx="7.5" cy="2.5" r="1.5"></circle><circle cx="2.5" cy="8" r="1.5"></circle><circle cx="7.5" cy="8" r="1.5"></circle><circle cx="2.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle></svg>' +
+          '</span>'
+        : '';
+
+      return '<div class="budget-row" data-cat-id="' + c.id + '">' +
         '<div class="budget-row-top">' +
-          '<span class="cat-name"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
+          '<span class="cat-name">' + handle + '<span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
           amountsHtml +
         '</div>' +
         '<div class="track" title="' + escapeHtml(c.name) + ': ' + fmtMoney(spent) + (budget ? ' of ' + fmtMoney(budget) + ' budget (' + Math.round((spent/budget)*100) + '%)' : ' (no budget set)') + '">' +
@@ -3208,6 +3220,93 @@
     }).join("");
 
     el.innerHTML = rows;
+    enableCategoryDragReorder(el);
+  }
+
+  // Re-threads just the currently-visible (dragged) categories into their new
+  // relative order while leaving any category not shown in this month's
+  // chart exactly where it already was in the full list -- so reordering a
+  // filtered view never silently reshuffles categories you can't even see.
+  function reorderCategoriesByVisibleOrder(newVisibleOrderIds) {
+    var visibleSet = {};
+    newVisibleOrderIds.forEach(function(id) { visibleSet[id] = true; });
+    var queue = newVisibleOrderIds.slice();
+    state.categories = state.categories.map(function(c) {
+      if (visibleSet[c.id]) return categoryById(queue.shift());
+      return c;
+    });
+  }
+
+  // Drag-to-reorder for the "Spending by category" rows, via each row's grip
+  // handle. Built on Pointer Events (not the HTML5 drag-and-drop API) so the
+  // same code works with mouse, touch, and pen. Only the dragged row actually
+  // moves (following the pointer); everything else just gets a thin
+  // highlighted edge showing where it'll land, and the real reorder commits
+  // (and the whole chart re-renders) on release.
+  function enableCategoryDragReorder(container) {
+    var draggingEl = null, otherRows = [], rowRects = [], targetIndex = -1, startY = 0;
+
+    function clearDropIndicators() {
+      otherRows.forEach(function(r) { r.classList.remove("drop-target-above", "drop-target-below"); });
+    }
+
+    function onPointerMove(e) {
+      if (!draggingEl) return;
+      draggingEl.style.transform = "translateY(" + (e.clientY - startY) + "px)";
+
+      var pointerY = e.clientY;
+      var newTargetIndex = otherRows.length;
+      for (var i = 0; i < rowRects.length; i++) {
+        if (pointerY < rowRects[i].top + rowRects[i].height / 2) { newTargetIndex = i; break; }
+      }
+      if (newTargetIndex !== targetIndex) {
+        targetIndex = newTargetIndex;
+        clearDropIndicators();
+        if (targetIndex < otherRows.length) otherRows[targetIndex].classList.add("drop-target-above");
+        else if (otherRows.length > 0) otherRows[otherRows.length - 1].classList.add("drop-target-below");
+      }
+    }
+
+    function onPointerUp() {
+      if (!draggingEl) return;
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+      clearDropIndicators();
+      draggingEl.classList.remove("dragging");
+      draggingEl.style.transform = "";
+
+      var newOrderIds = otherRows.map(function(r) { return r.dataset.catId; });
+      newOrderIds.splice(targetIndex, 0, draggingEl.dataset.catId);
+      reorderCategoriesByVisibleOrder(newOrderIds);
+      saveState();
+      renderDashboard();
+      renderCategories();
+      populateCategorySelects();
+      draggingEl = null;
+    }
+
+    container.querySelectorAll("[data-drag-handle]").forEach(function(handle) {
+      handle.addEventListener("pointerdown", function(e) {
+        var row = handle.closest(".budget-row");
+        if (!row) return;
+        var rows = Array.from(container.querySelectorAll(".budget-row[data-cat-id]"));
+        if (rows.length < 2) return;
+
+        draggingEl = row;
+        otherRows = rows.filter(function(r) { return r !== row; });
+        rowRects = otherRows.map(function(r) { return r.getBoundingClientRect(); });
+        var draggedRect = row.getBoundingClientRect();
+        startY = e.clientY;
+
+        targetIndex = 0;
+        for (var i = 0; i < rowRects.length; i++) { if (rowRects[i].top < draggedRect.top) targetIndex++; }
+
+        row.classList.add("dragging");
+        try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+        document.addEventListener("pointermove", onPointerMove);
+        document.addEventListener("pointerup", onPointerUp);
+      });
+    });
   }
 
   function renderTrendChart() {

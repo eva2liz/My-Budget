@@ -21,7 +21,10 @@ for exactly how that works.
   their own chart color automatically; pick your own color for any
   category at any time with the color swatch on its form under
   **Categories & Budgets** — it shows up everywhere that category does
-  (charts, the calendar, expense lists, and more)
+  (charts, the calendar, expense lists, and more). Drag the handle on any
+  row of the dashboard's "Spending by category" list to reorder your
+  categories — the new order applies everywhere (this list, Budget vs.
+  actual, Categories & Budgets, and every category dropdown)
 - Recurring expenses (rent, subscriptions, etc.) that auto-log once a month
 - Recurring income can be **monthly** (same day every month, like a fixed
   salary date) or **every 2 weeks** (like a biweekly paycheck that lands
