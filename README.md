@@ -46,7 +46,8 @@ for exactly how that works.
   budgeted vs. actual vs. remaining vs. % used, per category and in total.
   Click any row to open a breakdown of every transaction that makes up that
   total, with date, note, amount, and which paycheck (or "Unassigned") it
-  belongs to
+  belongs to. Click any transaction's note in that breakdown to jump
+  straight to editing it
 - Paycheck summary on the dashboard — a quick-glance totals table for the
   same month: payday, income, what's assigned against it, and what's left
   over, per paycheck. Click a row to drill into exactly which bills make up

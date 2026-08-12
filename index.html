@@ -284,6 +284,9 @@
   tr.search-result-row { cursor: pointer; }
   tr.search-result-row:hover { background: var(--track); }
   tr.search-result-row:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
+  .drill-note-cell { cursor: pointer; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 2px; }
+  .drill-note-cell:hover { color: var(--series-1); text-decoration-color: var(--series-1); }
+  .drill-note-cell:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
   td.check-cell, th.check-cell { text-align: center; }
   input.row-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); vertical-align: middle; }
   .paid-strike { text-decoration: line-through; color: var(--text-muted); }
@@ -3511,12 +3514,20 @@
         var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
         return '<tr>' +
           '<td>' + escapeHtml(e.date) + '</td>' +
-          '<td>' + escapeHtml(e.note || "") + splitTag + '</td>' +
+          '<td class="drill-note-cell" data-drill-edit="' + e.id + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(e.note || "(no note)") + splitTag + '</td>' +
           '<td class="num">' + fmtMoney(e.amount) + '</td>' +
           '<td>' + pcLabel + '</td>' +
         '</tr>';
       }).join("");
       wrap.innerHTML = '<table><thead><tr><th>Date</th><th>Note</th><th class="num">Amount</th><th>Paycheck</th></tr></thead><tbody>' + body + '</tbody></table>';
+      wrap.querySelectorAll("[data-drill-edit]").forEach(function(cell) {
+        function openEdit() {
+          document.getElementById("categoryDrillDialog").close();
+          editExpense(cell.dataset.drillEdit);
+        }
+        cell.addEventListener("click", openEdit);
+        cell.addEventListener("keydown", function(e) { if (e.key === "Enter") openEdit(); });
+      });
     }
     document.getElementById("categoryDrillDialog").showModal();
   }
