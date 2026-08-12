@@ -213,6 +213,7 @@
     white-space: nowrap;
   }
   .cal-chip.expense-chip { color: var(--text-primary); background: var(--surface-1); border-left: 3px solid; }
+  .cal-paid-check { color: var(--critical); font-weight: 700; margin-right: 3px; }
   .cal-clickable { cursor: pointer; }
   .cal-clickable:hover { filter: brightness(0.94); }
   .cal-clickable:focus-visible { outline: 2px solid var(--series-1); outline-offset: 1px; }
@@ -635,7 +636,7 @@
       </div>
       <div id="calendarGrid"></div>
       <div class="legend" id="calendarLegend"></div>
-      <p class="hint">Every income entry — recurring payday or one-time — highlights the whole day in the color you picked for it. Recurring bills show as labeled tags in their category color on the day they're due. Click any income or bill to open and edit it. One-time expenses aren't shown here — see the Paychecks tab for those.</p>
+      <p class="hint">Every income entry — recurring payday or one-time — highlights the whole day in the color you picked for it. Recurring bills show as labeled tags in their category color on the day they're due, with a <span class="cal-paid-check" style="margin-right:0;">✓</span> once that occurrence is marked paid. Click any income or bill to open and edit it. One-time expenses aren't shown here — see the Paychecks tab for those.</p>
     </div>
   </section>
 
@@ -1618,6 +1619,7 @@
     renderPaycheckPlanner();
     renderBalances();
     renderCategories();
+    renderCalendar();
   });
 
   document.getElementById("expenseCancelEdit").addEventListener("click", resetExpenseForm);
@@ -1669,6 +1671,7 @@
       renderPaycheckPlanner();
       renderBalances();
       renderCategories();
+      renderCalendar();
       showToast("Expense deleted");
     });
   }
@@ -1783,6 +1786,7 @@
     saveState();
     renderExpenses();
     renderPaycheckPlanner();
+    renderCalendar();
   }
 
   function toggleExpenseCleared(id) {
@@ -2315,7 +2319,15 @@
       }
 
       var billChips = billItems.map(function(item) {
-        return '<div class="cal-chip expense-chip cal-clickable" data-kind="bill" data-recid="' + item.id + '" data-date="' + dateStr + '" style="border-left-color:' + escapeHtml(item.color) + '" title="' + escapeHtml(item.name) + ' due: ' + fmtMoney(item.amount) + ' — click to view/edit" tabindex="0" role="button">' + escapeHtml(item.name) + '</div>';
+        // A bill chip represents the recurring template's day-of-month, which
+        // repeats every month regardless of whether that specific occurrence
+        // has actually been logged and paid yet. Look up the real expense (if
+        // any) logged for this exact date to know whether to show the paid
+        // checkmark.
+        var loggedExpense = state.expenses.find(function(e) { return e.recurringId === item.id && e.date === dateStr; });
+        var paid = !!(loggedExpense && loggedExpense.paid);
+        var checkMark = paid ? '<span class="cal-paid-check" aria-hidden="true">✓</span>' : '';
+        return '<div class="cal-chip expense-chip cal-clickable' + (paid ? ' cal-chip-paid' : '') + '" data-kind="bill" data-recid="' + item.id + '" data-date="' + dateStr + '" style="border-left-color:' + escapeHtml(item.color) + '" title="' + escapeHtml(item.name) + ' due: ' + fmtMoney(item.amount) + (paid ? " — paid" : "") + ' — click to view/edit" tabindex="0" role="button">' + checkMark + escapeHtml(item.name) + '</div>';
       }).join("");
 
       html += '<div class="cal-day' + (isToday ? ' today' : '') + (incomeItems.length ? ' has-income' : '') + '"' + cellStyleAttr + '>' +

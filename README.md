@@ -47,10 +47,11 @@ Your data is saved locally on whatever device/browser you open it in
   month it's in or whether it's been assigned to a paycheck yet. Click a
   result to jump straight to editing it
 - Calendar view showing when recurring bills are due (as labeled tags in
-  their category color) and every income entry — recurring payday or
-  one-time — highlighted across the whole day in a color you choose
-  yourself, with a legend and month navigation — click any bill or income
-  entry to open and edit it
+  their category color, with a red checkmark once that occurrence is
+  marked paid) and every income entry — recurring payday or one-time —
+  highlighted across the whole day in a color you choose yourself, with a
+  legend and month navigation — click any bill or income entry to open and
+  edit it
 - Filter/search your unassigned expense history by month or category
   (below the paycheck planner on the Paychecks tab)
 - Light/dark theme toggle
