@@ -59,22 +59,19 @@ Your data is saved locally on whatever device/browser you open it in
   what's still pending, and what's posted at the bank versus not yet
   settled
 - **Paychecks tab**: one place for income and one-time expenses/payments,
-  and for matching them up — add a paycheck or an expense at the top, see
-  it folded into the **paycheck planner** below (e.g. rent comes out of
-  the 7th's paycheck, groceries out of the 21st's), check bills off as
-  you pay them, and see exactly what's left over to spend from each
-  paycheck. The expense list further down shows only what's still
-  **unassigned** — the moment you assign one to a paycheck it moves up
-  into that paycheck's card (fully editable there: Edit, Split, Unassign,
-  Delete) and drops off the list below, so nothing is ever shown twice.
-  Income works the same way in reverse: whichever month the planner is
-  showing appears as full paycheck cards (with their own Cleared, Edit, and
-  Delete right on the card) — the **Other income** list further down only
-  shows paychecks logged ahead of time for months *after* whichever one's
-  open above. The moment you move the planner on to a new month, whatever
-  came before drops off that list for good instead of resurfacing every
-  time you check a later month — it's still there in full on the Calendar
-  tab and in your exports
+  and for matching them up. Add a paycheck and its **unassigned income**
+  list sits right below that same card; add an expense and its
+  **unassigned expenses** list sits right below that one — both update the
+  instant you add something, no scrolling required. The moment you assign
+  an expense to a paycheck (in the **paycheck planner** further down —
+  e.g. rent comes out of the 7th's paycheck, groceries out of the 21st's),
+  it moves up into that paycheck's card there (fully editable: Edit,
+  Split, Unassign, Delete) and drops off the unassigned list, so nothing's
+  ever shown twice. Income works the same way in reverse — a paycheck
+  disappears from the unassigned-income list the moment at least one bill
+  is assigned to it, no matter what month the planner is currently
+  showing. Either way, everything is still fully there on the Calendar tab
+  and in your exports
   - Recurring bills that haven't come due yet still show up here as
     "pending" options you can assign ahead of time, with a **Log now**
     button to record them early if you want them off your plate

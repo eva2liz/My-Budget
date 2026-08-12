@@ -680,6 +680,10 @@
         <button type="button" class="secondary" id="incomeCancelEdit" style="display:none;">Cancel</button>
       </form>
       <p class="hint">Every income entry shows on the Calendar tab on its date, in the color you pick here, and becomes a paycheck you can assign bills against below. For a paycheck that repeats every month, set it up once on the Recurring tab instead — it'll preview here automatically before its day even arrives.</p>
+
+      <h3 style="margin:20px 0 4px 0; font-size:14px;">Unassigned income <span class="muted" id="incomeCount"></span></h3>
+      <p class="hint" style="margin-top:0;">Income with no bills assigned to it yet, right here as soon as you add it. The moment you assign a bill to it in the planner below, it drops off this list — it's still fully there on the Calendar tab and in your exports.</p>
+      <div id="incomeTableWrap" class="table-scroll"></div>
     </div>
 
     <div class="card">
@@ -723,26 +727,9 @@
         <button type="button" class="secondary" id="expenseCancelEdit" style="display:none;">Cancel</button>
       </form>
       <p class="hint">For bills that repeat every month, use the Recurring tab instead — this is for one-off purchases and payments. Picking a loan or credit card category here reveals a Charge/Payment field that keeps its balance on the Balances tab up to date.</p>
-    </div>
 
-    <div class="card">
-      <div class="card-header-row">
-        <h2>Paycheck planner <span class="muted">assign bills to the paycheck that covers them</span></h2>
-        <input type="month" id="paycheckMonthPicker" aria-label="Month to view">
-      </div>
-      <p class="hint" style="margin-top:0;">For each paycheck below, assign the bills it needs to cover, check them off as you pay them, and see what's left over to spend. Paying more (or less) than the usual amount this time? Use <strong>Edit</strong> on that bill — for one not logged yet, use <strong>Log &amp; edit amount</strong> to log it and adjust before it's due; either way, it only changes that one occurrence, not the recurring template's default. Paying one bill from two different paychecks? Use its <strong>Split</strong> button (here or in the list below) to divide it into two linked entries with the amount and paycheck you choose for each.</p>
-      <div id="paycheckPlannerWrap"></div>
-    </div>
-
-    <div class="card">
-      <h2>Other income <span class="muted" id="incomeCount"></span></h2>
-      <p class="hint" style="margin-top:0;">Whichever month the paycheck planner above is showing is fully editable right there (Cleared, Edit, Delete on each paycheck). This list only shows paychecks you've logged ahead for months after that one -- once you move the planner past a month, it drops off this list for good (still fully there on the Calendar tab and in your exports).</p>
-      <div id="incomeTableWrap" class="table-scroll"></div>
-    </div>
-
-    <div class="card">
-      <h2>Unassigned one-time expenses &amp; payments <span class="muted" id="expenseCount"></span></h2>
-      <p class="hint" style="margin-top:0;">Once you assign one to a paycheck above, it moves there and drops off this list — this is just what's still waiting to be assigned.</p>
+      <h3 style="margin:20px 0 4px 0; font-size:14px;">Unassigned one-time expenses &amp; payments <span class="muted" id="expenseCount"></span></h3>
+      <p class="hint" style="margin-top:0;">Right here as soon as you add it. Once you assign it to a paycheck in the planner below, it moves there and drops off this list — this is just what's still waiting.</p>
       <div class="inline-form" style="margin-bottom:12px;">
         <div class="field">
           <label for="filterMonth">Month</label>
@@ -755,6 +742,15 @@
         <button type="button" class="secondary" id="clearFilters">Clear filters</button>
       </div>
       <div id="expenseTableWrap" class="table-scroll"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Paycheck planner <span class="muted">assign bills to the paycheck that covers them</span></h2>
+        <input type="month" id="paycheckMonthPicker" aria-label="Month to view">
+      </div>
+      <p class="hint" style="margin-top:0;">For each paycheck below, assign the bills it needs to cover, check them off as you pay them, and see what's left over to spend. Paying more (or less) than the usual amount this time? Use <strong>Edit</strong> on that bill — for one not logged yet, use <strong>Log &amp; edit amount</strong> to log it and adjust before it's due; either way, it only changes that one occurrence, not the recurring template's default. Paying one bill from two different paychecks? Use its <strong>Split</strong> button (here or in the list below) to divide it into two linked entries with the amount and paycheck you choose for each.</p>
+      <div id="paycheckPlannerWrap"></div>
     </div>
   </section>
 
@@ -1617,6 +1613,7 @@
     saveState();
     resetExpenseForm();
     renderExpenses();
+    renderIncome();
     renderDashboard();
     renderPaycheckPlanner();
     renderBalances();
@@ -1667,6 +1664,7 @@
       state.expenses = state.expenses.filter(function(x){ return x.id !== id; });
       saveState();
       renderExpenses();
+      renderIncome();
       renderDashboard();
       renderPaycheckPlanner();
       renderBalances();
@@ -1764,6 +1762,7 @@
       saveState();
       cleanup();
       renderExpenses();
+      renderIncome();
       renderDashboard();
       renderCalendar();
       renderPaycheckPlanner();
@@ -1946,28 +1945,23 @@
   }
 
   function renderIncome() {
-    // Whatever month the paycheck planner is currently showing is already
-    // fully editable up there as its own card (Cleared, Edit, Delete) --
-    // repeating those same entries down here would just be a second, less
-    // useful place to do the same thing. And once you've moved the planner
-    // on to a later month, whatever came before is done -- it shouldn't
-    // keep resurfacing here every time you check a new month. So this list
-    // is only income dated AFTER whichever month the planner above is
-    // showing (paychecks you've logged ahead of time); anything at or
-    // before that month, past or present, is considered handled and won't
-    // show here again -- it's still fully there on the Calendar tab and in
-    // your exports, just not cluttering this list.
-    var plannerMonthKey = (paycheckMonthPicker && paycheckMonthPicker.value) ? paycheckMonthPicker.value : currentMonthKey();
+    // This list intentionally shows only income with no bills assigned to
+    // it yet -- the moment even one expense is assigned to a paycheck, it's
+    // considered handled and drops off this list for good, no matter what
+    // month the planner above happens to be showing. (It's still fully
+    // there on the Calendar tab and in your exports.) This mirrors how the
+    // unassigned-expenses list below works, just from the income side.
     var totalCount = state.income.length;
-    var list = state.income.filter(function(inc) { return monthKeyOf(inc.date) > plannerMonthKey; })
-                            .sort(function(a,b){ return b.date.localeCompare(a.date); });
+    var list = state.income.filter(function(inc) {
+      return !state.expenses.some(function(e) { return e.paycheckId === inc.id; });
+    }).sort(function(a,b){ return b.date.localeCompare(a.date); });
     document.getElementById("incomeCount").textContent = "(" + list.length + ")";
 
     var wrap = document.getElementById("incomeTableWrap");
     if (list.length === 0) {
       wrap.innerHTML = '<div class="empty-state">' + (totalCount === 0
         ? "No income logged yet. Add your first entry above."
-        : "Nothing else to show -- past paychecks drop off this list once their month has passed (they're still on the Calendar tab and in your exports).") + '</div>';
+        : "Nothing unassigned right now — every paycheck has at least one bill assigned to it in the planner below.") + '</div>';
       return;
     }
     var html = '<table><thead><tr><th>Date</th><th>Source</th><th>Note</th><th class="num">Amount</th><th class="check-cell">Cleared</th><th></th></tr></thead><tbody>';
@@ -2402,6 +2396,7 @@
     state.expenses.push(newExpense);
     saveState();
     renderExpenses();
+    renderIncome();
     renderDashboard();
     renderCalendar();
     renderPaycheckPlanner();
@@ -2610,6 +2605,7 @@
         ex.paycheckId = null;
         saveState();
         renderExpenses();
+        renderIncome();
         renderPaycheckPlanner();
       });
     });
@@ -2671,6 +2667,7 @@
         }
         saveState();
         renderExpenses();
+        renderIncome();
         renderDashboard();
         renderCalendar();
         renderPaycheckPlanner();
