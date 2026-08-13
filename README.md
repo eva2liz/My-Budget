@@ -109,6 +109,13 @@ for exactly how that works.
     automatically, flagged with a red **✗** and a red-outlined field until
     you assign a real account and a paycheck to them — once you do, the
     flag clears itself
+  - A **Beginning balance** row is always pinned at the very top, in
+    italics, not linked to any category or paycheck — it's just an amount
+    (and, if you want, a date) you set once to match whatever your bank
+    account actually held before you started tracking here. Click its date
+    or its balance to edit either one directly; every balance below it
+    shifts to match, so the running balance is a true reflection of your
+    account instead of starting from zero
 - **Paychecks tab**: the **paycheck planner** — for each paycheck, assign
   the bills it needs to cover (right from the Check Register, or from the
   dropdown here), check them off as you pay them, and see what's left over

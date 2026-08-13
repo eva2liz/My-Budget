@@ -390,6 +390,15 @@
   .register-payee-cell:hover { color: var(--series-1); text-decoration: underline; text-decoration-color: var(--series-1); text-underline-offset: 2px; }
   .register-payee-cell:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
 
+  .register-table tr.register-opening-row td { background: rgba(70, 120, 220, 0.08); border-bottom: 1px solid var(--border); }
+  .register-opening-label { color: var(--text-muted); font-style: italic; }
+  .register-opening-amount {
+    width: 100%; box-sizing: border-box; text-align: right; font-family: inherit; font-size: 13px;
+    border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-primary);
+    padding: 4px 4px;
+  }
+  .register-opening-amount:hover, .register-opening-amount:focus { border-color: var(--series-1); background: var(--surface-1); outline: none; }
+
   .register-new-row td { border-bottom: none !important; }
   .register-new-row.register-txn-main td { background: rgba(27, 175, 122, 0.06); padding-top: 8px; }
   .register-new-row.register-txn-detail td { background: rgba(27, 175, 122, 0.06); border-bottom: 1px solid var(--border) !important; }
@@ -899,7 +908,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — pick an account (category) and, for expenses, which paycheck it counts against. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form.</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — pick an account (category) and, for expenses, which paycheck it counts against. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match.</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1215,7 +1224,7 @@
       recurring: [],
       recurringIncome: [],
       savingsGoals: [],
-      settings: { currency: "$", theme: "auto" },
+      settings: { currency: "$", theme: "auto", openingBalance: 0, openingBalanceDate: null },
       lastRecurringRun: null,
       lastRecurringIncomeRun: null
     };
@@ -1999,10 +2008,12 @@
   // ---------- CHECK REGISTER ----------
 
   // Merges expenses and income into one chronological ledger (oldest first,
-  // like a paper check register) and threads a running balance through it.
-  // Balance is always computed from the FULL history before any filtering,
-  // so the numbers stay meaningful even when the table below is narrowed to
-  // one month or category.
+  // like a paper check register) and threads a running balance through it,
+  // starting from the user's "beginning balance" (settings.openingBalance)
+  // rather than zero, so the running total matches their real bank balance
+  // even though it isn't tied to any category or paycheck. Balance is always
+  // computed from the FULL history before any filtering, so the numbers stay
+  // meaningful even when the table below is narrowed to one month or category.
   function buildRegisterRows() {
     var rows = [];
     state.expenses.forEach(function(e) {
@@ -2025,7 +2036,7 @@
       if (c !== 0) return c;
       return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
     });
-    var running = 0;
+    var running = Number(state.settings.openingBalance) || 0;
     rows.forEach(function(r) { running += r.amount; r.balance = running; });
     return rows;
   }
@@ -2194,6 +2205,25 @@
         '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
+    // A pinned "beginning balance" row -- always the very first row, not part
+    // of the sortable/filterable transaction list, and not linked to any
+    // category or paycheck. It's just an offset the running balance starts
+    // from, so the balance column can match a real bank account instead of
+    // starting from zero.
+    var openingBalanceVal = Number(state.settings.openingBalance) || 0;
+    var openingDateVal = state.settings.openingBalanceDate || "";
+    var openingRowHtml =
+      '<tr class="register-txn-main register-opening-row">' +
+        '<td class="reg-col-flag"></td>' +
+        '<td class="reg-col-date"><input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '"></td>' +
+        '<td class="register-opening-label" title="Not tied to any category or paycheck — just offsets the running balance to match your real starting balance">Beginning balance</td>' +
+        '<td class="num reg-col-payment"></td>' +
+        '<td class="reg-col-clr"></td>' +
+        '<td class="reg-col-paid"></td>' +
+        '<td class="num reg-col-deposit"></td>' +
+        '<td class="num reg-col-balance"><input type="number" class="register-opening-amount" id="regOpeningAmount" step="0.01" value="' + openingBalanceVal + '"></td>' +
+      '</tr>';
+
     var headHtml = '<thead><tr>' +
       '<th class="reg-col-flag"></th>' +
       '<th class="reg-col-date reg-sortable" data-sort-key="date">Date' + sortArrowHtml("date") + '</th>' +
@@ -2206,12 +2236,32 @@
       '</tr></thead>';
 
     if (allRows.length === 0) {
-      wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
+      wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + openingRowHtml + newRowHtml + '</tbody></table>';
     } else if (rows.length === 0) {
       wrap.innerHTML = '<div class="empty-state">Nothing matches the current filters.</div>' +
-        '<table class="register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
+        '<table class="register-table">' + headHtml + '<tbody>' + openingRowHtml + newRowHtml + '</tbody></table>';
     } else {
-      wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + bodyHtml + newRowHtml + '</tbody></table>';
+      wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + openingRowHtml + bodyHtml + newRowHtml + '</tbody></table>';
+    }
+
+    var openingDateEl = document.getElementById("regOpeningDate");
+    if (openingDateEl) {
+      openingDateEl.addEventListener("change", function() {
+        state.settings.openingBalanceDate = openingDateEl.value || null;
+        saveState();
+        refreshAfterRegisterChange();
+        showToast("Beginning balance date updated");
+      });
+    }
+    var openingAmountEl = document.getElementById("regOpeningAmount");
+    if (openingAmountEl) {
+      openingAmountEl.addEventListener("change", function() {
+        var v = parseFloat(openingAmountEl.value);
+        state.settings.openingBalance = isNaN(v) ? 0 : v;
+        saveState();
+        refreshAfterRegisterChange();
+        showToast("Beginning balance updated");
+      });
     }
 
     wrap.querySelectorAll("[data-sort-key]").forEach(function(th) {
