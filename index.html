@@ -1702,15 +1702,22 @@
     return short + " · " + inc.source + " · " + fmtMoney(inc.amount);
   }
 
+  // Only income logged from a Recurring Income template is a real "paycheck"
+  // you can plan bills against -- a one-off deposit (a gift, a refund,
+  // freelance work that isn't a fixed payday) doesn't recur, so there's
+  // nothing to divide it into ahead of time. Always keeps whatever is
+  // already selected in the list too, even if it's a one-off, so opening a
+  // form never silently wipes out an existing assignment.
+  function paycheckCandidates(selectedId) {
+    return state.income.filter(function(inc) { return !!inc.recurringId || inc.id === selectedId; })
+                        .sort(function(a, b) { return b.date.localeCompare(a.date); });
+  }
+
   function populatePaycheckSelect() {
-    var sorted = state.income.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
-    var optionsHtml = '<option value="">None</option>' + sorted.map(function(inc) {
-      return '<option value="' + inc.id + '">' + escapeHtml(paycheckLabel(inc)) + '</option>';
-    }).join("");
     ["expPaycheck", "recPaycheck"].forEach(function(id) {
       var sel = document.getElementById(id);
       var prev = sel.value;
-      sel.innerHTML = optionsHtml;
+      sel.innerHTML = paycheckOptionsFor(prev || null);
       if (prev) sel.value = prev;
     });
   }
@@ -1876,7 +1883,7 @@
   // treats them specially, so all existing totals/reports just add up the
   // two rows like any other expenses.
   function fillSplitPaycheckSelect(selectEl, selectedId) {
-    var sorted = state.income.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+    var sorted = paycheckCandidates(selectedId);
     selectEl.innerHTML = '<option value="">None (leave unassigned)</option>' + sorted.map(function(inc) {
       return '<option value="' + inc.id + '">' + escapeHtml(paycheckLabel(inc)) + '</option>';
     }).join("");
@@ -2068,7 +2075,7 @@
   }
 
   function paycheckOptionsFor(selectedId) {
-    var opts = state.income.slice().sort(function(a, b) { return b.date.localeCompare(a.date); });
+    var opts = paycheckCandidates(selectedId);
     return '<option value=""' + (selectedId ? '' : ' selected') + '>None</option>' + opts.map(function(inc) {
       return '<option value="' + inc.id + '"' + (inc.id === selectedId ? ' selected' : '') + '>' + escapeHtml(paycheckLabel(inc)) + '</option>';
     }).join("");
@@ -2967,8 +2974,16 @@
     var nextMonthKey = monthKeyOffset(monthKey, 1);
     var wrap = document.getElementById("paycheckPlannerWrap");
 
-    var incomes = state.income.filter(function(inc) { return monthKeyOf(inc.date) === monthKey; })
-                               .sort(function(a,b) { return a.date.localeCompare(b.date); });
+    // Only income logged from a Recurring Income template shows up as a
+    // "paycheck" block here -- a one-off deposit doesn't recur, so there's
+    // nothing to plan bills against ahead of time. Still shown if it already
+    // has bills assigned to it from before this behavior existed, so nothing
+    // already planned quietly disappears.
+    var incomes = state.income.filter(function(inc) {
+      if (monthKeyOf(inc.date) !== monthKey) return false;
+      if (inc.recurringId) return true;
+      return state.expenses.some(function(e) { return e.paycheckId === inc.id; });
+    }).sort(function(a,b) { return a.date.localeCompare(b.date); });
 
     // Recurring paychecks that haven't been logged yet this month — same idea
     // as pending bills below, so a biweekly or monthly payday previews here
@@ -4031,8 +4046,13 @@
   // the fully-detailed paycheck cards on the Paychecks tab.
   function renderPaycheckSummaryCard(monthKey) {
     var wrap = document.getElementById("paycheckSummaryWrap");
-    var rows = state.income.filter(function(inc) { return monthKeyOf(inc.date) === monthKey; })
-                            .sort(function(a,b) { return a.date.localeCompare(b.date); });
+    // Same rule as the planner: only recurring paychecks (or a one-off that
+    // already has bills assigned to it from before this existed) show up.
+    var rows = state.income.filter(function(inc) {
+      if (monthKeyOf(inc.date) !== monthKey) return false;
+      if (inc.recurringId) return true;
+      return state.expenses.some(function(e) { return e.paycheckId === inc.id; });
+    }).sort(function(a,b) { return a.date.localeCompare(b.date); });
     if (rows.length === 0) {
       wrap.innerHTML = '<div class="empty-state">No paychecks logged for ' + monthLabel(monthKey) + ' yet.</div>';
       return;

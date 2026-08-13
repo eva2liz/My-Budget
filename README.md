@@ -129,6 +129,15 @@ for exactly how that works.
   Register's blank row is everyday spending by definition and never gets
   a Paycheck field at all — one less thing to fill in, and nothing to be
   flagged for skipping
+- **Only recurring income counts as a "paycheck" too.** The same logic
+  applies on the income side — a "paycheck" is something you plan bills
+  against ahead of time, which only makes sense for income that actually
+  recurs (a salary or biweekly payday from the **Recurring** tab). A
+  one-off deposit typed into the Check Register (a gift, a tax refund,
+  a single freelance payment) still counts fully toward your income
+  totals and running balance, but it never shows up as a block in the
+  **Paychecks** tab or the Dashboard's Paycheck summary, and it's never
+  offered as a paycheck to assign a bill to
 - **Paychecks tab**: the **paycheck planner** — for each paycheck, assign
   the recurring bills it needs to cover (right from the Check Register, or
   from the dropdown here), check them off as you pay them, and see what's
