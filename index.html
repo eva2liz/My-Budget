@@ -874,7 +874,7 @@
             <label for="expNote">Note</label>
             <input type="text" id="expNote" placeholder="Optional">
           </div>
-          <div class="field">
+          <div class="field" id="expPaycheckField" style="display:none;">
             <label for="expPaycheck">Pay from paycheck</label>
             <select id="expPaycheck"><option value="">None</option></select>
           </div>
@@ -908,7 +908,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — pick an account (category) and, for expenses, which paycheck it counts against. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match.</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account (category). Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field only shows up for bills that came from the Recurring tab — everyday spending doesn't need one.</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1816,6 +1816,7 @@
     document.getElementById("expenseSubmitBtn").textContent = "Add expense";
     document.getElementById("expenseCancelEdit").style.display = "none";
     updateExpenseDebtTypeVisibility();
+    document.getElementById("expPaycheckField").style.display = "none";
     document.getElementById("registerEditPanel").style.display = "none";
   }
 
@@ -1832,6 +1833,12 @@
     document.getElementById("expNote").value = ex.note || "";
     populatePaycheckSelect();
     document.getElementById("expPaycheck").value = ex.paycheckId || "";
+    // Paycheck assignment only applies to bills generated from a Recurring
+    // template -- day-to-day expenses typed straight into the register never
+    // had a paycheck to begin with, so there's nothing to show here for them.
+    // Also show it for anything that already has a paycheckId (from before
+    // this behavior existed), so older assignments stay editable.
+    document.getElementById("expPaycheckField").style.display = (ex.recurringId || ex.paycheckId) ? "flex" : "none";
     document.getElementById("expPaid").checked = !!ex.paid;
     document.getElementById("expCleared").checked = !!ex.cleared;
     document.getElementById("expDebtType").value = ex.debtType || "charge";
@@ -2022,7 +2029,7 @@
         categoryId: e.categoryId, paycheckId: e.paycheckId || null,
         amount: -Math.abs(e.amount), paid: !!e.paid, cleared: !!e.cleared,
         imported: !!e.imported, categoryGuessed: !!e.categoryGuessed,
-        splitGroupId: e.splitGroupId || null
+        splitGroupId: e.splitGroupId || null, recurringId: e.recurringId || null
       });
     });
     state.income.forEach(function(inc) {
@@ -2041,9 +2048,13 @@
     return rows;
   }
 
+  // Imported bank transactions only need a real category assigned before
+  // they're "reviewed" -- paycheck assignment isn't part of this anymore,
+  // since only bills generated from a Recurring template are ever paycheck-
+  // trackable, and CSV imports never come in linked to a template.
   function registerRowFlagged(r) {
     if (r.kind !== "expense" || !r.imported) return false;
-    return r.categoryGuessed || !r.paycheckId;
+    return r.categoryGuessed;
   }
 
   function refreshAfterRegisterChange() {
@@ -2144,7 +2155,6 @@
     rows.forEach(function(r, idx) {
       var flagged = registerRowFlagged(r);
       var catFlagged = r.kind === "expense" && r.imported && r.categoryGuessed;
-      var pcFlagged = r.kind === "expense" && r.imported && !r.paycheckId;
       var stripe = idx % 2 === 1;
       var mainRowClass = "register-txn-main" + (flagged ? " register-row-flagged" : (stripe ? " register-stripe" : ""));
       var detailRowClass = "register-txn-detail" + (flagged ? " register-row-flagged" : (stripe ? " register-stripe" : ""));
@@ -2159,7 +2169,7 @@
         : '';
 
       bodyHtml += '<tr class="' + mainRowClass + '">' +
-        '<td class="reg-col-flag">' + (flagged ? '<span class="register-flag-x" title="Needs a category and/or a paycheck assigned">&#10007;</span>' : '') + '</td>' +
+        '<td class="reg-col-flag">' + (flagged ? '<span class="register-flag-x" title="Needs a real category assigned">&#10007;</span>' : '') + '</td>' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" data-reg-date="' + r.id + '" data-reg-kind="' + r.kind + '" value="' + r.date + '"></td>' +
         '<td class="register-payee-cell" data-drill-edit="' + r.id + '" data-drill-kind="' + r.kind + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(r.desc || "(no note)") + splitTag + flagTag + '</td>' +
         '<td class="num reg-col-payment">' + paymentCell + '</td>' +
@@ -2171,11 +2181,23 @@
 
       var detailInner;
       if (r.kind === "expense") {
+        // Paycheck assignment (and splitting across two paychecks) only
+        // applies to bills that came from a Recurring template -- day-to-day
+        // spending typed straight into the register never had a paycheck to
+        // begin with, so there's no field/button to show for it here. Also
+        // show it for anything that already has a paycheckId (from before
+        // this behavior existed), so older assignments stay visible/editable
+        // instead of just vanishing from view.
+        var pcTrackable = !!(r.recurringId || r.paycheckId);
+        var pcField = pcTrackable
+          ? '<span>Paycheck <select class="register-inline-select" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>'
+          : '';
+        var splitBtn = pcTrackable ? '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' : '';
         detailInner =
           '<span>Account <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + categoryOptionsFor(r.categoryId) + '</select></span>' +
-          '<span>Paycheck <select class="register-inline-select' + (pcFlagged ? ' register-flagged' : '') + '" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>' +
+          pcField +
           '<span class="reg-detail-actions">' +
-            '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' +
+            splitBtn +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="expense">Delete</button>' +
           '</span>';
       } else {
@@ -2201,7 +2223,6 @@
       '</tr>' +
       '<tr class="register-txn-detail register-new-row"><td class="reg-col-flag"></td><td colspan="7"><div class="register-detail-inline">' +
         '<span>Account <select id="regNewCategory">' + categoryOptionsFor(null) + '</select></span>' +
-        '<span>Paycheck <select id="regNewPaycheck">' + paycheckOptionsFor(null) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
@@ -2356,7 +2377,6 @@
       var cleared = document.getElementById("regNewCleared").checked;
       var paid = document.getElementById("regNewPaid").checked;
       var categoryId = document.getElementById("regNewCategory").value;
-      var paycheckId = document.getElementById("regNewPaycheck").value || null;
 
       var hasPayment = !isNaN(payment) && payment > 0;
       var hasDeposit = !isNaN(deposit) && deposit > 0;
@@ -2369,7 +2389,11 @@
         if (!categoryId) { showToast("Pick an account (category)"); return; }
         var cat = categoryById(categoryId);
         var debtType = cat && cat.debt ? "charge" : null;
-        state.expenses.push({ id: uid(), date: date, amount: payment, categoryId: categoryId, note: desc, paycheckId: paycheckId, paid: paid, cleared: cleared, debtType: debtType });
+        // No paycheckId here on purpose -- expenses typed straight into the
+        // register are never linked to a Recurring template, so they aren't
+        // paycheck-trackable. Assign a paycheck from the Recurring/Paychecks
+        // tabs instead, for bills that actually need to come out of one.
+        state.expenses.push({ id: uid(), date: date, amount: payment, categoryId: categoryId, note: desc, paycheckId: null, paid: paid, cleared: cleared, debtType: debtType });
         showToast("Expense added");
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
@@ -2964,7 +2988,10 @@
       return;
     }
 
-    var unassigned = state.expenses.filter(function(e) { return !e.paycheckId; })
+    // Only bills that came from a Recurring template are ever paycheck-
+    // trackable, so day-to-day Check Register spending never clutters this
+    // "choose a bill" list -- there's nothing to assign for it.
+    var unassigned = state.expenses.filter(function(e) { return !e.paycheckId && e.recurringId; })
                                     .sort(function(a,b) { return a.date.localeCompare(b.date); });
 
     // Recurring bills that haven't been logged yet for the current planner
@@ -3590,6 +3617,7 @@
         note: e.note || "",
         label: catName,
         paycheckId: e.paycheckId,
+        recurringId: e.recurringId || null,
         searchable: [e.date, e.note || "", catName, String(e.amount), fmtMoney(e.amount)].join(" ").toLowerCase()
       };
     });
@@ -3621,7 +3649,7 @@
 
     var body = shown.map(function(r) {
       var pcLabel = '<span class="muted">—</span>';
-      if (r.type === "expense") {
+      if (r.type === "expense" && r.recurringId) {
         var pc = r.paycheckId ? state.income.find(function(inc) { return inc.id === r.paycheckId; }) : null;
         pcLabel = pc ? escapeHtml(pc.source) : '<span class="muted">Unassigned</span>';
       }
@@ -3971,7 +3999,8 @@
     } else {
       var body = rows.map(function(e) {
         var pc = e.paycheckId ? state.income.find(function(inc){ return inc.id === e.paycheckId; }) : null;
-        var pcLabel = pc ? (escapeHtml(pc.source) + " · " + escapeHtml(pc.date)) : '<span class="muted">Unassigned</span>';
+        var pcLabel = pc ? (escapeHtml(pc.source) + " · " + escapeHtml(pc.date))
+          : (e.recurringId ? '<span class="muted">Unassigned</span>' : '<span class="muted">—</span>');
         var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
         return '<tr>' +
           '<td>' + escapeHtml(e.date) + '</td>' +

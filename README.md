@@ -91,13 +91,15 @@ for exactly how that works.
   the page never scrolls sideways, no matter how many transactions you have
   - **No separate "Add income"/"Add expense" cards** — type a new
     transaction straight into the blank line at the bottom: date, payee,
-    an amount in either **Payment** or **Deposit**, an **account**
-    (category), and, for a payment, which **paycheck** it counts against
+    an amount in either **Payment** or **Deposit**, and an **account**
+    (category). Everyday spending doesn't need a paycheck picked for it —
+    see **Paycheck assignment only applies to recurring bills** below
   - Every existing transaction's top line shows date, payee, payment or
     deposit, a **cleared** checkbox, a **paid** checkbox (expenses only —
     income doesn't have a "paid" state), and balance; the muted line right
-    underneath holds its account, paycheck, and Split/Delete — change any
-    of those right there, no extra clicks
+    underneath holds its account and Delete, plus, only for bills that
+    came from the Recurring tab, its paycheck and a Split button — change
+    any of those right there, no extra clicks
   - Click the **date** to correct it inline, or click the **payee** to open
     the full edit form (amount, paid status, and everything else) in a
     panel that appears above the register and tucks itself away again once
@@ -107,8 +109,7 @@ for exactly how that works.
     touching the running balance, which is always based on your full history
   - Bank transactions you import (see CSV import below) land here
     automatically, flagged with a red **✗** and a red-outlined field until
-    you assign a real account and a paycheck to them — once you do, the
-    flag clears itself
+    you assign a real account to them — once you do, the flag clears itself
   - A **Beginning balance** row is always pinned at the very top, in
     italics, not linked to any category or paycheck — it's just an amount
     (and, if you want, a date) you set once to match whatever your bank
@@ -116,10 +117,22 @@ for exactly how that works.
     or its balance to edit either one directly; every balance below it
     shifts to match, so the running balance is a true reflection of your
     account instead of starting from zero
+- **Paycheck assignment only applies to recurring bills.** The whole point
+  of assigning bills to paychecks is to know what not to spend so you're
+  not left short — that's only meaningful for the committed, recurring
+  payments (rent, utilities, subscriptions, debt), not for everyday
+  spending like food, gas, or shopping that's already tracked by category
+  in the Check Register. So a **Paycheck** field (and the **Split** button)
+  only ever shows up on a bill that came from the **Recurring** tab —
+  either auto-logged, logged early with **Log now**, or assigned straight
+  from the **Paychecks** tab. Anything you type directly into the Check
+  Register's blank row is everyday spending by definition and never gets
+  a Paycheck field at all — one less thing to fill in, and nothing to be
+  flagged for skipping
 - **Paychecks tab**: the **paycheck planner** — for each paycheck, assign
-  the bills it needs to cover (right from the Check Register, or from the
-  dropdown here), check them off as you pay them, and see what's left over
-  to spend
+  the recurring bills it needs to cover (right from the Check Register, or
+  from the dropdown here), check them off as you pay them, and see what's
+  left over to spend
   - Recurring bills that haven't come due yet still show up here as
     "pending" options you can assign ahead of time, with a **Log now**
     button to record them early if you want them off your plate
@@ -161,9 +174,9 @@ for exactly how that works.
   website; upload it under Settings and the app maps the columns
   automatically (with manual override if needed), splits deposits from
   charges, and skips duplicates on re-import. Imported expenses land in the
-  Check Register flagged for review until you assign a category and a
-  paycheck to each one. Nothing is uploaded anywhere — the file is only
-  read in your browser
+  Check Register flagged for review until you assign a real category to
+  each one. Nothing is uploaded anywhere — the file is only read in your
+  browser
 - Export everything (income + expenses) to CSV (opens directly in
   Excel/Google Sheets) or export a full JSON backup you can re-import later
   or on another device
