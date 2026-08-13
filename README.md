@@ -11,10 +11,10 @@ for exactly how that works.
 ## Features
 
 - Log one-time expenses and payments with a date, amount, category, and
-  note, right from the **Paychecks** tab — recurring bills live on their
-  own Recurring tab instead
+  note, right from the **Check Register** tab — recurring bills live on
+  their own Recurring tab instead
 - Log income with a date, amount, source (salary, freelance, etc.), and
-  note — also right from the **Paychecks** tab, alongside expenses,
+  note — also right from the **Check Register** tab, alongside expenses,
   since the two are so closely tied together
 - Set a monthly budget per category and see progress bars (with an "over
   budget" warning) on the dashboard. The first 8 categories you create get
@@ -69,27 +69,31 @@ for exactly how that works.
   highlighted across the whole day in a color you choose yourself, with a
   legend and month navigation — click any bill or income entry to open and
   edit it
-- Filter/search your unassigned expense history by month or category
-  (below the paycheck planner on the Paychecks tab)
+- Filter the Check Register by month or category to narrow what's shown
 - Light/dark theme toggle
 - **Paid** and **cleared** checkboxes on every expense (and a **cleared**
   checkbox on income) so you can track what you've actually paid versus
   what's still pending, and what's posted at the bank versus not yet
   settled
-- **Paychecks tab**: one place for income and one-time expenses/payments,
-  and for matching them up. Add a paycheck and its **unassigned income**
-  list sits right below that same card; add an expense and its
-  **unassigned expenses** list sits right below that one — both update the
-  instant you add something, no scrolling required. The moment you assign
-  an expense to a paycheck (in the **paycheck planner** further down —
-  e.g. rent comes out of the 7th's paycheck, groceries out of the 21st's),
-  it moves up into that paycheck's card there (fully editable: Edit,
-  Split, Unassign, Delete) and drops off the unassigned list, so nothing's
-  ever shown twice. Income works the same way in reverse — a paycheck
-  disappears from the unassigned-income list the moment at least one bill
-  is assigned to it, no matter what month the planner is currently
-  showing. Either way, everything is still fully there on the Calendar tab
-  and in your exports
+- **Check Register tab**: a running ledger of every transaction you've ever
+  logged, oldest to newest, with a **balance column** that adds up as you go
+  so you can reconcile against your bank statement — this is now where you
+  add income and one-time expenses (the forms sit right above it). Right in
+  the table you can pick a transaction's **category** and, for expenses,
+  which **paycheck** it should count against, without opening anything else;
+  click the **date** to correct it inline, or click the **description** to
+  open the full edit form (amount, paid status, and more). A **Paid** and a
+  **Cleared** checkbox sit on every expense row (income just gets Cleared),
+  and a Month/Category filter narrows what's shown without touching the
+  running balance, which is always based on your full history
+  - Bank transactions you import (see CSV import below) land here
+    automatically, flagged with a red **✗** and a red-outlined field until
+    you assign a real category and a paycheck to them — once you do, the
+    flag clears itself
+- **Paychecks tab**: the **paycheck planner** — for each paycheck, assign
+  the bills it needs to cover (right from the Check Register, or from the
+  dropdown here), check them off as you pay them, and see what's left over
+  to spend
   - Recurring bills that haven't come due yet still show up here as
     "pending" options you can assign ahead of time, with a **Log now**
     button to record them early if you want them off your plate
@@ -108,18 +112,18 @@ for exactly how that works.
     month's bills (e.g. September's rent) before that month even starts
   - Paying one bill from two different paychecks (e.g. half of rent from
     the 7th's check, half from the 21st's)? Use its **Split** button
-    (in the planner or in the list below it) to divide it into two linked
+    (in the planner or the Check Register) to divide it into two linked
     entries — same date, category, and note — with the amount and paycheck
     you choose for each; they always add back up to the original total
   - A recurring bill can have a **default paycheck** set on its template
     (in the Recurring tab) so it auto-assigns itself every time it's due
     — just note that this ties it to one specific paycheck entry, so
     you'll want to re-pick it once that particular paycheck has passed;
-    day-to-day, assigning bills from the Paychecks tab each pay period
-    is the simplest approach. (If that default paycheck has already
-    passed, the bill now logs as unassigned instead of silently sticking
-    to the old paycheck — so it always shows up as assignable in the
-    current month's dropdown rather than disappearing.)
+    day-to-day, assigning bills from the Check Register or planner each
+    pay period is the simplest approach. (If that default paycheck has
+    already passed, the bill now logs as unassigned instead of silently
+    sticking to the old paycheck — so it always shows up as assignable in
+    the current month's dropdown rather than disappearing.)
 - **Loan &amp; credit card balances**: mark any category as a loan or credit
   card (under Categories &amp; Budgets), enter what you currently owe and
   as of what date, then log expenses in that category as a **charge**
@@ -130,8 +134,10 @@ for exactly how that works.
   America, let you download recent transactions as a CSV from their
   website; upload it under Settings and the app maps the columns
   automatically (with manual override if needed), splits deposits from
-  charges, and skips duplicates on re-import. Nothing is uploaded anywhere
-  — the file is only read in your browser
+  charges, and skips duplicates on re-import. Imported expenses land in the
+  Check Register flagged for review until you assign a category and a
+  paycheck to each one. Nothing is uploaded anywhere — the file is only
+  read in your browser
 - Export everything (income + expenses) to CSV (opens directly in
   Excel/Google Sheets) or export a full JSON backup you can re-import later
   or on another device

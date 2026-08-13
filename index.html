@@ -291,6 +291,20 @@
   input.row-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); vertical-align: middle; }
   .paid-strike { text-decoration: line-through; color: var(--text-muted); }
 
+  .register-table { white-space: nowrap; }
+  .register-inline-select, .register-inline-date {
+    width: 100%; min-width: 90px; font-family: inherit; font-size: 13px;
+    padding: 6px 7px; border: 1px solid transparent; border-radius: 6px;
+    background: transparent; color: var(--text-primary);
+  }
+  .register-inline-select:hover, .register-inline-date:hover { border-color: var(--border); }
+  .register-inline-select:focus, .register-inline-date:focus { border-color: var(--series-1); background: var(--surface-1); outline: none; }
+  .register-inline-select.register-flagged {
+    border-color: var(--critical); background: rgba(208, 59, 59, 0.1); border-radius: 6px;
+  }
+  .register-row-flagged { background: rgba(208, 59, 59, 0.05); }
+  .register-flag-x { color: var(--critical); font-weight: 700; }
+
   .paycheck-block { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
   .paycheck-block:last-child { margin-bottom: 0; }
   .paycheck-block.pending { border-style: dashed; background: var(--surface-2, transparent); opacity: 0.85; }
@@ -490,6 +504,7 @@
 
 <nav class="tabs">
   <button data-panel="dashboard" class="active">Dashboard</button>
+  <button data-panel="register">Check Register</button>
   <button data-panel="calendar">Calendar</button>
   <button data-panel="recurring">Recurring</button>
   <button data-panel="paychecks">Paychecks</button>
@@ -661,6 +676,18 @@
   <!-- PAYCHECKS -->
   <section id="paychecks" class="panel">
     <div class="card">
+      <div class="card-header-row">
+        <h2>Paycheck planner <span class="muted">assign bills to the paycheck that covers them</span></h2>
+        <input type="month" id="paycheckMonthPicker" aria-label="Month to view">
+      </div>
+      <p class="hint" style="margin-top:0;">For each paycheck below, assign the bills it needs to cover, check them off as you pay them, and see what's left over to spend. Paying more (or less) than the usual amount this time? Use <strong>Edit</strong> on that bill — for one not logged yet, use <strong>Log &amp; edit amount</strong> to log it and adjust before it's due; either way, it only changes that one occurrence, not the recurring template's default. Paying one bill from two different paychecks? Use its <strong>Split</strong> button (here or in the list below) to divide it into two linked entries with the amount and paycheck you choose for each. Adding income and one-time expenses now happens on the <strong>Check Register</strong> tab.</p>
+      <div id="paycheckPlannerWrap"></div>
+    </div>
+  </section>
+
+  <!-- CHECK REGISTER -->
+  <section id="register" class="panel">
+    <div class="card">
       <h2 id="incomeFormTitle">Add income</h2>
       <form class="inline-form" id="incomeForm">
         <div class="field">
@@ -698,11 +725,7 @@
         <button type="submit" class="primary" id="incomeSubmitBtn">Add income</button>
         <button type="button" class="secondary" id="incomeCancelEdit" style="display:none;">Cancel</button>
       </form>
-      <p class="hint">Every income entry shows on the Calendar tab on its date, in the color you pick here, and becomes a paycheck you can assign bills against below. For a paycheck that repeats every month, set it up once on the Recurring tab instead — it'll preview here automatically before its day even arrives.</p>
-
-      <h3 style="margin:20px 0 4px 0; font-size:14px;">Unassigned income <span class="muted" id="incomeCount"></span></h3>
-      <p class="hint" style="margin-top:0;">Income with no bills assigned to it yet, right here as soon as you add it. The moment you assign a bill to it in the planner below, it drops off this list — it's still fully there on the Calendar tab and in your exports.</p>
-      <div id="incomeTableWrap" class="table-scroll"></div>
+      <p class="hint">Every income entry shows on the Calendar tab on its date, in the color you pick here, and becomes a paycheck you can assign bills against on the Paychecks tab. For a paycheck that repeats every month, set it up once on the Recurring tab instead — it'll preview there automatically before its day even arrives.</p>
     </div>
 
     <div class="card">
@@ -746,9 +769,13 @@
         <button type="button" class="secondary" id="expenseCancelEdit" style="display:none;">Cancel</button>
       </form>
       <p class="hint">For bills that repeat every month, use the Recurring tab instead — this is for one-off purchases and payments. Picking a loan or credit card category here reveals a Charge/Payment field that keeps its balance on the Balances tab up to date.</p>
+    </div>
 
-      <h3 style="margin:20px 0 4px 0; font-size:14px;">Unassigned one-time expenses &amp; payments <span class="muted" id="expenseCount"></span></h3>
-      <p class="hint" style="margin-top:0;">Right here as soon as you add it. Once you assign it to a paycheck in the planner below, it moves there and drops off this list — this is just what's still waiting.</p>
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Check register <span class="muted" id="registerCount"></span></h2>
+      </div>
+      <p class="hint" style="margin-top:0;">Every transaction you've ever logged, oldest to newest, with a running balance so you can reconcile against your bank statement. Pick a category and, for expenses, which paycheck it should count against, right in the table — bank imports land here too, flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> and a red field until you assign them. Click the date to fix it inline, or click the description for the full edit form (amount, paid status, and more).</p>
       <div class="inline-form" style="margin-bottom:12px;">
         <div class="field">
           <label for="filterMonth">Month</label>
@@ -760,16 +787,7 @@
         </div>
         <button type="button" class="secondary" id="clearFilters">Clear filters</button>
       </div>
-      <div id="expenseTableWrap" class="table-scroll"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-header-row">
-        <h2>Paycheck planner <span class="muted">assign bills to the paycheck that covers them</span></h2>
-        <input type="month" id="paycheckMonthPicker" aria-label="Month to view">
-      </div>
-      <p class="hint" style="margin-top:0;">For each paycheck below, assign the bills it needs to cover, check them off as you pay them, and see what's left over to spend. Paying more (or less) than the usual amount this time? Use <strong>Edit</strong> on that bill — for one not logged yet, use <strong>Log &amp; edit amount</strong> to log it and adjust before it's due; either way, it only changes that one occurrence, not the recurring template's default. Paying one bill from two different paychecks? Use its <strong>Split</strong> button (here or in the list below) to divide it into two linked entries with the amount and paycheck you choose for each.</p>
-      <div id="paycheckPlannerWrap"></div>
+      <div id="checkRegisterWrap" class="table-scroll"></div>
     </div>
   </section>
 
@@ -1695,7 +1713,7 @@
     document.getElementById("expenseFormTitle").textContent = "Edit expense";
     document.getElementById("expenseSubmitBtn").textContent = "Save changes";
     document.getElementById("expenseCancelEdit").style.display = "inline-block";
-    document.querySelector('nav.tabs button[data-panel="paychecks"]').click();
+    document.querySelector('nav.tabs button[data-panel="register"]').click();
     document.getElementById("expDate").scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
@@ -1849,52 +1867,224 @@
   // is assigned to a paycheck, it moves into that paycheck's block in the
   // planner above (where it's still fully editable — Edit, Split, Unassign,
   // Delete) and drops out of this list, so nothing is ever shown twice.
+  // renderExpenses() and renderIncome() used to render separate "unassigned"
+  // lists here; both of those are now the Check Register below, which shows
+  // every transaction (assigned or not) in one place. Kept as thin aliases
+  // since dozens of mutation handlers throughout the app already call one or
+  // both of these after changing an expense or income entry -- rather than
+  // hunt down every call site, both just refresh the register instead.
   function renderExpenses() {
-    var monthFilter = document.getElementById("filterMonth").value;
-    var catFilter = document.getElementById("filterCategory").value;
-    var list = state.expenses.filter(function(e) { return !e.paycheckId; })
-                              .sort(function(a,b){ return b.date.localeCompare(a.date); });
-    if (monthFilter) list = list.filter(function(e){ return monthKeyOf(e.date) === monthFilter; });
-    if (catFilter) list = list.filter(function(e){ return e.categoryId === catFilter; });
+    renderCheckRegister();
+  }
 
-    document.getElementById("expenseCount").textContent = "(" + list.length + ")";
+  // ---------- CHECK REGISTER ----------
 
-    var wrap = document.getElementById("expenseTableWrap");
-    if (list.length === 0) {
-      var totalCount = state.expenses.length;
-      wrap.innerHTML = totalCount > 0
-        ? '<div class="empty-state">Nothing unassigned right now — everything is assigned to a paycheck above (or doesn\'t match the current filters).</div>'
-        : '<div class="empty-state">No expenses yet. Add your first one above.</div>';
+  // Merges expenses and income into one chronological ledger (oldest first,
+  // like a paper check register) and threads a running balance through it.
+  // Balance is always computed from the FULL history before any filtering,
+  // so the numbers stay meaningful even when the table below is narrowed to
+  // one month or category.
+  function buildRegisterRows() {
+    var rows = [];
+    state.expenses.forEach(function(e) {
+      rows.push({
+        kind: "expense", id: e.id, date: e.date, desc: e.note || "",
+        categoryId: e.categoryId, paycheckId: e.paycheckId || null,
+        amount: -Math.abs(e.amount), paid: !!e.paid, cleared: !!e.cleared,
+        imported: !!e.imported, categoryGuessed: !!e.categoryGuessed,
+        splitGroupId: e.splitGroupId || null
+      });
+    });
+    state.income.forEach(function(inc) {
+      rows.push({
+        kind: "income", id: inc.id, date: inc.date, desc: inc.source || "",
+        amount: Math.abs(inc.amount), cleared: !!inc.cleared, imported: !!inc.imported
+      });
+    });
+    rows.sort(function(a, b) {
+      var c = a.date.localeCompare(b.date);
+      if (c !== 0) return c;
+      return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+    });
+    var running = 0;
+    rows.forEach(function(r) { running += r.amount; r.balance = running; });
+    return rows;
+  }
+
+  function registerRowFlagged(r) {
+    if (r.kind !== "expense" || !r.imported) return false;
+    return r.categoryGuessed || !r.paycheckId;
+  }
+
+  function refreshAfterRegisterChange() {
+    renderCheckRegister();
+    renderDashboard();
+    renderPaycheckPlanner();
+    renderBalances();
+    renderCategories();
+    renderCalendar();
+    populatePaycheckSelect();
+  }
+
+  function renderCheckRegister() {
+    var wrap = document.getElementById("checkRegisterWrap");
+    if (!wrap) return;
+    var allRows = buildRegisterRows();
+
+    var monthFilterEl = document.getElementById("filterMonth");
+    var catFilterEl = document.getElementById("filterCategory");
+    var monthFilter = monthFilterEl ? monthFilterEl.value : "";
+    var catFilter = catFilterEl ? catFilterEl.value : "";
+
+    var rows = allRows.filter(function(r) {
+      if (monthFilter && monthKeyOf(r.date) !== monthFilter) return false;
+      if (catFilter && r.categoryId !== catFilter) return false;
+      return true;
+    });
+
+    var countEl = document.getElementById("registerCount");
+    if (countEl) {
+      countEl.textContent = (monthFilter || catFilter)
+        ? "(" + rows.length + " of " + allRows.length + ")"
+        : "(" + allRows.length + ")";
+    }
+
+    if (allRows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No transactions yet. Add income or an expense above to get started.</div>';
       return;
     }
-    var html = '<table><thead><tr><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th><th class="check-cell">Paid</th><th class="check-cell">Cleared</th><th></th></tr></thead><tbody>';
-    list.forEach(function(e) {
-      var cat = categoryById(e.categoryId);
-      var catName = cat ? cat.name : "(deleted)";
-      var color = cat ? categoryColorHex(e.categoryId) : "#a6a49c";
-      var noteClass = e.paid ? "paid-strike" : "";
-      var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
-      html += '<tr>' +
-        '<td>' + escapeHtml(e.date) + '</td>' +
-        '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(catName) + '</span></td>' +
-        '<td class="' + noteClass + '">' + escapeHtml(e.note || "") + splitTag + '</td>' +
-        '<td class="num">' + fmtMoney(e.amount) + '</td>' +
-        '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-paid="' + e.id + '"' + (e.paid ? ' checked' : '') + '></td>' +
-        '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Nothing matches the current filters.</div>';
+      return;
+    }
+
+    var paycheckOptionsCache = state.income.slice().sort(function(a, b) { return b.date.localeCompare(a.date); });
+    function paycheckOptionsFor(selectedId) {
+      return '<option value=""' + (selectedId ? '' : ' selected') + '>None</option>' + paycheckOptionsCache.map(function(inc) {
+        return '<option value="' + inc.id + '"' + (inc.id === selectedId ? ' selected' : '') + '>' + escapeHtml(paycheckLabel(inc)) + '</option>';
+      }).join("");
+    }
+
+    var html = '<table class="register-table"><thead><tr>' +
+      '<th class="check-cell" title="Needs a category or paycheck"></th>' +
+      '<th>Date</th><th>Description</th><th>Category</th><th>Paycheck</th>' +
+      '<th class="num">Amount</th><th class="check-cell">Paid</th><th class="check-cell">Cleared</th>' +
+      '<th class="num">Balance</th><th></th>' +
+      '</tr></thead><tbody>';
+
+    rows.forEach(function(r) {
+      var flagged = registerRowFlagged(r);
+      var catFlagged = r.kind === "expense" && r.imported && r.categoryGuessed;
+      var pcFlagged = r.kind === "expense" && r.imported && !r.paycheckId;
+
+      var categoryCell;
+      if (r.kind === "expense") {
+        var catOptions = state.categories.map(function(c) {
+          return '<option value="' + c.id + '"' + (c.id === r.categoryId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+        }).join("");
+        categoryCell = '<select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + catOptions + '</select>';
+      } else {
+        categoryCell = '<span class="muted">Income</span>';
+      }
+
+      var paycheckCell;
+      if (r.kind === "expense") {
+        paycheckCell = '<select class="register-inline-select' + (pcFlagged ? ' register-flagged' : '') + '" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select>';
+      } else {
+        paycheckCell = '<span class="muted">—</span>';
+      }
+
+      var splitTag = r.splitGroupId ? ' <span class="muted">(split)</span>' : "";
+      var amountClass = r.amount < 0 ? "variance-over" : "variance-under";
+
+      html += '<tr class="' + (flagged ? "register-row-flagged" : "") + '">' +
+        '<td class="check-cell">' + (flagged ? '<span class="register-flag-x" title="Needs a category and/or a paycheck assigned">&#10007;</span>' : '') + '</td>' +
+        '<td><input type="date" class="register-inline-date" data-reg-date="' + r.id + '" data-reg-kind="' + r.kind + '" value="' + r.date + '"></td>' +
+        '<td><span class="drill-note-cell" data-drill-edit="' + r.id + '" data-drill-kind="' + r.kind + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(r.desc || "(no note)") + splitTag + '</span></td>' +
+        '<td>' + categoryCell + '</td>' +
+        '<td>' + paycheckCell + '</td>' +
+        '<td class="num ' + amountClass + '">' + fmtMoney(r.amount) + '</td>' +
+        '<td class="check-cell">' + (r.kind === "expense" ? '<input type="checkbox" class="row-checkbox" data-reg-paid="' + r.id + '"' + (r.paid ? ' checked' : '') + '>' : '<span class="muted">—</span>') + '</td>' +
+        '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-reg-cleared="' + r.id + '" data-reg-kind="' + r.kind + '"' + (r.cleared ? ' checked' : '') + '></td>' +
+        '<td class="num">' + fmtMoney(r.balance) + '</td>' +
         '<td class="actions-cell">' +
-          '<button class="row-btn" data-edit="' + e.id + '">Edit</button>' +
-          '<button class="row-btn" data-split="' + e.id + '">Split</button>' +
-          '<button class="row-btn danger" data-del="' + e.id + '">Delete</button>' +
+          (r.kind === "expense" ? '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' : '') +
+          '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="' + r.kind + '">Delete</button>' +
         '</td>' +
       '</tr>';
     });
+
     html += '</tbody></table>';
     wrap.innerHTML = html;
-    wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editExpense(b.dataset.edit); }); });
-    wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteExpense(b.dataset.del); }); });
-    wrap.querySelectorAll("[data-split]").forEach(function(b) { b.addEventListener("click", function(){ openSplitDialog(b.dataset.split); }); });
-    wrap.querySelectorAll("[data-paid]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpensePaid(b.dataset.paid); }); });
-    wrap.querySelectorAll("[data-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpenseCleared(b.dataset.cleared); }); });
+
+    wrap.querySelectorAll("[data-drill-edit]").forEach(function(cell) {
+      function openEdit() {
+        if (cell.dataset.drillKind === "income") editIncome(cell.dataset.drillEdit);
+        else editExpense(cell.dataset.drillEdit);
+      }
+      cell.addEventListener("click", openEdit);
+      cell.addEventListener("keydown", function(e) { if (e.key === "Enter") openEdit(); });
+    });
+
+    wrap.querySelectorAll("[data-reg-category]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.regCategory; });
+        if (!ex) return;
+        ex.categoryId = sel.value;
+        ex.categoryGuessed = false;
+        saveState();
+        refreshAfterRegisterChange();
+        showToast("Category updated");
+      });
+    });
+
+    wrap.querySelectorAll("[data-reg-paycheck]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.regPaycheck; });
+        if (!ex) return;
+        ex.paycheckId = sel.value || null;
+        saveState();
+        refreshAfterRegisterChange();
+        showToast("Paycheck updated");
+      });
+    });
+
+    wrap.querySelectorAll("[data-reg-date]").forEach(function(inp) {
+      inp.addEventListener("change", function() {
+        if (!inp.value) return;
+        if (inp.dataset.regKind === "income") {
+          var inc = state.income.find(function(x) { return x.id === inp.dataset.regDate; });
+          if (!inc) return;
+          inc.date = inp.value;
+        } else {
+          var ex2 = state.expenses.find(function(x) { return x.id === inp.dataset.regDate; });
+          if (!ex2) return;
+          ex2.date = inp.value;
+        }
+        saveState();
+        refreshAfterRegisterChange();
+        showToast("Date updated");
+      });
+    });
+
+    wrap.querySelectorAll("[data-reg-paid]").forEach(function(b) {
+      b.addEventListener("change", function() { toggleExpensePaid(b.dataset.regPaid); });
+    });
+    wrap.querySelectorAll("[data-reg-cleared]").forEach(function(b) {
+      b.addEventListener("change", function() {
+        if (b.dataset.regKind === "income") toggleIncomeCleared(b.dataset.regCleared);
+        else toggleExpenseCleared(b.dataset.regCleared);
+      });
+    });
+    wrap.querySelectorAll("[data-reg-split]").forEach(function(b) {
+      b.addEventListener("click", function() { openSplitDialog(b.dataset.regSplit); });
+    });
+    wrap.querySelectorAll("[data-reg-del]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        if (b.dataset.regKind === "income") deleteIncome(b.dataset.regDel);
+        else deleteExpense(b.dataset.regDel);
+      });
+    });
   }
 
   // ---------- INCOME ----------
@@ -1958,7 +2148,7 @@
     document.getElementById("incomeFormTitle").textContent = "Edit income";
     document.getElementById("incomeSubmitBtn").textContent = "Save changes";
     document.getElementById("incomeCancelEdit").style.display = "inline-block";
-    document.querySelector('nav.tabs button[data-panel="paychecks"]').click();
+    document.querySelector('nav.tabs button[data-panel="register"]').click();
     document.getElementById("incDate").scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
@@ -1987,45 +2177,10 @@
     });
   }
 
+  // See the comment above renderExpenses() -- income's old "unassigned" list
+  // is now part of the same Check Register, so this just refreshes that.
   function renderIncome() {
-    // This list intentionally shows only income with no bills assigned to
-    // it yet -- the moment even one expense is assigned to a paycheck, it's
-    // considered handled and drops off this list for good, no matter what
-    // month the planner above happens to be showing. (It's still fully
-    // there on the Calendar tab and in your exports.) This mirrors how the
-    // unassigned-expenses list below works, just from the income side.
-    var totalCount = state.income.length;
-    var list = state.income.filter(function(inc) {
-      return !state.expenses.some(function(e) { return e.paycheckId === inc.id; });
-    }).sort(function(a,b){ return b.date.localeCompare(a.date); });
-    document.getElementById("incomeCount").textContent = "(" + list.length + ")";
-
-    var wrap = document.getElementById("incomeTableWrap");
-    if (list.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">' + (totalCount === 0
-        ? "No income logged yet. Add your first entry above."
-        : "Nothing unassigned right now — every paycheck has at least one bill assigned to it in the planner below.") + '</div>';
-      return;
-    }
-    var html = '<table><thead><tr><th>Date</th><th>Source</th><th>Note</th><th class="num">Amount</th><th class="check-cell">Cleared</th><th></th></tr></thead><tbody>';
-    list.forEach(function(inc) {
-      html += '<tr>' +
-        '<td>' + escapeHtml(inc.date) + '</td>' +
-        '<td>' + escapeHtml(inc.source) + '</td>' +
-        '<td>' + escapeHtml(inc.note || "") + '</td>' +
-        '<td class="num">' + fmtMoney(inc.amount) + '</td>' +
-        '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-cleared="' + inc.id + '"' + (inc.cleared ? ' checked' : '') + '></td>' +
-        '<td class="actions-cell">' +
-          '<button class="row-btn" data-edit="' + inc.id + '">Edit</button>' +
-          '<button class="row-btn danger" data-del="' + inc.id + '">Delete</button>' +
-        '</td>' +
-      '</tr>';
-    });
-    html += '</tbody></table>';
-    wrap.innerHTML = html;
-    wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editIncome(b.dataset.edit); }); });
-    wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteIncome(b.dataset.del); }); });
-    wrap.querySelectorAll("[data-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleIncomeCleared(b.dataset.cleared); }); });
+    renderCheckRegister();
   }
 
   // ---------- RECURRING ----------
@@ -3990,12 +4145,12 @@
       if (m.kind === "expense") {
         var dupe = state.expenses.some(function(e) { return e.date === m.date && e.amount === m.amount && e.note === m.note; });
         if (dupe) { duplicates++; return; }
-        state.expenses.push({ id: uid(), date: m.date, amount: m.amount, categoryId: m.categoryId || expenseCategory, note: m.note, paid: true, cleared: true });
+        state.expenses.push({ id: uid(), date: m.date, amount: m.amount, categoryId: m.categoryId || expenseCategory, note: m.note, paid: true, cleared: true, paycheckId: null, imported: true, categoryGuessed: !m.categoryId });
         addedExpenses++;
       } else {
         var dupeInc = state.income.some(function(inc) { return inc.date === m.date && inc.amount === m.amount && inc.note === m.note; });
         if (dupeInc) { duplicates++; return; }
-        state.income.push({ id: uid(), date: m.date, amount: m.amount, source: incomeSource, note: m.note, color: "#1baf7a", cleared: true });
+        state.income.push({ id: uid(), date: m.date, amount: m.amount, source: incomeSource, note: m.note, color: "#1baf7a", cleared: true, imported: true });
         addedIncome++;
       }
     });
