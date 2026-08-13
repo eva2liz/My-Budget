@@ -99,6 +99,8 @@
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     background: var(--page-plane);
     color: var(--text-primary);
+    overflow-x: hidden;
+    max-width: 100%;
   }
   body { padding-bottom: 60px; }
 
@@ -291,19 +293,121 @@
   input.row-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); vertical-align: middle; }
   .paid-strike { text-decoration: line-through; color: var(--text-muted); }
 
-  .register-table { white-space: nowrap; }
-  .register-inline-select, .register-inline-date {
-    width: 100%; min-width: 90px; font-family: inherit; font-size: 13px;
-    padding: 6px 7px; border: 1px solid transparent; border-radius: 6px;
-    background: transparent; color: var(--text-primary);
+  /* Check register: breaks out of main's centered 900px column so the
+     ledger can use the full window width and never needs to scroll
+     sideways -- only the panel itself scrolls vertically, like a desktop
+     spreadsheet register. */
+  .register-shell {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    padding: 0 20px 20px;
+    box-sizing: border-box;
   }
-  .register-inline-select:hover, .register-inline-date:hover { border-color: var(--border); }
+  .register-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 6px;
+  }
+  .register-toolbar h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .register-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .register-filters input, .register-filters select {
+    font-family: inherit; font-size: 13px; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface-1); color: var(--text-primary);
+  }
+  .register-hint { margin: 4px 0 12px 0; }
+
+  .register-scroll {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    max-height: 72vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  table.register-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .register-table thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--surface-2, var(--surface-1));
+    border-bottom: 1px solid var(--border);
+    padding: 8px 8px; text-align: left;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--text-muted); font-weight: 600;
+  }
+  .register-table th.num, .register-table td.num { text-align: right; }
+  .register-table th.reg-col-flag, .register-table td.reg-col-flag { width: 26px; padding-left: 8px; padding-right: 0; }
+  .register-table th.reg-col-date, .register-table td.reg-col-date { width: 138px; }
+  .register-table th.reg-col-payment, .register-table td.reg-col-payment,
+  .register-table th.reg-col-deposit, .register-table td.reg-col-deposit { width: 110px; }
+  .register-table th.reg-col-clr, .register-table td.reg-col-clr { width: 34px; text-align: center; }
+  .register-table th.reg-col-balance, .register-table td.reg-col-balance { width: 120px; }
+  .register-table td {
+    padding: 7px 8px; font-size: 13px; vertical-align: middle;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .register-table tr.register-stripe td { background: rgba(120, 120, 120, 0.045); }
+  .register-table tr.register-row-flagged td { background: rgba(208, 59, 59, 0.07); }
+  .register-table tr.register-txn-detail td {
+    padding-top: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    white-space: normal;
+  }
+  .register-table tr.register-txn-main td { border-bottom: none; padding-top: 8px; }
+  .register-detail-inline {
+    display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .register-detail-inline .reg-detail-actions { margin-left: auto; display: flex; gap: 6px; }
+  .register-inline-select, .register-inline-date {
+    font-family: inherit; font-size: 12.5px;
+    padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface-1); color: var(--text-primary); max-width: 220px;
+  }
+  .register-table tr.register-txn-main .register-inline-date {
+    border-color: transparent; background: transparent; font-size: 13px; padding: 4px 4px;
+  }
+  .register-inline-select:hover, .register-inline-date:hover { border-color: var(--series-1); }
   .register-inline-select:focus, .register-inline-date:focus { border-color: var(--series-1); background: var(--surface-1); outline: none; }
   .register-inline-select.register-flagged {
-    border-color: var(--critical); background: rgba(208, 59, 59, 0.1); border-radius: 6px;
+    border-color: var(--critical); background: rgba(208, 59, 59, 0.12);
   }
-  .register-row-flagged { background: rgba(208, 59, 59, 0.05); }
   .register-flag-x { color: var(--critical); font-weight: 700; }
+  .register-flag-inline { color: var(--critical); font-size: 11px; font-weight: 600; margin-left: 6px; }
+  .register-payee-cell { cursor: pointer; }
+  .register-payee-cell:hover { color: var(--series-1); text-decoration: underline; text-decoration-color: var(--series-1); text-underline-offset: 2px; }
+  .register-payee-cell:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
+
+  .register-new-row td { border-bottom: none !important; }
+  .register-new-row.register-txn-main td { background: rgba(27, 175, 122, 0.06); padding-top: 8px; }
+  .register-new-row.register-txn-detail td { background: rgba(27, 175, 122, 0.06); border-bottom: 1px solid var(--border) !important; }
+  .register-new-row input, .register-new-row select {
+    width: 100%; box-sizing: border-box; font-family: inherit; font-size: 13px;
+    padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface-1); color: var(--text-primary);
+  }
+  .register-new-row input::placeholder { color: var(--text-muted); }
+
+  .short-label { display: none; }
+  @media (max-width: 640px) {
+    .register-shell { padding: 0 8px 16px; }
+    .register-scroll { max-height: 60vh; }
+    .register-table td, .register-table thead th { padding: 6px 3px; font-size: 11.5px; }
+    .register-table th.reg-col-flag, .register-table td.reg-col-flag { width: 14px; padding-left: 4px; }
+    .register-table th.reg-col-date, .register-table td.reg-col-date { width: 80px; }
+    .register-table th.reg-col-payment, .register-table td.reg-col-payment,
+    .register-table th.reg-col-deposit, .register-table td.reg-col-deposit { width: 56px; }
+    .register-table th.reg-col-clr, .register-table td.reg-col-clr { width: 20px; }
+    .register-table th.reg-col-balance, .register-table td.reg-col-balance { width: 58px; }
+    .register-table tr.register-txn-main .register-inline-date { font-size: 11px; padding: 2px 0; }
+    .register-new-row input, .register-new-row select { font-size: 11.5px; padding: 4px 3px; }
+    .full-label { display: none; }
+    .short-label { display: inline; }
+  }
 
   .paycheck-block { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
   .paycheck-block:last-child { margin-bottom: 0; }
@@ -687,107 +791,105 @@
 
   <!-- CHECK REGISTER -->
   <section id="register" class="panel">
-    <div class="card">
-      <h2 id="incomeFormTitle">Add income</h2>
-      <form class="inline-form" id="incomeForm">
-        <div class="field">
-          <label for="incDate">Date</label>
-          <input type="date" id="incDate" required>
+    <div id="registerEditPanel" style="display:none;">
+      <div class="card" id="incomeFormCard">
+        <div class="card-header-row">
+          <h2 id="incomeFormTitle">Edit income</h2>
         </div>
-        <div class="field">
-          <label for="incAmount">Amount</label>
-          <input type="number" id="incAmount" step="0.01" min="0" placeholder="0.00" required>
+        <form class="inline-form" id="incomeForm">
+          <div class="field">
+            <label for="incDate">Date</label>
+            <input type="date" id="incDate" required>
+          </div>
+          <div class="field">
+            <label for="incAmount">Amount</label>
+            <input type="number" id="incAmount" step="0.01" min="0" placeholder="0.00" required>
+          </div>
+          <div class="field">
+            <label for="incSource">Source</label>
+            <input type="text" id="incSource" list="incomeSources" placeholder="e.g. Salary" required>
+            <datalist id="incomeSources">
+              <option value="Salary"></option>
+              <option value="Freelance"></option>
+              <option value="Gift"></option>
+              <option value="Interest"></option>
+              <option value="Refund"></option>
+              <option value="Other"></option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="incColor">Calendar color</label>
+            <input type="color" id="incColor" value="#1baf7a">
+          </div>
+          <div class="field" style="flex:1; min-width:160px;">
+            <label for="incNote">Note</label>
+            <input type="text" id="incNote" placeholder="Optional">
+          </div>
+          <div class="field checkbox-field">
+            <label><input type="checkbox" id="incCleared"> Cleared bank</label>
+          </div>
+          <input type="hidden" id="incEditId">
+          <button type="submit" class="primary" id="incomeSubmitBtn">Save changes</button>
+          <button type="button" class="secondary" id="incomeCancelEdit" style="display:none;">Cancel</button>
+        </form>
+      </div>
+
+      <div class="card" id="expenseFormCard">
+        <div class="card-header-row">
+          <h2 id="expenseFormTitle">Edit expense</h2>
         </div>
-        <div class="field">
-          <label for="incSource">Source</label>
-          <input type="text" id="incSource" list="incomeSources" placeholder="e.g. Salary" required>
-          <datalist id="incomeSources">
-            <option value="Salary"></option>
-            <option value="Freelance"></option>
-            <option value="Gift"></option>
-            <option value="Interest"></option>
-            <option value="Refund"></option>
-            <option value="Other"></option>
-          </datalist>
-        </div>
-        <div class="field">
-          <label for="incColor">Calendar color</label>
-          <input type="color" id="incColor" value="#1baf7a">
-        </div>
-        <div class="field" style="flex:1; min-width:160px;">
-          <label for="incNote">Note</label>
-          <input type="text" id="incNote" placeholder="Optional">
-        </div>
-        <div class="field checkbox-field">
-          <label><input type="checkbox" id="incCleared"> Cleared bank</label>
-        </div>
-        <input type="hidden" id="incEditId">
-        <button type="submit" class="primary" id="incomeSubmitBtn">Add income</button>
-        <button type="button" class="secondary" id="incomeCancelEdit" style="display:none;">Cancel</button>
-      </form>
-      <p class="hint">Every income entry shows on the Calendar tab on its date, in the color you pick here, and becomes a paycheck you can assign bills against on the Paychecks tab. For a paycheck that repeats every month, set it up once on the Recurring tab instead — it'll preview there automatically before its day even arrives.</p>
+        <form class="inline-form" id="expenseForm">
+          <div class="field">
+            <label for="expDate">Date</label>
+            <input type="date" id="expDate" required>
+          </div>
+          <div class="field">
+            <label for="expAmount">Amount</label>
+            <input type="number" id="expAmount" step="0.01" min="0" placeholder="0.00" required>
+          </div>
+          <div class="field">
+            <label for="expCategory">Category</label>
+            <select id="expCategory" required></select>
+          </div>
+          <div class="field" style="flex:1; min-width:160px;">
+            <label for="expNote">Note</label>
+            <input type="text" id="expNote" placeholder="Optional">
+          </div>
+          <div class="field">
+            <label for="expPaycheck">Pay from paycheck</label>
+            <select id="expPaycheck"><option value="">None</option></select>
+          </div>
+          <div class="field" id="expDebtTypeField" style="display:none;">
+            <label for="expDebtType">Charge or payment?</label>
+            <select id="expDebtType">
+              <option value="charge">Charge (adds to balance)</option>
+              <option value="payment">Payment (reduces balance)</option>
+            </select>
+          </div>
+          <div class="field checkbox-field">
+            <label><input type="checkbox" id="expPaid"> Paid</label>
+          </div>
+          <div class="field checkbox-field">
+            <label><input type="checkbox" id="expCleared"> Cleared bank</label>
+          </div>
+          <input type="hidden" id="expEditId">
+          <button type="submit" class="primary" id="expenseSubmitBtn">Save changes</button>
+          <button type="button" class="secondary" id="expenseCancelEdit" style="display:none;">Cancel</button>
+        </form>
+      </div>
     </div>
 
-    <div class="card">
-      <h2 id="expenseFormTitle">Add a one-time expense or payment</h2>
-      <form class="inline-form" id="expenseForm">
-        <div class="field">
-          <label for="expDate">Date</label>
-          <input type="date" id="expDate" required>
-        </div>
-        <div class="field">
-          <label for="expAmount">Amount</label>
-          <input type="number" id="expAmount" step="0.01" min="0" placeholder="0.00" required>
-        </div>
-        <div class="field">
-          <label for="expCategory">Category</label>
-          <select id="expCategory" required></select>
-        </div>
-        <div class="field" style="flex:1; min-width:160px;">
-          <label for="expNote">Note</label>
-          <input type="text" id="expNote" placeholder="Optional">
-        </div>
-        <div class="field">
-          <label for="expPaycheck">Pay from paycheck</label>
-          <select id="expPaycheck"><option value="">None</option></select>
-        </div>
-        <div class="field" id="expDebtTypeField" style="display:none;">
-          <label for="expDebtType">Charge or payment?</label>
-          <select id="expDebtType">
-            <option value="charge">Charge (adds to balance)</option>
-            <option value="payment">Payment (reduces balance)</option>
-          </select>
-        </div>
-        <div class="field checkbox-field">
-          <label><input type="checkbox" id="expPaid"> Paid</label>
-        </div>
-        <div class="field checkbox-field">
-          <label><input type="checkbox" id="expCleared"> Cleared bank</label>
-        </div>
-        <input type="hidden" id="expEditId">
-        <button type="submit" class="primary" id="expenseSubmitBtn">Add expense</button>
-        <button type="button" class="secondary" id="expenseCancelEdit" style="display:none;">Cancel</button>
-      </form>
-      <p class="hint">For bills that repeat every month, use the Recurring tab instead — this is for one-off purchases and payments. Picking a loan or credit card category here reveals a Charge/Payment field that keeps its balance on the Balances tab up to date.</p>
-    </div>
-
-    <div class="card">
-      <div class="card-header-row">
+    <div class="register-shell">
+      <div class="register-toolbar">
         <h2>Check register <span class="muted" id="registerCount"></span></h2>
-      </div>
-      <p class="hint" style="margin-top:0;">Every transaction you've ever logged, oldest to newest, with a running balance so you can reconcile against your bank statement. Pick a category and, for expenses, which paycheck it should count against, right in the table — bank imports land here too, flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> and a red field until you assign them. Click the date to fix it inline, or click the description for the full edit form (amount, paid status, and more).</p>
-      <div class="inline-form" style="margin-bottom:12px;">
-        <div class="field">
-          <label for="filterMonth">Month</label>
-          <input type="month" id="filterMonth">
+        <div class="register-filters">
+          <input type="month" id="filterMonth" aria-label="Filter by month">
+          <select id="filterCategory" aria-label="Filter by category"><option value="">All categories</option></select>
+          <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
-        <div class="field">
-          <label for="filterCategory">Category</label>
-          <select id="filterCategory"><option value="">All</option></select>
-        </div>
-        <button type="button" class="secondary" id="clearFilters">Clear filters</button>
       </div>
-      <div id="checkRegisterWrap" class="table-scroll"></div>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — pick an account (category) and, for expenses, which paycheck it counts against. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form.</p>
+      <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
 
@@ -1694,11 +1796,15 @@
     document.getElementById("expenseSubmitBtn").textContent = "Add expense";
     document.getElementById("expenseCancelEdit").style.display = "none";
     updateExpenseDebtTypeVisibility();
+    document.getElementById("registerEditPanel").style.display = "none";
   }
 
   function editExpense(id) {
     var ex = state.expenses.find(function(x){ return x.id === id; });
     if (!ex) return;
+    document.getElementById("registerEditPanel").style.display = "block";
+    document.getElementById("expenseFormCard").style.display = "block";
+    document.getElementById("incomeFormCard").style.display = "none";
     document.getElementById("expEditId").value = ex.id;
     document.getElementById("expDate").value = ex.date;
     document.getElementById("expAmount").value = ex.amount;
@@ -1926,6 +2032,24 @@
     populatePaycheckSelect();
   }
 
+  function paycheckOptionsFor(selectedId) {
+    var opts = state.income.slice().sort(function(a, b) { return b.date.localeCompare(a.date); });
+    return '<option value=""' + (selectedId ? '' : ' selected') + '>None</option>' + opts.map(function(inc) {
+      return '<option value="' + inc.id + '"' + (inc.id === selectedId ? ' selected' : '') + '>' + escapeHtml(paycheckLabel(inc)) + '</option>';
+    }).join("");
+  }
+
+  function categoryOptionsFor(selectedId) {
+    return state.categories.map(function(c) {
+      return '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+    }).join("");
+  }
+
+  // Renders a QuickBooks-style two-line-per-transaction register: a compact
+  // main line (date, payee, payment/deposit, cleared, balance) and a muted
+  // detail line right under it (account/category, paycheck, paid, actions)
+  // -- so the whole thing reads without ever needing to scroll sideways.
+  // The panel itself scrolls vertically (sticky header) instead of the page.
   function renderCheckRegister() {
     var wrap = document.getElementById("checkRegisterWrap");
     if (!wrap) return;
@@ -1949,73 +2073,83 @@
         : "(" + allRows.length + ")";
     }
 
-    if (allRows.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">No transactions yet. Add income or an expense above to get started.</div>';
-      return;
-    }
-    if (rows.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">Nothing matches the current filters.</div>';
-      return;
-    }
-
-    var paycheckOptionsCache = state.income.slice().sort(function(a, b) { return b.date.localeCompare(a.date); });
-    function paycheckOptionsFor(selectedId) {
-      return '<option value=""' + (selectedId ? '' : ' selected') + '>None</option>' + paycheckOptionsCache.map(function(inc) {
-        return '<option value="' + inc.id + '"' + (inc.id === selectedId ? ' selected' : '') + '>' + escapeHtml(paycheckLabel(inc)) + '</option>';
-      }).join("");
-    }
-
-    var html = '<table class="register-table"><thead><tr>' +
-      '<th class="check-cell" title="Needs a category or paycheck"></th>' +
-      '<th>Date</th><th>Description</th><th>Category</th><th>Paycheck</th>' +
-      '<th class="num">Amount</th><th class="check-cell">Paid</th><th class="check-cell">Cleared</th>' +
-      '<th class="num">Balance</th><th></th>' +
-      '</tr></thead><tbody>';
-
-    rows.forEach(function(r) {
+    var bodyHtml = "";
+    rows.forEach(function(r, idx) {
       var flagged = registerRowFlagged(r);
       var catFlagged = r.kind === "expense" && r.imported && r.categoryGuessed;
       var pcFlagged = r.kind === "expense" && r.imported && !r.paycheckId;
-
-      var categoryCell;
-      if (r.kind === "expense") {
-        var catOptions = state.categories.map(function(c) {
-          return '<option value="' + c.id + '"' + (c.id === r.categoryId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
-        }).join("");
-        categoryCell = '<select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + catOptions + '</select>';
-      } else {
-        categoryCell = '<span class="muted">Income</span>';
-      }
-
-      var paycheckCell;
-      if (r.kind === "expense") {
-        paycheckCell = '<select class="register-inline-select' + (pcFlagged ? ' register-flagged' : '') + '" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select>';
-      } else {
-        paycheckCell = '<span class="muted">—</span>';
-      }
+      var stripe = idx % 2 === 1;
+      var mainRowClass = "register-txn-main" + (flagged ? " register-row-flagged" : (stripe ? " register-stripe" : ""));
+      var detailRowClass = "register-txn-detail" + (flagged ? " register-row-flagged" : (stripe ? " register-stripe" : ""));
 
       var splitTag = r.splitGroupId ? ' <span class="muted">(split)</span>' : "";
-      var amountClass = r.amount < 0 ? "variance-over" : "variance-under";
+      var flagTag = flagged ? '<span class="register-flag-inline">needs review</span>' : "";
+      var paymentCell = r.kind === "expense" ? fmtMoney(Math.abs(r.amount)) : "";
+      var depositCell = r.kind === "income" ? fmtMoney(r.amount) : "";
 
-      html += '<tr class="' + (flagged ? "register-row-flagged" : "") + '">' +
-        '<td class="check-cell">' + (flagged ? '<span class="register-flag-x" title="Needs a category and/or a paycheck assigned">&#10007;</span>' : '') + '</td>' +
-        '<td><input type="date" class="register-inline-date" data-reg-date="' + r.id + '" data-reg-kind="' + r.kind + '" value="' + r.date + '"></td>' +
-        '<td><span class="drill-note-cell" data-drill-edit="' + r.id + '" data-drill-kind="' + r.kind + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(r.desc || "(no note)") + splitTag + '</span></td>' +
-        '<td>' + categoryCell + '</td>' +
-        '<td>' + paycheckCell + '</td>' +
-        '<td class="num ' + amountClass + '">' + fmtMoney(r.amount) + '</td>' +
-        '<td class="check-cell">' + (r.kind === "expense" ? '<input type="checkbox" class="row-checkbox" data-reg-paid="' + r.id + '"' + (r.paid ? ' checked' : '') + '>' : '<span class="muted">—</span>') + '</td>' +
-        '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-reg-cleared="' + r.id + '" data-reg-kind="' + r.kind + '"' + (r.cleared ? ' checked' : '') + '></td>' +
-        '<td class="num">' + fmtMoney(r.balance) + '</td>' +
-        '<td class="actions-cell">' +
-          (r.kind === "expense" ? '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' : '') +
-          '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="' + r.kind + '">Delete</button>' +
-        '</td>' +
+      bodyHtml += '<tr class="' + mainRowClass + '">' +
+        '<td class="reg-col-flag">' + (flagged ? '<span class="register-flag-x" title="Needs a category and/or a paycheck assigned">&#10007;</span>' : '') + '</td>' +
+        '<td class="reg-col-date"><input type="date" class="register-inline-date" data-reg-date="' + r.id + '" data-reg-kind="' + r.kind + '" value="' + r.date + '"></td>' +
+        '<td class="register-payee-cell" data-drill-edit="' + r.id + '" data-drill-kind="' + r.kind + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(r.desc || "(no note)") + splitTag + flagTag + '</td>' +
+        '<td class="num reg-col-payment">' + paymentCell + '</td>' +
+        '<td class="reg-col-clr"><input type="checkbox" class="row-checkbox" data-reg-cleared="' + r.id + '" data-reg-kind="' + r.kind + '"' + (r.cleared ? ' checked' : '') + '></td>' +
+        '<td class="num reg-col-deposit">' + depositCell + '</td>' +
+        '<td class="num reg-col-balance">' + fmtMoney(r.balance) + '</td>' +
       '</tr>';
+
+      var detailInner;
+      if (r.kind === "expense") {
+        detailInner =
+          '<span>Account <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + categoryOptionsFor(r.categoryId) + '</select></span>' +
+          '<span>Paycheck <select class="register-inline-select' + (pcFlagged ? ' register-flagged' : '') + '" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>' +
+          '<label class="checkbox-field" style="padding:0;"><input type="checkbox" data-reg-paid="' + r.id + '"' + (r.paid ? ' checked' : '') + '> Paid</label>' +
+          '<span class="reg-detail-actions">' +
+            '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' +
+            '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="expense">Delete</button>' +
+          '</span>';
+      } else {
+        detailInner =
+          '<span class="muted">Income</span>' +
+          '<span class="reg-detail-actions">' +
+            '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="income">Delete</button>' +
+          '</span>';
+      }
+      bodyHtml += '<tr class="' + detailRowClass + '"><td class="reg-col-flag"></td><td colspan="6"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
     });
 
-    html += '</tbody></table>';
-    wrap.innerHTML = html;
+    var newRowHtml =
+      '<tr class="register-txn-main register-new-row">' +
+        '<td class="reg-col-flag"></td>' +
+        '<td class="reg-col-date"><input type="date" id="regNewDate" value="' + todayISO() + '"></td>' +
+        '<td><input type="text" id="regNewDesc" placeholder="Payee / description"></td>' +
+        '<td class="num reg-col-payment"><input type="number" id="regNewPayment" placeholder="Payment" step="0.01" min="0"></td>' +
+        '<td class="reg-col-clr"><input type="checkbox" id="regNewCleared"></td>' +
+        '<td class="num reg-col-deposit"><input type="number" id="regNewDeposit" placeholder="Deposit" step="0.01" min="0"></td>' +
+        '<td class="num reg-col-balance muted">—</td>' +
+      '</tr>' +
+      '<tr class="register-txn-detail register-new-row"><td class="reg-col-flag"></td><td colspan="6"><div class="register-detail-inline">' +
+        '<span>Account <select id="regNewCategory">' + categoryOptionsFor(null) + '</select></span>' +
+        '<span>Paycheck <select id="regNewPaycheck">' + paycheckOptionsFor(null) + '</select></span>' +
+        '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
+      '</div></td></tr>';
+
+    var headHtml = '<thead><tr>' +
+      '<th class="reg-col-flag"></th>' +
+      '<th class="reg-col-date">Date</th><th>Payee</th>' +
+      '<th class="num reg-col-payment"><span class="full-label">Payment</span><span class="short-label">Pmt</span></th>' +
+      '<th class="reg-col-clr">&#10003;</th>' +
+      '<th class="num reg-col-deposit"><span class="full-label">Deposit</span><span class="short-label">Dep</span></th>' +
+      '<th class="num reg-col-balance"><span class="full-label">Balance</span><span class="short-label">Bal</span></th>' +
+      '</tr></thead>';
+
+    if (allRows.length === 0) {
+      wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
+    } else if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Nothing matches the current filters.</div>' +
+        '<table class="register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
+    } else {
+      wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + bodyHtml + newRowHtml + '</tbody></table>';
+    }
 
     wrap.querySelectorAll("[data-drill-edit]").forEach(function(cell) {
       function openEdit() {
@@ -2034,7 +2168,7 @@
         ex.categoryGuessed = false;
         saveState();
         refreshAfterRegisterChange();
-        showToast("Category updated");
+        showToast("Account updated");
       });
     });
 
@@ -2085,6 +2219,47 @@
         else deleteExpense(b.dataset.regDel);
       });
     });
+
+    // The blank line at the bottom -- QuickBooks-style: type a whole new
+    // transaction directly into the register, no separate form to open.
+    function commitNewRegisterRow() {
+      var date = document.getElementById("regNewDate").value;
+      var desc = document.getElementById("regNewDesc").value.trim();
+      var payment = parseFloat(document.getElementById("regNewPayment").value);
+      var deposit = parseFloat(document.getElementById("regNewDeposit").value);
+      var cleared = document.getElementById("regNewCleared").checked;
+      var categoryId = document.getElementById("regNewCategory").value;
+      var paycheckId = document.getElementById("regNewPaycheck").value || null;
+
+      var hasPayment = !isNaN(payment) && payment > 0;
+      var hasDeposit = !isNaN(deposit) && deposit > 0;
+
+      if (!date) { showToast("Pick a date first"); return; }
+      if (hasPayment && hasDeposit) { showToast("Enter an amount in either Payment or Deposit, not both"); return; }
+      if (!hasPayment && !hasDeposit) { showToast("Enter an amount in Payment or Deposit"); return; }
+
+      if (hasPayment) {
+        if (!categoryId) { showToast("Pick an account (category)"); return; }
+        var cat = categoryById(categoryId);
+        var debtType = cat && cat.debt ? "charge" : null;
+        state.expenses.push({ id: uid(), date: date, amount: payment, categoryId: categoryId, note: desc, paycheckId: paycheckId, paid: false, cleared: cleared, debtType: debtType });
+        showToast("Expense added");
+      } else {
+        if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
+        state.income.push({ id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared });
+        showToast("Income added");
+      }
+
+      saveState();
+      refreshAfterRegisterChange();
+    }
+
+    var addBtn = document.getElementById("regNewAdd");
+    if (addBtn) addBtn.addEventListener("click", commitNewRegisterRow);
+    ["regNewDate", "regNewDesc", "regNewPayment", "regNewDeposit"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); commitNewRegisterRow(); } });
+    });
   }
 
   // ---------- INCOME ----------
@@ -2133,11 +2308,15 @@
     document.getElementById("incomeFormTitle").textContent = "Add income";
     document.getElementById("incomeSubmitBtn").textContent = "Add income";
     document.getElementById("incomeCancelEdit").style.display = "none";
+    document.getElementById("registerEditPanel").style.display = "none";
   }
 
   function editIncome(id) {
     var inc = state.income.find(function(x){ return x.id === id; });
     if (!inc) return;
+    document.getElementById("registerEditPanel").style.display = "block";
+    document.getElementById("incomeFormCard").style.display = "block";
+    document.getElementById("expenseFormCard").style.display = "none";
     document.getElementById("incEditId").value = inc.id;
     document.getElementById("incDate").value = inc.date;
     document.getElementById("incAmount").value = inc.amount;

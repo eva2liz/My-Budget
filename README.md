@@ -75,20 +75,29 @@ for exactly how that works.
   checkbox on income) so you can track what you've actually paid versus
   what's still pending, and what's posted at the bank versus not yet
   settled
-- **Check Register tab**: a running ledger of every transaction you've ever
-  logged, oldest to newest, with a **balance column** that adds up as you go
-  so you can reconcile against your bank statement — this is now where you
-  add income and one-time expenses (the forms sit right above it). Right in
-  the table you can pick a transaction's **category** and, for expenses,
-  which **paycheck** it should count against, without opening anything else;
-  click the **date** to correct it inline, or click the **description** to
-  open the full edit form (amount, paid status, and more). A **Paid** and a
-  **Cleared** checkbox sit on every expense row (income just gets Cleared),
-  and a Month/Category filter narrows what's shown without touching the
-  running balance, which is always based on your full history
+- **Check Register tab**: a full-width ledger styled like a desktop
+  checkbook register (QuickBooks-style) — two lines per transaction, a
+  **balance column** that runs down the page so you can reconcile against
+  your bank statement, and a sticky header. It's the whole browser window
+  wide on purpose, and only the register itself scrolls (top to bottom) —
+  the page never scrolls sideways, no matter how many transactions you have
+  - **No separate "Add income"/"Add expense" cards** — type a new
+    transaction straight into the blank line at the bottom: date, payee,
+    an amount in either **Payment** or **Deposit**, an **account**
+    (category), and, for a payment, which **paycheck** it counts against
+  - Every existing transaction's top line shows date, payee, payment or
+    deposit, cleared checkbox, and balance; the muted line right underneath
+    holds its account, paycheck, **Paid** checkbox, and Split/Delete —
+    change any of those right there, no extra clicks
+  - Click the **date** to correct it inline, or click the **payee** to open
+    the full edit form (amount, paid status, and everything else) in a
+    panel that appears above the register and tucks itself away again once
+    you're done
+  - A Month/Category filter narrows what's shown without touching the
+    running balance, which is always based on your full history
   - Bank transactions you import (see CSV import below) land here
     automatically, flagged with a red **✗** and a red-outlined field until
-    you assign a real category and a paycheck to them — once you do, the
+    you assign a real account and a paycheck to them — once you do, the
     flag clears itself
 - **Paychecks tab**: the **paycheck planner** — for each paycheck, assign
   the bills it needs to cover (right from the Check Register, or from the
