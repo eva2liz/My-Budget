@@ -344,12 +344,16 @@
     font-size: 11px; text-transform: uppercase; letter-spacing: .03em;
     color: var(--text-muted); font-weight: 600;
   }
+  .register-table th.reg-sortable { cursor: pointer; user-select: none; }
+  .register-table th.reg-sortable:hover { color: var(--text-primary); }
+  .register-table th .sort-arrow { opacity: 0.75; font-size: 0.9em; margin-left: 2px; }
   .register-table th.num, .register-table td.num { text-align: right; }
   .register-table th.reg-col-flag, .register-table td.reg-col-flag { width: 26px; padding-left: 8px; padding-right: 0; }
   .register-table th.reg-col-date, .register-table td.reg-col-date { width: 138px; }
   .register-table th.reg-col-payment, .register-table td.reg-col-payment,
   .register-table th.reg-col-deposit, .register-table td.reg-col-deposit { width: 110px; }
-  .register-table th.reg-col-clr, .register-table td.reg-col-clr { width: 34px; text-align: center; }
+  .register-table th.reg-col-clr, .register-table td.reg-col-clr,
+  .register-table th.reg-col-paid, .register-table td.reg-col-paid { width: 34px; text-align: center; }
   .register-table th.reg-col-balance, .register-table td.reg-col-balance { width: 120px; }
   .register-table td {
     padding: 7px 8px; font-size: 13px; vertical-align: middle;
@@ -405,8 +409,10 @@
     .register-table th.reg-col-date, .register-table td.reg-col-date { width: 80px; }
     .register-table th.reg-col-payment, .register-table td.reg-col-payment,
     .register-table th.reg-col-deposit, .register-table td.reg-col-deposit { width: 56px; }
-    .register-table th.reg-col-clr, .register-table td.reg-col-clr { width: 20px; }
+    .register-table th.reg-col-clr, .register-table td.reg-col-clr,
+    .register-table th.reg-col-paid, .register-table td.reg-col-paid { width: 16px; }
     .register-table th.reg-col-balance, .register-table td.reg-col-balance { width: 58px; }
+    .register-table th .sort-arrow { display: none; }
     .register-table tr.register-txn-main .register-inline-date { font-size: 11px; padding: 2px 0; }
     .register-new-row input, .register-new-row select { font-size: 11.5px; padding: 4px 3px; }
     .full-label { display: none; }
@@ -2052,6 +2058,45 @@
     }).join("");
   }
 
+  // Click-a-column-title-to-sort state for the Check Register. Lives outside
+  // renderCheckRegister (not in `state`, not persisted) so it survives
+  // re-renders during this session but always starts back at plain
+  // chronological order (the same order buildRegisterRows/the running
+  // balance are computed in) on a fresh page load.
+  var registerSort = { key: "date", dir: 1 };
+  var REGISTER_SORT_DEFAULT_DIR = {
+    date: 1, payee: 1, payment: 1, cleared: -1, paid: -1, deposit: 1, balance: 1
+  };
+  function registerSortValue(r, key) {
+    switch (key) {
+      case "date": return r.date;
+      case "payee": return (r.desc || "").toLowerCase();
+      case "payment": return r.kind === "expense" ? Math.abs(r.amount) : -1;
+      case "cleared": return r.cleared ? 1 : 0;
+      case "paid": return r.kind === "expense" ? (r.paid ? 1 : 0) : -1;
+      case "deposit": return r.kind === "income" ? r.amount : -1;
+      case "balance": return r.balance;
+      default: return "";
+    }
+  }
+  function sortRegisterRows(rows) {
+    var key = registerSort.key, dir = registerSort.dir;
+    rows.sort(function(a, b) {
+      var av = registerSortValue(a, key), bv = registerSortValue(b, key);
+      var cmp = (typeof av === "string") ? av.localeCompare(bv) : (av - bv);
+      if (cmp === 0) {
+        cmp = a.date.localeCompare(b.date);
+        if (cmp === 0) cmp = a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+      }
+      return cmp * dir;
+    });
+    return rows;
+  }
+  function sortArrowHtml(key) {
+    if (registerSort.key !== key) return "";
+    return '<span class="sort-arrow">' + (registerSort.dir === 1 ? "▲" : "▼") + '</span>';
+  }
+
   // Renders a QuickBooks-style two-line-per-transaction register: a compact
   // main line (date, payee, payment/deposit, cleared, balance) and a muted
   // detail line right under it (account/category, paycheck, paid, actions)
@@ -2075,6 +2120,7 @@
       if (catFilter && r.categoryId !== catFilter) return false;
       return true;
     });
+    sortRegisterRows(rows);
 
     var countEl = document.getElementById("registerCount");
     if (countEl) {
@@ -2097,12 +2143,17 @@
       var paymentCell = r.kind === "expense" ? fmtMoney(Math.abs(r.amount)) : "";
       var depositCell = r.kind === "income" ? fmtMoney(r.amount) : "";
 
+      var paidCell = r.kind === "expense"
+        ? '<input type="checkbox" class="row-checkbox" data-reg-paid="' + r.id + '"' + (r.paid ? ' checked' : '') + '>'
+        : '';
+
       bodyHtml += '<tr class="' + mainRowClass + '">' +
         '<td class="reg-col-flag">' + (flagged ? '<span class="register-flag-x" title="Needs a category and/or a paycheck assigned">&#10007;</span>' : '') + '</td>' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" data-reg-date="' + r.id + '" data-reg-kind="' + r.kind + '" value="' + r.date + '"></td>' +
         '<td class="register-payee-cell" data-drill-edit="' + r.id + '" data-drill-kind="' + r.kind + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(r.desc || "(no note)") + splitTag + flagTag + '</td>' +
         '<td class="num reg-col-payment">' + paymentCell + '</td>' +
         '<td class="reg-col-clr"><input type="checkbox" class="row-checkbox" data-reg-cleared="' + r.id + '" data-reg-kind="' + r.kind + '"' + (r.cleared ? ' checked' : '') + '></td>' +
+        '<td class="reg-col-paid">' + paidCell + '</td>' +
         '<td class="num reg-col-deposit">' + depositCell + '</td>' +
         '<td class="num reg-col-balance">' + fmtMoney(r.balance) + '</td>' +
       '</tr>';
@@ -2112,7 +2163,6 @@
         detailInner =
           '<span>Account <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + categoryOptionsFor(r.categoryId) + '</select></span>' +
           '<span>Paycheck <select class="register-inline-select' + (pcFlagged ? ' register-flagged' : '') + '" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>' +
-          '<label class="checkbox-field" style="padding:0;"><input type="checkbox" data-reg-paid="' + r.id + '"' + (r.paid ? ' checked' : '') + '> Paid</label>' +
           '<span class="reg-detail-actions">' +
             '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="expense">Delete</button>' +
@@ -2124,7 +2174,7 @@
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="income">Delete</button>' +
           '</span>';
       }
-      bodyHtml += '<tr class="' + detailRowClass + '"><td class="reg-col-flag"></td><td colspan="6"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
+      bodyHtml += '<tr class="' + detailRowClass + '"><td class="reg-col-flag"></td><td colspan="7"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
     });
 
     var newRowHtml =
@@ -2134,10 +2184,11 @@
         '<td><input type="text" id="regNewDesc" placeholder="Payee / description"></td>' +
         '<td class="num reg-col-payment"><input type="number" id="regNewPayment" placeholder="Payment" step="0.01" min="0"></td>' +
         '<td class="reg-col-clr"><input type="checkbox" id="regNewCleared"></td>' +
+        '<td class="reg-col-paid"><input type="checkbox" id="regNewPaid" title="Paid"></td>' +
         '<td class="num reg-col-deposit"><input type="number" id="regNewDeposit" placeholder="Deposit" step="0.01" min="0"></td>' +
         '<td class="num reg-col-balance muted">—</td>' +
       '</tr>' +
-      '<tr class="register-txn-detail register-new-row"><td class="reg-col-flag"></td><td colspan="6"><div class="register-detail-inline">' +
+      '<tr class="register-txn-detail register-new-row"><td class="reg-col-flag"></td><td colspan="7"><div class="register-detail-inline">' +
         '<span>Account <select id="regNewCategory">' + categoryOptionsFor(null) + '</select></span>' +
         '<span>Paycheck <select id="regNewPaycheck">' + paycheckOptionsFor(null) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
@@ -2145,11 +2196,13 @@
 
     var headHtml = '<thead><tr>' +
       '<th class="reg-col-flag"></th>' +
-      '<th class="reg-col-date">Date</th><th>Payee</th>' +
-      '<th class="num reg-col-payment"><span class="full-label">Payment</span><span class="short-label">Pmt</span></th>' +
-      '<th class="reg-col-clr">&#10003;</th>' +
-      '<th class="num reg-col-deposit"><span class="full-label">Deposit</span><span class="short-label">Dep</span></th>' +
-      '<th class="num reg-col-balance"><span class="full-label">Balance</span><span class="short-label">Bal</span></th>' +
+      '<th class="reg-col-date reg-sortable" data-sort-key="date">Date' + sortArrowHtml("date") + '</th>' +
+      '<th class="reg-sortable" data-sort-key="payee">Payee' + sortArrowHtml("payee") + '</th>' +
+      '<th class="num reg-col-payment reg-sortable" data-sort-key="payment"><span class="full-label">Payment</span><span class="short-label">Pmt</span>' + sortArrowHtml("payment") + '</th>' +
+      '<th class="reg-col-clr reg-sortable" data-sort-key="cleared" title="Sort by cleared">&#10003;' + sortArrowHtml("cleared") + '</th>' +
+      '<th class="reg-col-paid reg-sortable" data-sort-key="paid" title="Sort by paid">P' + sortArrowHtml("paid") + '</th>' +
+      '<th class="num reg-col-deposit reg-sortable" data-sort-key="deposit"><span class="full-label">Deposit</span><span class="short-label">Dep</span>' + sortArrowHtml("deposit") + '</th>' +
+      '<th class="num reg-col-balance reg-sortable" data-sort-key="balance"><span class="full-label">Balance</span><span class="short-label">Bal</span>' + sortArrowHtml("balance") + '</th>' +
       '</tr></thead>';
 
     if (allRows.length === 0) {
@@ -2160,6 +2213,19 @@
     } else {
       wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + bodyHtml + newRowHtml + '</tbody></table>';
     }
+
+    wrap.querySelectorAll("[data-sort-key]").forEach(function(th) {
+      th.addEventListener("click", function() {
+        var key = th.dataset.sortKey;
+        if (registerSort.key === key) {
+          registerSort.dir *= -1;
+        } else {
+          registerSort.key = key;
+          registerSort.dir = REGISTER_SORT_DEFAULT_DIR[key] || 1;
+        }
+        renderCheckRegister();
+      });
+    });
 
     wrap.querySelectorAll("[data-drill-edit]").forEach(function(cell) {
       function openEdit() {
@@ -2238,6 +2304,7 @@
       var payment = parseFloat(document.getElementById("regNewPayment").value);
       var deposit = parseFloat(document.getElementById("regNewDeposit").value);
       var cleared = document.getElementById("regNewCleared").checked;
+      var paid = document.getElementById("regNewPaid").checked;
       var categoryId = document.getElementById("regNewCategory").value;
       var paycheckId = document.getElementById("regNewPaycheck").value || null;
 
@@ -2252,7 +2319,7 @@
         if (!categoryId) { showToast("Pick an account (category)"); return; }
         var cat = categoryById(categoryId);
         var debtType = cat && cat.debt ? "charge" : null;
-        state.expenses.push({ id: uid(), date: date, amount: payment, categoryId: categoryId, note: desc, paycheckId: paycheckId, paid: false, cleared: cleared, debtType: debtType });
+        state.expenses.push({ id: uid(), date: date, amount: payment, categoryId: categoryId, note: desc, paycheckId: paycheckId, paid: paid, cleared: cleared, debtType: debtType });
         showToast("Expense added");
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }

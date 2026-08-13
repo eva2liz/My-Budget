@@ -76,6 +76,13 @@ for exactly how that works.
   checkbox on income) so you can track what you've actually paid versus
   what's still pending, and what's posted at the bank versus not yet
   settled
+- **Click any column title in the Check Register to sort by it** — click
+  **Payee** to group every transaction with the same payee together
+  alphabetically (click again to reverse), click the **✓** column to bring
+  cleared items to the top, or **P** to bring paid items to the top. Click
+  **Date** to go back to plain chronological order. The running balance
+  never recalculates when you sort — it's always the true running total in
+  date order, just displayed in whatever order you're currently sorted by
 - **Check Register tab**: a full-width ledger styled like a desktop
   checkbook register (QuickBooks-style) — two lines per transaction, a
   **balance column** that runs down the page so you can reconcile against
@@ -87,9 +94,10 @@ for exactly how that works.
     an amount in either **Payment** or **Deposit**, an **account**
     (category), and, for a payment, which **paycheck** it counts against
   - Every existing transaction's top line shows date, payee, payment or
-    deposit, cleared checkbox, and balance; the muted line right underneath
-    holds its account, paycheck, **Paid** checkbox, and Split/Delete —
-    change any of those right there, no extra clicks
+    deposit, a **cleared** checkbox, a **paid** checkbox (expenses only —
+    income doesn't have a "paid" state), and balance; the muted line right
+    underneath holds its account, paycheck, and Split/Delete — change any
+    of those right there, no extra clicks
   - Click the **date** to correct it inline, or click the **payee** to open
     the full edit form (amount, paid status, and everything else) in a
     panel that appears above the register and tucks itself away again once
