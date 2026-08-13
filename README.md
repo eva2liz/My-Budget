@@ -69,7 +69,8 @@ for exactly how that works.
   highlighted across the whole day in a color you choose yourself, with a
   legend and month navigation — click any bill or income entry to open and
   edit it
-- Filter the Check Register by month or category to narrow what's shown
+- Filter the Check Register by a custom date range (From/To) or category to
+  narrow what's shown
 - Light/dark theme toggle
 - **Paid** and **cleared** checkboxes on every expense (and a **cleared**
   checkbox on income) so you can track what you've actually paid versus
@@ -93,8 +94,9 @@ for exactly how that works.
     the full edit form (amount, paid status, and everything else) in a
     panel that appears above the register and tucks itself away again once
     you're done
-  - A Month/Category filter narrows what's shown without touching the
-    running balance, which is always based on your full history
+  - A From/To date-range filter (plus a category filter), right at the top
+    next to the "Check register" heading, narrows what's shown without
+    touching the running balance, which is always based on your full history
   - Bank transactions you import (see CSV import below) land here
     automatically, flagged with a red **✗** and a red-outlined field until
     you assign a real account and a paycheck to them — once you do, the

@@ -318,6 +318,10 @@
     border: 1px solid var(--border); border-radius: 8px;
     background: var(--surface-1); color: var(--text-primary);
   }
+  .register-filter-daterange {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+  }
   .register-hint { margin: 4px 0 12px 0; }
 
   .register-scroll {
@@ -883,7 +887,8 @@
       <div class="register-toolbar">
         <h2>Check register <span class="muted" id="registerCount"></span></h2>
         <div class="register-filters">
-          <input type="month" id="filterMonth" aria-label="Filter by month">
+          <label class="register-filter-daterange">From <input type="date" id="filterFrom" aria-label="From date"></label>
+          <label class="register-filter-daterange">To <input type="date" id="filterTo" aria-label="To date"></label>
           <select id="filterCategory" aria-label="Filter by category"><option value="">All categories</option></select>
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
@@ -1961,10 +1966,12 @@
     renderPaycheckPlanner();
   }
 
-  document.getElementById("filterMonth").addEventListener("change", renderExpenses);
+  document.getElementById("filterFrom").addEventListener("change", renderExpenses);
+  document.getElementById("filterTo").addEventListener("change", renderExpenses);
   document.getElementById("filterCategory").addEventListener("change", renderExpenses);
   document.getElementById("clearFilters").addEventListener("click", function() {
-    document.getElementById("filterMonth").value = "";
+    document.getElementById("filterFrom").value = "";
+    document.getElementById("filterTo").value = "";
     document.getElementById("filterCategory").value = "";
     renderExpenses();
   });
@@ -2055,20 +2062,23 @@
     if (!wrap) return;
     var allRows = buildRegisterRows();
 
-    var monthFilterEl = document.getElementById("filterMonth");
+    var fromFilterEl = document.getElementById("filterFrom");
+    var toFilterEl = document.getElementById("filterTo");
     var catFilterEl = document.getElementById("filterCategory");
-    var monthFilter = monthFilterEl ? monthFilterEl.value : "";
+    var fromFilter = fromFilterEl ? fromFilterEl.value : "";
+    var toFilter = toFilterEl ? toFilterEl.value : "";
     var catFilter = catFilterEl ? catFilterEl.value : "";
 
     var rows = allRows.filter(function(r) {
-      if (monthFilter && monthKeyOf(r.date) !== monthFilter) return false;
+      if (fromFilter && r.date < fromFilter) return false;
+      if (toFilter && r.date > toFilter) return false;
       if (catFilter && r.categoryId !== catFilter) return false;
       return true;
     });
 
     var countEl = document.getElementById("registerCount");
     if (countEl) {
-      countEl.textContent = (monthFilter || catFilter)
+      countEl.textContent = (fromFilter || toFilter || catFilter)
         ? "(" + rows.length + " of " + allRows.length + ")"
         : "(" + allRows.length + ")";
     }
