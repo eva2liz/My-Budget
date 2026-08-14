@@ -117,6 +117,10 @@
   }
   header h1 { font-size: 18px; margin: 0; font-weight: 600; }
   header .actions { display: flex; gap: 8px; align-items: center; }
+  .logo-icon {
+    height: 1.35em; width: 1.35em; vertical-align: -0.38em; margin-right: 5px;
+    border-radius: 7px; object-fit: cover;
+  }
 
   .icon-btn {
     background: transparent;
@@ -580,7 +584,7 @@
 
 <div id="authGate" class="auth-gate">
   <div class="auth-card">
-    <h1 class="auth-logo">💰 My Budget</h1>
+    <h1 class="auth-logo"><img src="logo-piggy.png" alt="" class="logo-icon"> My Budget</h1>
     <div class="auth-tabs">
       <button type="button" class="auth-tab active" id="authTabLogin">Log in</button>
       <button type="button" class="auth-tab" id="authTabSignup">Sign up</button>
@@ -605,7 +609,7 @@
 <div id="appShell" style="display:none;">
 
 <header>
-  <h1>💰 My Budget</h1>
+  <h1><img src="logo-piggy.png" alt="" class="logo-icon"> My Budget</h1>
   <div class="actions">
     <span class="hint" id="authUserEmail" style="margin-right:2px;"></span>
     <button class="icon-btn" id="searchBtn" title="Search transactions">
@@ -2081,8 +2085,16 @@
     }).join("");
   }
 
-  function categoryOptionsFor(selectedId) {
-    return state.categories.map(function(c) {
+  // includePlaceholder adds a disabled "Select…" option that's selected
+  // whenever there's no real category yet, so a blank Account field never
+  // silently defaults to whichever category happens to be first in the
+  // list -- used for the new-transaction row, where that matters; existing
+  // rows always already have a real category, so they don't need it.
+  function categoryOptionsFor(selectedId, includePlaceholder) {
+    var placeholder = includePlaceholder
+      ? '<option value=""' + (selectedId ? '' : ' selected') + ' disabled>Select…</option>'
+      : '';
+    return placeholder + state.categories.map(function(c) {
       return '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
     }).join("");
   }
@@ -2229,7 +2241,7 @@
         '<td class="num reg-col-balance muted">—</td>' +
       '</tr>' +
       '<tr class="register-txn-detail register-new-row"><td class="reg-col-flag"></td><td colspan="7"><div class="register-detail-inline">' +
-        '<span>Account <select id="regNewCategory">' + categoryOptionsFor(null) + '</select></span>' +
+        '<span>Account <select id="regNewCategory">' + categoryOptionsFor(null, true) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 

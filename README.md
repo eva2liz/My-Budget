@@ -216,18 +216,20 @@ Pages link, straight off your own computer, or anywhere else:
 
 1. Create a new repository on GitHub (e.g. `my-budget`).
 2. Upload the whole `budget-app` folder as-is — `index.html`, `manifest.json`,
-   `sw.js`, and the `icons/` folder — to the repository (via the GitHub web
-   UI's "Add file → Upload files", dragging in the folder, or with git):
+   `sw.js`, `logo-piggy.png`, and the icon files (`icon-192.png`,
+   `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`) — to the
+   repository (via the GitHub web UI's "Add file → Upload files", dragging
+   in the folder, or with git):
    ```bash
    git init
-   git add index.html manifest.json sw.js icons
+   git add index.html manifest.json sw.js logo-piggy.png icon-192.png icon-512.png icon-maskable-512.png apple-touch-icon.png
    git commit -m "Add budget tracker"
    git branch -M main
    git remote add origin https://github.com/<your-username>/my-budget.git
    git push -u origin main
    ```
-   All of these need to stay in the same folder, alongside each other, for
-   the icons and offline support to work.
+   All of these need to stay in the same folder, alongside `index.html`, for
+   the header logo, icons, and offline support to all work.
 3. In the repo, go to **Settings → Pages**.
 4. Under "Build and deployment", set **Source** to "Deploy from a branch",
    pick the **main** branch and **/ (root)** folder, then save.
