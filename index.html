@@ -45,6 +45,18 @@
     --series-7: #4a3aa7; /* violet    - Shopping */
     --series-8: #e34948; /* red       - Other */
     --series-muted: #a6a49c; /* fallback for categories beyond 8 */
+
+    /* Blue-spectrum accent tones for dashboard chrome (paycheck cards, etc.)
+       -- decorative variety only, never used to encode category identity. */
+    --tone-1: #14335e;
+    --tone-2: #2a78d6;
+    --tone-3: #4a97e0;
+    --tone-4: #7ab8ee;
+
+    --sidebar-bg: #14335e;
+    --sidebar-text: rgba(255,255,255,0.78);
+    --sidebar-text-active: #ffffff;
+    --sidebar-active-bg: rgba(255,255,255,0.16);
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
@@ -67,6 +79,16 @@
     --series-6: #008300;
     --series-7: #9085e9;
     --series-8: #e66767;
+
+    --tone-1: #2a78d6;
+    --tone-2: #4a97e0;
+    --tone-3: #7ab8ee;
+    --tone-4: #a8d1f5;
+
+    --sidebar-bg: #0d2140;
+    --sidebar-text: rgba(255,255,255,0.72);
+    --sidebar-text-active: #ffffff;
+    --sidebar-active-bg: rgba(255,255,255,0.14);
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
@@ -90,6 +112,16 @@
       --series-6: #008300;
       --series-7: #9085e9;
       --series-8: #e66767;
+
+      --tone-1: #2a78d6;
+      --tone-2: #4a97e0;
+      --tone-3: #7ab8ee;
+      --tone-4: #a8d1f5;
+
+      --sidebar-bg: #0d2140;
+      --sidebar-text: rgba(255,255,255,0.72);
+      --sidebar-text-active: #ffffff;
+      --sidebar-active-bg: rgba(255,255,255,0.14);
     }
   }
 
@@ -116,6 +148,7 @@
     z-index: 10;
   }
   header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .header-left { display: flex; align-items: center; gap: 10px; }
   header .actions { display: flex; gap: 8px; align-items: center; }
   .logo-icon {
     height: 1.35em; width: 1.35em; vertical-align: -0.38em; margin-right: 5px;
@@ -131,35 +164,78 @@
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     font-size: 16px;
+    flex-shrink: 0;
   }
   .icon-btn:hover { background: var(--track); }
+  .sidebar-toggle { display: none; }
+
+  /* Layout: a persistent left sidebar nav beside the main content on wide
+     screens; below 901px it becomes an off-canvas drawer toggled from the
+     hamburger button in the header (see .sidebar-toggle / #sidebarBackdrop). */
+  .app-body { display: flex; align-items: flex-start; }
 
   nav.tabs {
     display: flex;
-    gap: 4px;
-    padding: 10px 20px 0 20px;
-    background: var(--surface-1);
-    border-bottom: 1px solid var(--border);
-    overflow-x: auto;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 12px;
+    background: var(--sidebar-bg);
+    border-bottom: none;
+    flex: 0 0 216px;
+    width: 216px;
+    box-sizing: border-box;
   }
   nav.tabs button {
     background: transparent;
     border: none;
-    padding: 10px 14px;
+    padding: 10px 12px;
     font-size: 14px;
-    color: var(--text-secondary);
+    color: var(--sidebar-text);
     cursor: pointer;
-    border-bottom: 2px solid transparent;
+    border-bottom: none;
+    border-radius: 8px;
     white-space: nowrap;
     font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    width: 100%;
   }
+  nav.tabs button .nav-icon { flex-shrink: 0; width: 18px; text-align: center; }
+  nav.tabs button:hover { background: rgba(255,255,255,0.08); color: var(--sidebar-text-active); }
   nav.tabs button.active {
-    color: var(--text-primary);
-    border-bottom-color: var(--series-1);
+    color: var(--sidebar-text-active);
+    background: var(--sidebar-active-bg);
     font-weight: 600;
   }
+  @media (min-width: 901px) {
+    nav.tabs { position: sticky; top: 66px; max-height: calc(100vh - 66px); overflow-y: auto; }
+  }
+  @media (max-width: 900px) {
+    .sidebar-toggle { display: flex; }
+    nav.tabs {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      width: 240px;
+      transform: translateX(-100%);
+      transition: transform .22s ease;
+      z-index: 60;
+      box-shadow: 2px 0 18px rgba(0,0,0,0.3);
+      padding-top: 20px;
+      overflow-y: auto;
+    }
+    nav.tabs.sidebar-open { transform: translateX(0); }
+  }
+  #sidebarBackdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 55;
+  }
+  #sidebarBackdrop.show { display: block; }
 
-  main { max-width: 900px; margin: 0 auto; padding: 20px; }
+  main { flex: 1; min-width: 0; max-width: 1100px; padding: 20px; }
   .panel { display: none; }
   .panel.active { display: block; }
 
@@ -243,6 +319,41 @@
   .stat-tile .value.over { color: var(--critical); }
   .stat-tile .value.good { color: var(--success); }
 
+  /* Dashboard: Recent transactions / Due today / Upcoming payments row */
+  .dash-panels-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+  .dash-panel-card { margin-bottom: 0; }
+  .dash-panel-list { max-height: 280px; overflow-y: auto; }
+  @media (max-width: 900px) {
+    .dash-panels-row { grid-template-columns: 1fr; }
+  }
+  .mini-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--gridline); border-radius: 6px; }
+  .mini-row:last-child { border-bottom: none; }
+  .mini-row.cal-clickable:hover { background: var(--track); }
+  .mini-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .mini-row-title { font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini-row-sub { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini-row-amt { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Dashboard: this month's paychecks, shown as a horizontally-scrolling
+     row of cards (styled in the blue tone set, not the category palette --
+     these don't encode category identity, just visual variety). */
+  .pg-cards-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; }
+  .pg-card {
+    flex: 0 0 190px;
+    background: var(--page-plane);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--pg-accent, var(--series-1));
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+  .pg-card:hover { background: var(--track); }
+  .pg-card:focus-visible { outline: 2px solid var(--series-1); outline-offset: 1px; }
+  .pg-card-title { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pg-card-date { font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; }
+  .pg-card-amount { font-size: 18px; font-weight: 700; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+  .pg-card-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; margin-top: 6px; color: var(--text-secondary); }
+
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--gridline); }
   th { color: var(--text-secondary); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
@@ -297,17 +408,14 @@
   input.row-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--series-1); vertical-align: middle; }
   .paid-strike { text-decoration: line-through; color: var(--text-muted); }
 
-  /* Check register: breaks out of main's centered 900px column so the
-     ledger can use the full window width and never needs to scroll
-     sideways -- only the panel itself scrolls vertically, like a desktop
-     spreadsheet register. */
+  /* Check register: breaks out of main's own left/right padding so the
+     ledger can use the full width of the content column (beside the
+     sidebar) and never needs to scroll sideways -- only the panel itself
+     scrolls vertically, like a desktop spreadsheet register. */
   .register-shell {
-    width: 100vw;
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    margin-right: -20px;
     padding: 0 20px 20px;
     box-sizing: border-box;
   }
@@ -415,7 +523,7 @@
 
   .short-label { display: none; }
   @media (max-width: 640px) {
-    .register-shell { padding: 0 8px 16px; }
+    .register-shell { width: calc(100% + 24px); margin-left: -12px; margin-right: -12px; padding: 0 8px 16px; }
     .register-scroll { max-height: 60vh; }
     .register-table td, .register-table thead th { padding: 6px 3px; font-size: 11.5px; }
     .register-table th.reg-col-flag, .register-table td.reg-col-flag { width: 14px; padding-left: 4px; }
@@ -537,8 +645,6 @@
     header .actions { gap: 6px; }
     main { padding: 12px; }
     .card { padding: 14px; }
-    nav.tabs { padding: 8px 14px 0 14px; }
-    nav.tabs button { padding: 9px 10px; font-size: 13px; }
     .stat-row { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
     .stat-tile { padding: 10px 12px; }
     .stat-tile .value { font-size: 18px; }
@@ -615,7 +721,16 @@
 <div id="appShell" style="display:none;">
 
 <header>
-  <h1><img src="logo-piggy.png" alt="" class="logo-icon"> My Budget</h1>
+  <div class="header-left">
+    <button class="icon-btn sidebar-toggle" id="sidebarToggle" title="Menu" aria-label="Open menu">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <h1><img src="logo-piggy.png" alt="" class="logo-icon"> My Budget</h1>
+  </div>
   <div class="actions">
     <span class="hint" id="authUserEmail" style="margin-right:2px;"></span>
     <button class="icon-btn" id="searchBtn" title="Search transactions">
@@ -635,16 +750,19 @@
   </div>
 </header>
 
+<div class="app-body">
 <nav class="tabs">
-  <button data-panel="dashboard" class="active">Dashboard</button>
-  <button data-panel="calendar">Calendar</button>
-  <button data-panel="recurring">Recurring</button>
-  <button data-panel="register">Check Register</button>
-  <button data-panel="paychecks">Paychecks</button>
-  <button data-panel="balances">Balances</button>
-  <button data-panel="categories">Categories &amp; Budgets</button>
-  <button data-panel="settings">Settings</button>
+  <button data-panel="dashboard" class="active"><span class="nav-icon">🏠</span><span>Dashboard</span></button>
+  <button data-panel="calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
+  <button data-panel="recurring"><span class="nav-icon">🔁</span><span>Recurring</span></button>
+  <button data-panel="register"><span class="nav-icon">📒</span><span>Check Register</span></button>
+  <button data-panel="paychecks"><span class="nav-icon">💵</span><span>Paychecks</span></button>
+  <button data-panel="balances"><span class="nav-icon">💳</span><span>Balances</span></button>
+  <button data-panel="categories"><span class="nav-icon">🏷️</span><span>Categories &amp; Budgets</span></button>
+  <button data-panel="budgetVsActual"><span class="nav-icon">📊</span><span>Budget vs. Actual</span></button>
+  <button data-panel="settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
 </nav>
+<div id="sidebarBackdrop"></div>
 
 <main>
 
@@ -652,30 +770,34 @@
   <section id="dashboard" class="panel active">
     <div class="stat-row" id="statRow"></div>
 
+    <div class="dash-panels-row">
+      <div class="card dash-panel-card">
+        <h2>Recent transactions</h2>
+        <div id="recentTxnWrap" class="dash-panel-list"></div>
+      </div>
+      <div class="card dash-panel-card">
+        <h2>Due today</h2>
+        <div id="dueTodayWrap" class="dash-panel-list"></div>
+      </div>
+      <div class="card dash-panel-card">
+        <h2>Upcoming payments <span class="muted">next 14 days</span></h2>
+        <div id="upcomingPaymentsWrap" class="dash-panel-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>This month's paychecks</h2>
+      <p class="hint" style="margin-top:0;">Click a paycheck to see exactly which bills are assigned to it.</p>
+      <div id="paycheckCardsWrap"></div>
+    </div>
+
     <div class="card">
       <div class="card-header-row">
         <h2>Spending by category <span class="muted" id="dashMonthLabel"></span></h2>
         <input type="month" id="dashMonthPicker" aria-label="Month to view">
       </div>
-      <p class="hint" style="margin-top:0;">For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. Drag the handle on the left of any row to reorder your categories -- the new order applies everywhere (this list, Budget vs. actual, Categories &amp; Budgets, and dropdowns).</p>
+      <p class="hint" style="margin-top:0;">For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. To reorder your categories, head to Categories &amp; Budgets -- the order you set there applies everywhere (this list, Budget vs. actual, and dropdowns).</p>
       <div id="categoryChart"></div>
-    </div>
-
-    <div class="card">
-      <h2>Budget vs. actual <span class="muted">for the month selected above</span></h2>
-      <p class="hint" style="margin-top:0;">Click any row to see exactly which transactions make up its total.</p>
-      <div id="budgetVsActualWrap" class="table-scroll"></div>
-    </div>
-
-    <div class="card">
-      <h2>Paycheck summary <span class="muted">for the month selected above</span></h2>
-      <p class="hint" style="margin-top:0;">Click any row to see exactly which bills are assigned to that paycheck.</p>
-      <div id="paycheckSummaryWrap" class="table-scroll"></div>
-    </div>
-
-    <div class="card">
-      <h2>Last 6 months</h2>
-      <div id="trendChart"></div>
     </div>
 
     <div class="card">
@@ -960,8 +1082,26 @@
       <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. Color, name, and monthly budget can also all be changed right in the table below -- no need to open this form unless you're marking something as a loan or credit card. For a loan or credit card, enter what you currently owe and today's date — every charge or payment you log afterward in that category updates the running balance on the Balances tab.</p>
     </div>
     <div class="card">
+      <h2>Reorder categories <span class="muted">drag to change display order everywhere</span></h2>
+      <p class="hint" style="margin-top:0;">Drag the handle on the left of any row to reorder your categories -- the new order applies everywhere: the Dashboard, Budget vs. actual, the table below, and every category dropdown. Bar lengths here reflect this month's spending, just for reference.</p>
+      <div id="categoryDragList"></div>
+    </div>
+
+    <div class="card">
       <h2>Your categories</h2>
       <div id="categoryTableWrap" class="table-scroll"></div>
+    </div>
+  </section>
+
+  <!-- BUDGET VS ACTUAL -->
+  <section id="budgetVsActual" class="panel">
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Budget vs. actual <span class="muted" id="bvaMonthLabel"></span></h2>
+        <input type="month" id="bvaMonthPicker" aria-label="Month to view">
+      </div>
+      <p class="hint" style="margin-top:0;">Click any row to see exactly which transactions make up its total.</p>
+      <div id="budgetVsActualWrap" class="table-scroll"></div>
     </div>
   </section>
 
@@ -1012,6 +1152,7 @@
   </section>
 
 </main>
+</div><!-- .app-body -->
 
 </div><!-- #appShell -->
 
@@ -1652,6 +1793,25 @@
 
   // ---------- tabs ----------
 
+  // ---------- sidebar nav (drawer on mobile) ----------
+
+  var sidebarNav = document.querySelector("nav.tabs");
+  var sidebarToggle = document.getElementById("sidebarToggle");
+  var sidebarBackdrop = document.getElementById("sidebarBackdrop");
+
+  function openSidebar() {
+    sidebarNav.classList.add("sidebar-open");
+    sidebarBackdrop.classList.add("show");
+  }
+  function closeSidebar() {
+    sidebarNav.classList.remove("sidebar-open");
+    sidebarBackdrop.classList.remove("show");
+  }
+  sidebarToggle.addEventListener("click", function() {
+    if (sidebarNav.classList.contains("sidebar-open")) closeSidebar(); else openSidebar();
+  });
+  sidebarBackdrop.addEventListener("click", closeSidebar);
+
   var tabButtons = document.querySelectorAll("nav.tabs button");
   tabButtons.forEach(function(btn) {
     btn.addEventListener("click", function() {
@@ -1660,6 +1820,8 @@
       document.querySelectorAll(".panel").forEach(function(p){ p.classList.remove("active"); });
       document.getElementById(btn.dataset.panel).classList.add("active");
       if (btn.dataset.panel === "dashboard") renderDashboard();
+      if (btn.dataset.panel === "budgetVsActual") renderBudgetVsActualTab();
+      closeSidebar();
     });
   });
 
@@ -3379,6 +3541,7 @@
   }
 
   function renderCategories() {
+    renderCategoryDragList();
     var wrap = document.getElementById("categoryTableWrap");
     if (state.categories.length === 0) {
       wrap.innerHTML = '<div class="empty-state">No categories yet.</div>';
@@ -3754,11 +3917,20 @@
     }).join("");
   }
 
-  function renderCategoryChart(monthKey, totals) {
-    var el = document.getElementById("categoryChart");
-    var cats = state.categories.filter(function(c) { return (totals[c.id] || 0) > 0 || c.budget > 0; });
+  // opts.targetId lets this same renderer draw into either the read-only
+  // Dashboard chart or the draggable list on Categories & Budgets.
+  // opts.readOnly hides the drag handle and skips wiring up drag-reorder.
+  // opts.showAll includes every category regardless of spending/budget this
+  // month, so the Categories & Budgets tab can reorder categories that
+  // haven't been used yet -- the Dashboard still only shows active ones.
+  function renderCategoryChart(monthKey, totals, opts) {
+    opts = opts || {};
+    var el = document.getElementById(opts.targetId || "categoryChart");
+    var cats = opts.showAll
+      ? state.categories.slice()
+      : state.categories.filter(function(c) { return (totals[c.id] || 0) > 0 || c.budget > 0; });
     if (cats.length === 0) {
-      el.innerHTML = '<div class="empty-state">No spending yet this month.</div>';
+      el.innerHTML = '<div class="empty-state">' + (opts.showAll ? "No categories yet." : "No spending yet this month.") + '</div>';
       return;
     }
     // Each budgeted category's bar fills relative to ITS OWN budget --
@@ -3792,7 +3964,7 @@
         : Math.min(100, (spent / maxUnbudgetedSpend) * 100);
       var fillClass = "fill" + (fillWidth >= 100 ? " overflow" : "");
 
-      var handle = cats.length > 1
+      var handle = (!opts.readOnly && cats.length > 1)
         ? '<span class="cat-drag-handle" data-drag-handle="' + c.id + '" title="Drag to reorder" aria-hidden="true">' +
             '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.5"></circle><circle cx="7.5" cy="2.5" r="1.5"></circle><circle cx="2.5" cy="8" r="1.5"></circle><circle cx="7.5" cy="8" r="1.5"></circle><circle cx="2.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle></svg>' +
           '</span>'
@@ -3810,7 +3982,15 @@
     }).join("");
 
     el.innerHTML = rows;
-    enableCategoryDragReorder(el);
+    if (!opts.readOnly) enableCategoryDragReorder(el);
+  }
+
+  // The draggable category list lives on Categories & Budgets -- this month's
+  // spending is just shown for reference on each bar, reordering isn't
+  // month-specific.
+  function renderCategoryDragList() {
+    var monthKey = currentMonthKey();
+    renderCategoryChart(monthKey, totalsForMonth(monthKey), { targetId: "categoryDragList", showAll: true });
   }
 
   // Re-threads just the currently-visible (dragged) categories into their new
@@ -3897,73 +4077,6 @@
         document.addEventListener("pointerup", onPointerUp);
       });
     });
-  }
-
-  function renderTrendChart() {
-    var el = document.getElementById("trendChart");
-    var now = new Date();
-    var months = [];
-    for (var i = 5; i >= 0; i--) {
-      var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"));
-    }
-    var expenseTotals = months.map(function(mk) {
-      return state.expenses.filter(function(e){ return monthKeyOf(e.date) === mk; })
-                            .reduce(function(s,e){ return s + e.amount; }, 0);
-    });
-    var incomeTotals = months.map(function(mk) { return incomeForMonth(mk); });
-    var hasIncome = incomeTotals.some(function(v){ return v > 0; });
-    var max = Math.max.apply(null, expenseTotals.concat(incomeTotals).concat([1]));
-
-    var W = 640, H = 220, padBottom = 34, padTop = 20, padSide = 10;
-    var chartH = H - padBottom - padTop;
-    var barSlot = (W - padSide*2) / months.length;
-    var groupW = Math.min(70, barSlot * 0.72);
-    var barW = hasIncome ? (groupW - 4) / 2 : Math.min(46, groupW);
-
-    var bars = "";
-    months.forEach(function(mk, i) {
-      var groupX = padSide + i * barSlot + (barSlot - groupW) / 2;
-      var isCurrent = mk === currentMonthKey();
-      var opacity = isCurrent ? "1" : "0.55";
-
-      if (hasIncome) {
-        var incVal = incomeTotals[i];
-        var incH = max > 0 ? (incVal / max) * chartH : 0;
-        var incX = groupX;
-        var incY = padTop + (chartH - incH);
-        bars += '<rect class="bar" x="' + incX + '" y="' + incY + '" width="' + barW + '" height="' + Math.max(incH,1) +
-                '" rx="3" fill="var(--series-3)" opacity="' + opacity + '"><title>' + monthLabel(mk) + ' income: ' + fmtMoney(incVal) + '</title></rect>';
-
-        var expVal = expenseTotals[i];
-        var expH = max > 0 ? (expVal / max) * chartH : 0;
-        var expX = groupX + barW + 4;
-        var expY = padTop + (chartH - expH);
-        bars += '<rect class="bar" x="' + expX + '" y="' + expY + '" width="' + barW + '" height="' + Math.max(expH,1) +
-                '" rx="3" fill="var(--series-1)" opacity="' + opacity + '"><title>' + monthLabel(mk) + ' expenses: ' + fmtMoney(expVal) + '</title></rect>';
-      } else {
-        var val = expenseTotals[i];
-        var barH = max > 0 ? (val / max) * chartH : 0;
-        var x = groupX + (groupW - barW) / 2;
-        var y = padTop + (chartH - barH);
-        bars += '<rect class="bar" x="' + x + '" y="' + y + '" width="' + barW + '" height="' + Math.max(barH,1) +
-                '" rx="4" fill="var(--series-1)" opacity="' + opacity + '"><title>' + monthLabel(mk) + ': ' + fmtMoney(val) + '</title></rect>';
-      }
-      bars += '<text class="bar-label" x="' + (groupX + groupW/2) + '" y="' + (H - padBottom + 18) + '" text-anchor="middle">' + monthLabel(mk).split(" ")[0] + '</text>';
-    });
-
-    var legend = hasIncome
-      ? '<div class="legend">' +
-          '<span class="legend-item"><span class="swatch" style="background:var(--series-3)"></span>Income</span>' +
-          '<span class="legend-item"><span class="swatch" style="background:var(--series-1)"></span>Expenses</span>' +
-        '</div>'
-      : '';
-
-    var svg = '<svg class="bars-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" style="width:100%; height:auto;">' +
-      '<line class="axis-line" x1="' + padSide + '" y1="' + (H - padBottom) + '" x2="' + (W - padSide) + '" y2="' + (H - padBottom) + '"></line>' +
-      bars +
-      '</svg>' + legend;
-    el.innerHTML = svg;
   }
 
   function renderBudgetVsActualTable(monthKey, totals) {
@@ -4058,12 +4171,13 @@
     document.getElementById("categoryDrillDialog").close();
   });
 
-  // Condensed, per-paycheck view of the same month shown above: just payday,
-  // income, what's assigned against it, and what's left -- click a row for
-  // the full list of bills behind that total. Complements (doesn't replace)
-  // the fully-detailed paycheck cards on the Paychecks tab.
-  function renderPaycheckSummaryCard(monthKey) {
-    var wrap = document.getElementById("paycheckSummaryWrap");
+  // Dashboard "This month's paychecks" row: one card per paycheck for the
+  // current calendar month, showing income vs. what's already assigned --
+  // click a card for the full list of bills behind that total. Complements
+  // (doesn't replace) the fully-detailed paycheck planner on the Paychecks
+  // tab.
+  function renderPaycheckCardsRow(monthKey) {
+    var wrap = document.getElementById("paycheckCardsWrap");
     // Same rule as the planner: only recurring paychecks (or a one-off that
     // already has bills assigned to it from before this existed) show up.
     var rows = state.income.filter(function(inc) {
@@ -4075,32 +4189,129 @@
       wrap.innerHTML = '<div class="empty-state">No paychecks logged for ' + monthLabel(monthKey) + ' yet.</div>';
       return;
     }
-    var totalIncome = 0, totalAssigned = 0;
-    var body = rows.map(function(inc) {
+    var tones = ["var(--tone-1)", "var(--tone-2)", "var(--tone-3)", "var(--tone-4)"];
+    var cards = rows.map(function(inc, i) {
       var assigned = state.expenses.filter(function(e) { return e.paycheckId === inc.id; })
                                     .reduce(function(s,e){ return s + e.amount; }, 0);
       var leftover = inc.amount - assigned;
-      totalIncome += inc.amount;
-      totalAssigned += assigned;
-      return '<tr class="cal-clickable" data-paycheck-drill="' + inc.id + '" tabindex="0" title="Click to see the bills assigned to this paycheck">' +
-        '<td>' + escapeHtml(inc.date) + '</td>' +
-        '<td>' + escapeHtml(inc.source) + '</td>' +
-        '<td class="num">' + fmtMoney(inc.amount) + '</td>' +
-        '<td class="num">' + fmtMoney(assigned) + '</td>' +
-        '<td class="num ' + (leftover < 0 ? "variance-over" : "variance-under") + '">' + fmtMoney(leftover) + '</td>' +
-      '</tr>';
+      var pct = inc.amount > 0 ? Math.min(100, (assigned / inc.amount) * 100) : 0;
+      var tone = tones[i % tones.length];
+      return '<div class="pg-card cal-clickable" data-paycheck-drill="' + inc.id + '" tabindex="0" style="--pg-accent:' + tone + ';" title="Click to see the bills assigned to this paycheck">' +
+        '<div class="pg-card-title">' + escapeHtml(inc.source) + '</div>' +
+        '<div class="pg-card-date">' + escapeHtml(inc.date) + '</div>' +
+        '<div class="pg-card-amount">' + fmtMoney(inc.amount) + '</div>' +
+        '<div class="track"><div class="fill' + (pct >= 100 ? ' overflow' : '') + '" style="width:' + pct + '%; background:' + tone + ';"></div></div>' +
+        '<div class="pg-card-meta"><span>' + fmtMoney(assigned) + ' assigned</span><span class="' + (leftover < 0 ? "variance-over" : "variance-under") + '">' + fmtMoney(leftover) + ' left</span></div>' +
+      '</div>';
     }).join("");
-    var totalLeftover = totalIncome - totalAssigned;
-    var footer = '<tfoot><tr><td colspan="2"><strong>Total</strong></td>' +
-      '<td class="num"><strong>' + fmtMoney(totalIncome) + '</strong></td>' +
-      '<td class="num"><strong>' + fmtMoney(totalAssigned) + '</strong></td>' +
-      '<td class="num ' + (totalLeftover < 0 ? "variance-over" : "variance-under") + '"><strong>' + fmtMoney(totalLeftover) + '</strong></td></tr></tfoot>';
-    wrap.innerHTML = '<table class="summary-table"><thead><tr><th>Payday</th><th>Source</th><th class="num">Income</th><th class="num">Assigned</th><th class="num">Leftover</th></tr></thead><tbody>' +
-      body + '</tbody>' + footer + '</table>';
-    wrap.querySelectorAll("[data-paycheck-drill]").forEach(function(row) {
-      row.addEventListener("click", function() { openPaycheckDrillDialog(row.dataset.paycheckDrill); });
+    wrap.innerHTML = '<div class="pg-cards-row">' + cards + '</div>';
+    wrap.querySelectorAll("[data-paycheck-drill]").forEach(function(card) {
+      card.addEventListener("click", function() { openPaycheckDrillDialog(card.dataset.paycheckDrill); });
+      card.addEventListener("keydown", function(e) { if (e.key === "Enter") card.click(); });
+    });
+  }
+
+  // Dashboard "Recent transactions" panel: the last handful of register
+  // entries (expenses and income together), newest first -- click one to
+  // jump straight to editing it.
+  function renderRecentTransactionsPanel() {
+    var wrap = document.getElementById("recentTxnWrap");
+    var rows = buildRegisterRows().slice().sort(function(a, b) {
+      var c = b.date.localeCompare(a.date);
+      if (c !== 0) return c;
+      return a.id < b.id ? 1 : (a.id > b.id ? -1 : 0);
+    }).slice(0, 6);
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No transactions yet.</div>';
+      return;
+    }
+    var html = rows.map(function(r) {
+      var isExpense = r.kind === "expense";
+      var cat = isExpense ? categoryById(r.categoryId) : null;
+      var title = isExpense ? (cat ? cat.name : "(deleted category)") : (r.desc || "Income");
+      var sub = isExpense ? (r.desc || "") : "Income";
+      var color = isExpense ? categoryColorHex(r.categoryId) : "var(--success)";
+      var amtCls = isExpense ? "variance-over" : "variance-under";
+      var amtSign = isExpense ? "-" : "+";
+      return '<div class="mini-row cal-clickable" data-recent-kind="' + r.kind + '" data-recent-id="' + r.id + '" tabindex="0">' +
+        '<span class="swatch" style="background:' + color + '"></span>' +
+        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(title) + '</span><span class="mini-row-sub">' + escapeHtml(sub) + ' &middot; ' + escapeHtml(r.date) + '</span></span>' +
+        '<span class="mini-row-amt ' + amtCls + '">' + amtSign + fmtMoney(Math.abs(r.amount)) + '</span>' +
+      '</div>';
+    }).join("");
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-recent-id]").forEach(function(row) {
+      row.addEventListener("click", function() {
+        if (row.dataset.recentKind === "expense") editExpense(row.dataset.recentId);
+        else editIncome(row.dataset.recentId);
+      });
       row.addEventListener("keydown", function(e) { if (e.key === "Enter") row.click(); });
     });
+  }
+
+  // Dashboard "Due today" panel: unpaid expenses dated exactly today.
+  function renderDueTodayPanel() {
+    var wrap = document.getElementById("dueTodayWrap");
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var rows = state.expenses.filter(function(e) { return e.date === todayStr && !e.paid; })
+                              .sort(function(a, b) { return (a.note || "").localeCompare(b.note || ""); });
+    if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Nothing due today.</div>';
+      return;
+    }
+    var html = rows.map(function(e) {
+      var cat = categoryById(e.categoryId);
+      var color = cat ? categoryColorHex(e.categoryId) : "#a6a49c";
+      return '<div class="mini-row cal-clickable" data-due-id="' + e.id + '" tabindex="0">' +
+        '<span class="swatch" style="background:' + color + '"></span>' +
+        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(e.note || (cat ? cat.name : "Expense")) + '</span><span class="mini-row-sub">' + escapeHtml(cat ? cat.name : "") + '</span></span>' +
+        '<span class="mini-row-amt">' + fmtMoney(e.amount) + '</span>' +
+      '</div>';
+    }).join("");
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-due-id]").forEach(function(row) {
+      row.addEventListener("click", function() { editExpense(row.dataset.dueId); });
+      row.addEventListener("keydown", function(e) { if (e.key === "Enter") row.click(); });
+    });
+  }
+
+  // Dashboard "Upcoming payments" panel: recurring bills due (but not yet
+  // logged) within the next 14 days -- same "pending" idea used by the
+  // paycheck planner, just filtered to a short near-future window.
+  function renderUpcomingPaymentsPanel() {
+    var wrap = document.getElementById("upcomingPaymentsWrap");
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var monthKey = currentMonthKey();
+    var nextMonthKey = monthKeyOffset(monthKey, 1);
+    var windowEnd = new Date();
+    windowEnd.setDate(windowEnd.getDate() + 14);
+    var windowEndStr = windowEnd.toISOString().slice(0, 10);
+
+    var pending = [];
+    state.recurring.forEach(function(r) {
+      [monthKey, nextMonthKey].forEach(function(mk) {
+        var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === mk; });
+        if (already) return;
+        var dueDate = templateDueDateInMonth(r, mk);
+        if (dueDate >= todayStr && dueDate <= windowEndStr) pending.push({ template: r, dueDate: dueDate });
+      });
+    });
+    pending.sort(function(a, b) { return a.dueDate.localeCompare(b.dueDate); });
+
+    if (pending.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Nothing upcoming in the next 14 days.</div>';
+      return;
+    }
+    var html = pending.map(function(p) {
+      var cat = categoryById(p.template.categoryId);
+      var color = cat ? categoryColorHex(p.template.categoryId) : "#a6a49c";
+      return '<div class="mini-row">' +
+        '<span class="swatch" style="background:' + color + '"></span>' +
+        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(p.template.name) + '</span><span class="mini-row-sub">Due ' + escapeHtml(p.dueDate) + '</span></span>' +
+        '<span class="mini-row-amt">' + fmtMoney(p.template.amount) + '</span>' +
+      '</div>';
+    }).join("");
+    wrap.innerHTML = html;
   }
 
   function openPaycheckDrillDialog(incomeId) {
@@ -4147,19 +4358,32 @@
 
   var dashMonthPicker = document.getElementById("dashMonthPicker");
   dashMonthPicker.addEventListener("change", renderDashboard);
+  var bvaMonthPicker = document.getElementById("bvaMonthPicker");
+  bvaMonthPicker.addEventListener("change", renderBudgetVsActualTab);
 
   function renderDashboard() {
     var todayMonthKey = currentMonthKey();
     renderStatTiles(todayMonthKey, totalsForMonth(todayMonthKey));
 
+    renderRecentTransactionsPanel();
+    renderDueTodayPanel();
+    renderUpcomingPaymentsPanel();
+    renderPaycheckCardsRow(todayMonthKey);
+
     if (!dashMonthPicker.value) dashMonthPicker.value = todayMonthKey;
     var monthKey = dashMonthPicker.value;
     document.getElementById("dashMonthLabel").textContent = "· " + monthLabel(monthKey);
     var totals = totalsForMonth(monthKey);
-    renderCategoryChart(monthKey, totals);
-    renderBudgetVsActualTable(monthKey, totals);
-    renderPaycheckSummaryCard(monthKey);
-    renderTrendChart();
+    renderCategoryChart(monthKey, totals, { targetId: "categoryChart", readOnly: true });
+  }
+
+  // Budget vs. actual now lives on its own tab with its own month picker,
+  // decoupled from the Dashboard's "Spending by category" month.
+  function renderBudgetVsActualTab() {
+    if (!bvaMonthPicker.value) bvaMonthPicker.value = currentMonthKey();
+    var monthKey = bvaMonthPicker.value;
+    document.getElementById("bvaMonthLabel").textContent = "· " + monthLabel(monthKey);
+    renderBudgetVsActualTable(monthKey, totalsForMonth(monthKey));
   }
 
   // ---------- SETTINGS ----------
@@ -4546,6 +4770,7 @@
     renderRecurringIncome();
     renderCategories();
     renderDashboard();
+    renderBudgetVsActualTab();
     renderCalendar();
     renderPaycheckPlanner();
     renderBalances();

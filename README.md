@@ -10,6 +10,10 @@ for exactly how that works.
 
 ## Features
 
+- **Sidebar navigation** — the tabs live in a left-hand sidebar on wider
+  screens; on phones it tucks away behind a menu (☰) button in the header
+  and slides out as a drawer, so the app has room to breathe no matter the
+  screen size
 - Log one-time expenses and payments with a date, amount, category, and
   note, right from the **Check Register** tab — recurring bills live on
   their own Recurring tab instead
@@ -20,10 +24,11 @@ for exactly how that works.
   budget" warning) on the dashboard. The first 8 categories you create get
   their own chart color automatically; pick your own color for any
   category at any time — it shows up everywhere that category does
-  (charts, the calendar, expense lists, and more). Drag the handle on any
-  row of the dashboard's "Spending by category" list to reorder your
-  categories — the new order applies everywhere (this list, Budget vs.
-  actual, Categories & Budgets, and every category dropdown)
+  (charts, the calendar, expense lists, and more). **Reordering categories
+  now happens on the Categories & Budgets tab** — drag the handle on any
+  row of its "Reorder categories" list, and the new order applies
+  everywhere (the Dashboard, Budget vs. actual, the category table, and
+  every category dropdown)
 - **Categories & Budgets table is directly editable** — change a
   category's color, name, or monthly budget right in the table (color
   saves the moment you pick one; name and budget save when you click
@@ -36,23 +41,28 @@ for exactly how that works.
   on a different date each cycle — e.g. every other Friday) — for
   biweekly, just give it any date you know it landed on and future/past
   occurrences are calculated from there
-- Dashboard with income, spending, and net totals for the month, plus a
-  6-month income-vs-expenses trend chart
-- "Spending by category" chart — each category's bar fills toward its own
-  budget (full means right at budget, red means over); categories with no
-  budget set are just compared to each other, so one big category no longer
-  makes every other bar look emptier than it really is
-- Budget vs. actual table on the dashboard — pick any month and see
-  budgeted vs. actual vs. remaining vs. % used, per category and in total.
-  Click any row to open a breakdown of every transaction that makes up that
-  total, with date, note, amount, and which paycheck (or "Unassigned") it
-  belongs to. Click any transaction's note in that breakdown to jump
-  straight to editing it
-- Paycheck summary on the dashboard — a quick-glance totals table for the
-  same month: payday, income, what's assigned against it, and what's left
-  over, per paycheck. Click a row to drill into exactly which bills make up
-  that "assigned" total, and click any bill's note there to jump straight
-  to editing it
+- Dashboard with income, spending, and net totals for the month, a **Recent
+  transactions** panel, a **Due today** panel, and an **Upcoming payments**
+  panel (recurring bills due in the next 14 days that haven't been logged
+  yet) — click any recent transaction or due-today item to jump straight to
+  editing it
+- **This month's paychecks**, shown as a row of cards on the Dashboard —
+  each card shows the payday, income, a progress bar of what's been
+  assigned against it, and what's left over. Click a card to drill into
+  exactly which bills make up its "assigned" total, and click any bill's
+  note there to jump straight to editing it
+- "Spending by category" chart on the Dashboard — each category's bar fills
+  toward its own budget (full means right at budget, red means over);
+  categories with no budget set are just compared to each other, so one big
+  category no longer makes every other bar look emptier than it really is.
+  This view is read-only — reorder categories from the Categories & Budgets
+  tab instead (see above)
+- **Budget vs. Actual** has its own tab with its own month picker — pick any
+  month and see budgeted vs. actual vs. remaining vs. % used, per category
+  and in total. Click any row to open a breakdown of every transaction that
+  makes up that total, with date, note, amount, and which paycheck (or
+  "Unassigned") it belongs to. Click any transaction's note in that
+  breakdown to jump straight to editing it
 - Savings goals — set aside money for something specific (an emergency
   fund, a trip, a car), separate from bills and budgets. Give it a name,
   target amount, and starting balance; log **Add money** each time you set
@@ -136,7 +146,7 @@ for exactly how that works.
   one-off deposit typed into the Check Register (a gift, a tax refund,
   a single freelance payment) still counts fully toward your income
   totals and running balance, but it never shows up as a block in the
-  **Paychecks** tab or the Dashboard's Paycheck summary, and it's never
+  **Paychecks** tab or the Dashboard's "This month's paychecks" row, and it's never
   offered as a paycheck to assign a bill to
 - **Paychecks tab**: the **paycheck planner** — for each paycheck, assign
   the recurring bills it needs to cover (right from the Check Register, or
