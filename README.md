@@ -45,13 +45,15 @@ for exactly how that works.
   panels:
   - **Recent transactions** — the last 7 Check Register entries (expenses
     and income together) from the current month, as of today
-  - **Due today** — recurring bills (not everyday spending) whose due date
-    this month is today
-  - **Upcoming payments** — recurring bills due later this month that
-    haven't been logged yet
+  - **Due today & past due** — recurring bills (not everyday spending) due
+    today, plus any earlier this month that are still sitting unpaid or
+    uncleared (e.g. tithes or a mortgage payment that slipped by) — those
+    are flagged in red as "Past due" so they don't get lost
+  - **Upcoming payments** — recurring bills due later this month, whether
+    already logged (but not yet paid or cleared) or not logged at all yet
 
-  Click any recent transaction or due-today item to jump straight to
-  editing it
+  Click any recent transaction, due-today, or upcoming-payment item to jump
+  straight to editing it
 - **This month's paychecks**, shown as a row of cards on the Dashboard —
   each card shows the payday, income, a progress bar of what's been
   assigned against it, and what's left over. Click a card to drill into

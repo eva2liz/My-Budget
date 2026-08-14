@@ -776,11 +776,11 @@
         <div id="recentTxnWrap" class="dash-panel-list"></div>
       </div>
       <div class="card dash-panel-card">
-        <h2>Due today</h2>
+        <h2>Due today <span class="muted">&amp; past due</span></h2>
         <div id="dueTodayWrap" class="dash-panel-list"></div>
       </div>
       <div class="card dash-panel-card">
-        <h2>Upcoming payments <span class="muted">rest of this month</span></h2>
+        <h2>Upcoming payments <span class="muted">later this month</span></h2>
         <div id="upcomingPaymentsWrap" class="dash-panel-list"></div>
       </div>
     </div>
@@ -4253,39 +4253,60 @@
     });
   }
 
-  // Dashboard "Due today" panel: recurring bills whose due date this month
-  // is today -- not everyday spending. Covers both the usual case (the
-  // bill already auto-logged today and is just sitting unpaid) and the
-  // edge case where it somehow hasn't been logged yet at all.
+  // Dashboard "Due today" panel: recurring bills due today, PLUS ones
+  // already past due this month (due date already passed but still not
+  // paid or cleared -- e.g. tithes or a mortgage payment that slipped by).
+  // Anything due later this month belongs in Upcoming payments instead.
   function renderDueTodayPanel() {
     var wrap = document.getElementById("dueTodayWrap");
     var todayStr = new Date().toISOString().slice(0, 10);
     var monthKey = currentMonthKey();
 
     var items = [];
-    state.recurring.forEach(function(r) {
-      if (templateDueDateInMonth(r, monthKey) !== todayStr) return;
-      var logged = state.expenses.find(function(e) { return e.recurringId === r.id && e.date === todayStr; });
-      if (logged && logged.paid) return;
-      items.push({ template: r, expense: logged || null });
+
+    // Already logged, due today or earlier this month, still not settled.
+    state.expenses.forEach(function(e) {
+      if (!e.recurringId) return;
+      if (monthKeyOf(e.date) !== monthKey) return;
+      if (e.date > todayStr) return;
+      if (e.cleared || e.paid) return;
+      var template = state.recurring.find(function(r) { return r.id === e.recurringId; });
+      items.push({
+        name: template ? template.name : (e.note || "Recurring bill"),
+        categoryId: e.categoryId, amount: e.amount, dueDate: e.date,
+        expenseId: e.id, overdue: e.date < todayStr
+      });
     });
 
+    // Not logged at all yet, but due today or earlier this month (edge
+    // case -- normally the app auto-logs these on their due date).
+    state.recurring.forEach(function(r) {
+      var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === monthKey; });
+      if (already) return;
+      var dueDate = templateDueDateInMonth(r, monthKey);
+      if (dueDate <= todayStr) {
+        items.push({ name: r.name, categoryId: r.categoryId, amount: r.amount, dueDate: dueDate, expenseId: null, overdue: dueDate < todayStr });
+      }
+    });
+
+    items.sort(function(a, b) { return a.dueDate.localeCompare(b.dueDate); });
+
     if (items.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">No recurring payments due today.</div>';
+      wrap.innerHTML = '<div class="empty-state">Nothing due today, and nothing past due.</div>';
       return;
     }
     var html = items.map(function(it) {
-      var cat = categoryById(it.template.categoryId);
-      var color = cat ? categoryColorHex(it.template.categoryId) : "#a6a49c";
-      var amount = it.expense ? it.expense.amount : it.template.amount;
-      var sub = escapeHtml(cat ? cat.name : "") + (it.expense ? "" : " &middot; not logged yet");
-      var clickableClass = it.expense ? " cal-clickable" : "";
-      var dataAttr = it.expense ? ' data-due-id="' + it.expense.id + '"' : '';
-      var tabAttr = it.expense ? ' tabindex="0"' : '';
+      var cat = categoryById(it.categoryId);
+      var color = cat ? categoryColorHex(it.categoryId) : "#a6a49c";
+      var clickableClass = it.expenseId ? " cal-clickable" : "";
+      var dataAttr = it.expenseId ? ' data-due-id="' + it.expenseId + '"' : '';
+      var tabAttr = it.expenseId ? ' tabindex="0"' : '';
+      var subLabel = it.overdue ? ("Past due &middot; " + escapeHtml(it.dueDate)) : "Due today";
+      var subStyle = it.overdue ? ' style="color:var(--critical);"' : '';
       return '<div class="mini-row' + clickableClass + '"' + dataAttr + tabAttr + '>' +
         '<span class="swatch" style="background:' + color + '"></span>' +
-        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(it.template.name) + '</span><span class="mini-row-sub">' + sub + '</span></span>' +
-        '<span class="mini-row-amt">' + fmtMoney(amount) + '</span>' +
+        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(it.name) + '</span><span class="mini-row-sub"' + subStyle + '>' + subLabel + '</span></span>' +
+        '<span class="mini-row-amt">' + fmtMoney(it.amount) + '</span>' +
       '</div>';
     }).join("");
     wrap.innerHTML = html;
@@ -4295,38 +4316,69 @@
     });
   }
 
-  // Dashboard "Upcoming payments" panel: recurring bills due later this
-  // month that haven't been logged yet -- same "pending" idea used by the
-  // paycheck planner. Today's own due date is covered by the Due Today
-  // panel above, so this only looks at what's still ahead this month.
+  // Dashboard "Upcoming payments" panel: recurring bills due LATER this
+  // month (strictly after today) -- either already logged but not yet
+  // cleared or marked paid, or not logged at all yet. Today's due bills
+  // and anything already past due live in the Due Today panel instead, so
+  // they're never shown in both places.
   function renderUpcomingPaymentsPanel() {
     var wrap = document.getElementById("upcomingPaymentsWrap");
     var todayStr = new Date().toISOString().slice(0, 10);
     var monthKey = currentMonthKey();
 
-    var pending = [];
+    var items = [];
+
+    // Already logged this month with a future date, but not cleared and
+    // not marked paid yet (uncommon -- most bills log on their due date --
+    // but possible if a bill was logged early).
+    state.expenses.forEach(function(e) {
+      if (!e.recurringId) return;
+      if (e.date <= todayStr) return;
+      if (monthKeyOf(e.date) !== monthKey) return;
+      if (e.cleared || e.paid) return;
+      var template = state.recurring.find(function(r) { return r.id === e.recurringId; });
+      items.push({
+        name: template ? template.name : (e.note || "Recurring bill"),
+        categoryId: e.categoryId,
+        amount: e.amount,
+        dueDate: e.date,
+        expenseId: e.id
+      });
+    });
+
+    // Not logged at all yet, due later this month.
     state.recurring.forEach(function(r) {
       var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === monthKey; });
       if (already) return;
       var dueDate = templateDueDateInMonth(r, monthKey);
-      if (dueDate > todayStr) pending.push({ template: r, dueDate: dueDate });
+      if (dueDate > todayStr) {
+        items.push({ name: r.name, categoryId: r.categoryId, amount: r.amount, dueDate: dueDate, expenseId: null });
+      }
     });
-    pending.sort(function(a, b) { return a.dueDate.localeCompare(b.dueDate); });
 
-    if (pending.length === 0) {
+    items.sort(function(a, b) { return a.dueDate.localeCompare(b.dueDate); });
+
+    if (items.length === 0) {
       wrap.innerHTML = '<div class="empty-state">Nothing else due later this month.</div>';
       return;
     }
-    var html = pending.map(function(p) {
-      var cat = categoryById(p.template.categoryId);
-      var color = cat ? categoryColorHex(p.template.categoryId) : "#a6a49c";
-      return '<div class="mini-row">' +
+    var html = items.map(function(it) {
+      var cat = categoryById(it.categoryId);
+      var color = cat ? categoryColorHex(it.categoryId) : "#a6a49c";
+      var clickableClass = it.expenseId ? " cal-clickable" : "";
+      var dataAttr = it.expenseId ? ' data-upcoming-id="' + it.expenseId + '"' : '';
+      var tabAttr = it.expenseId ? ' tabindex="0"' : '';
+      return '<div class="mini-row' + clickableClass + '"' + dataAttr + tabAttr + '>' +
         '<span class="swatch" style="background:' + color + '"></span>' +
-        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(p.template.name) + '</span><span class="mini-row-sub">Due ' + escapeHtml(p.dueDate) + '</span></span>' +
-        '<span class="mini-row-amt">' + fmtMoney(p.template.amount) + '</span>' +
+        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(it.name) + '</span><span class="mini-row-sub">Due ' + escapeHtml(it.dueDate) + '</span></span>' +
+        '<span class="mini-row-amt">' + fmtMoney(it.amount) + '</span>' +
       '</div>';
     }).join("");
     wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-upcoming-id]").forEach(function(row) {
+      row.addEventListener("click", function() { editExpense(row.dataset.upcomingId); });
+      row.addEventListener("keydown", function(e) { if (e.key === "Enter") row.click(); });
+    });
   }
 
   function openPaycheckDrillDialog(incomeId) {
