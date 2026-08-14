@@ -567,7 +567,12 @@
     padding: 28px 24px;
     width: 100%; max-width: 360px;
   }
-  .auth-logo { font-size: 20px; text-align: center; margin: 0 0 18px 0; }
+  .auth-logo { font-size: 20px; text-align: center; margin: 0 0 6px 0; }
+  .auth-verse {
+    text-align: center; font-style: italic; font-size: 12.5px;
+    color: var(--text-muted); line-height: 1.5; margin: 0 0 18px 0;
+  }
+  .auth-verse-ref { font-style: normal; font-weight: 600; }
   .auth-tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
   .auth-tab {
     flex: 1; background: transparent; border: none; padding: 10px;
@@ -585,6 +590,7 @@
 <div id="authGate" class="auth-gate">
   <div class="auth-card">
     <h1 class="auth-logo"><img src="logo-piggy.png" alt="" class="logo-icon"> My Budget</h1>
+    <p class="auth-verse">"But my God shall supply all your need according to his riches in glory by Christ Jesus." <span class="auth-verse-ref">— Philippians 4:19</span></p>
     <div class="auth-tabs">
       <button type="button" class="auth-tab active" id="authTabLogin">Log in</button>
       <button type="button" class="auth-tab" id="authTabSignup">Sign up</button>
