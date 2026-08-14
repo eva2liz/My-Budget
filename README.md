@@ -41,10 +41,16 @@ for exactly how that works.
   on a different date each cycle — e.g. every other Friday) — for
   biweekly, just give it any date you know it landed on and future/past
   occurrences are calculated from there
-- Dashboard with income, spending, and net totals for the month, a **Recent
-  transactions** panel, a **Due today** panel, and an **Upcoming payments**
-  panel (recurring bills due in the next 14 days that haven't been logged
-  yet) — click any recent transaction or due-today item to jump straight to
+- Dashboard with income, spending, and net totals for the month, plus three
+  panels:
+  - **Recent transactions** — the last 7 Check Register entries (expenses
+    and income together) from the current month, as of today
+  - **Due today** — recurring bills (not everyday spending) whose due date
+    this month is today
+  - **Upcoming payments** — recurring bills due later this month that
+    haven't been logged yet
+
+  Click any recent transaction or due-today item to jump straight to
   editing it
 - **This month's paychecks**, shown as a row of cards on the Dashboard —
   each card shows the payday, income, a progress bar of what's been

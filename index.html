@@ -772,7 +772,7 @@
 
     <div class="dash-panels-row">
       <div class="card dash-panel-card">
-        <h2>Recent transactions</h2>
+        <h2>Recent transactions <span class="muted">this month</span></h2>
         <div id="recentTxnWrap" class="dash-panel-list"></div>
       </div>
       <div class="card dash-panel-card">
@@ -780,7 +780,7 @@
         <div id="dueTodayWrap" class="dash-panel-list"></div>
       </div>
       <div class="card dash-panel-card">
-        <h2>Upcoming payments <span class="muted">next 14 days</span></h2>
+        <h2>Upcoming payments <span class="muted">rest of this month</span></h2>
         <div id="upcomingPaymentsWrap" class="dash-panel-list"></div>
       </div>
     </div>
@@ -4211,18 +4211,22 @@
     });
   }
 
-  // Dashboard "Recent transactions" panel: the last handful of register
-  // entries (expenses and income together), newest first -- click one to
-  // jump straight to editing it.
+  // Dashboard "Recent transactions" panel: the last 7 register entries
+  // (expenses and income together) dated this month, as of today, newest
+  // first -- click one to jump straight to editing it.
   function renderRecentTransactionsPanel() {
     var wrap = document.getElementById("recentTxnWrap");
-    var rows = buildRegisterRows().slice().sort(function(a, b) {
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var monthKey = currentMonthKey();
+    var rows = buildRegisterRows().filter(function(r) {
+      return monthKeyOf(r.date) === monthKey && r.date <= todayStr;
+    }).sort(function(a, b) {
       var c = b.date.localeCompare(a.date);
       if (c !== 0) return c;
       return a.id < b.id ? 1 : (a.id > b.id ? -1 : 0);
-    }).slice(0, 6);
+    }).slice(0, 7);
     if (rows.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">No transactions yet.</div>';
+      wrap.innerHTML = '<div class="empty-state">No transactions yet this month.</div>';
       return;
     }
     var html = rows.map(function(r) {
@@ -4249,23 +4253,39 @@
     });
   }
 
-  // Dashboard "Due today" panel: unpaid expenses dated exactly today.
+  // Dashboard "Due today" panel: recurring bills whose due date this month
+  // is today -- not everyday spending. Covers both the usual case (the
+  // bill already auto-logged today and is just sitting unpaid) and the
+  // edge case where it somehow hasn't been logged yet at all.
   function renderDueTodayPanel() {
     var wrap = document.getElementById("dueTodayWrap");
     var todayStr = new Date().toISOString().slice(0, 10);
-    var rows = state.expenses.filter(function(e) { return e.date === todayStr && !e.paid; })
-                              .sort(function(a, b) { return (a.note || "").localeCompare(b.note || ""); });
-    if (rows.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">Nothing due today.</div>';
+    var monthKey = currentMonthKey();
+
+    var items = [];
+    state.recurring.forEach(function(r) {
+      if (templateDueDateInMonth(r, monthKey) !== todayStr) return;
+      var logged = state.expenses.find(function(e) { return e.recurringId === r.id && e.date === todayStr; });
+      if (logged && logged.paid) return;
+      items.push({ template: r, expense: logged || null });
+    });
+
+    if (items.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No recurring payments due today.</div>';
       return;
     }
-    var html = rows.map(function(e) {
-      var cat = categoryById(e.categoryId);
-      var color = cat ? categoryColorHex(e.categoryId) : "#a6a49c";
-      return '<div class="mini-row cal-clickable" data-due-id="' + e.id + '" tabindex="0">' +
+    var html = items.map(function(it) {
+      var cat = categoryById(it.template.categoryId);
+      var color = cat ? categoryColorHex(it.template.categoryId) : "#a6a49c";
+      var amount = it.expense ? it.expense.amount : it.template.amount;
+      var sub = escapeHtml(cat ? cat.name : "") + (it.expense ? "" : " &middot; not logged yet");
+      var clickableClass = it.expense ? " cal-clickable" : "";
+      var dataAttr = it.expense ? ' data-due-id="' + it.expense.id + '"' : '';
+      var tabAttr = it.expense ? ' tabindex="0"' : '';
+      return '<div class="mini-row' + clickableClass + '"' + dataAttr + tabAttr + '>' +
         '<span class="swatch" style="background:' + color + '"></span>' +
-        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(e.note || (cat ? cat.name : "Expense")) + '</span><span class="mini-row-sub">' + escapeHtml(cat ? cat.name : "") + '</span></span>' +
-        '<span class="mini-row-amt">' + fmtMoney(e.amount) + '</span>' +
+        '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(it.template.name) + '</span><span class="mini-row-sub">' + sub + '</span></span>' +
+        '<span class="mini-row-amt">' + fmtMoney(amount) + '</span>' +
       '</div>';
     }).join("");
     wrap.innerHTML = html;
@@ -4275,31 +4295,26 @@
     });
   }
 
-  // Dashboard "Upcoming payments" panel: recurring bills due (but not yet
-  // logged) within the next 14 days -- same "pending" idea used by the
-  // paycheck planner, just filtered to a short near-future window.
+  // Dashboard "Upcoming payments" panel: recurring bills due later this
+  // month that haven't been logged yet -- same "pending" idea used by the
+  // paycheck planner. Today's own due date is covered by the Due Today
+  // panel above, so this only looks at what's still ahead this month.
   function renderUpcomingPaymentsPanel() {
     var wrap = document.getElementById("upcomingPaymentsWrap");
     var todayStr = new Date().toISOString().slice(0, 10);
     var monthKey = currentMonthKey();
-    var nextMonthKey = monthKeyOffset(monthKey, 1);
-    var windowEnd = new Date();
-    windowEnd.setDate(windowEnd.getDate() + 14);
-    var windowEndStr = windowEnd.toISOString().slice(0, 10);
 
     var pending = [];
     state.recurring.forEach(function(r) {
-      [monthKey, nextMonthKey].forEach(function(mk) {
-        var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === mk; });
-        if (already) return;
-        var dueDate = templateDueDateInMonth(r, mk);
-        if (dueDate >= todayStr && dueDate <= windowEndStr) pending.push({ template: r, dueDate: dueDate });
-      });
+      var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === monthKey; });
+      if (already) return;
+      var dueDate = templateDueDateInMonth(r, monthKey);
+      if (dueDate > todayStr) pending.push({ template: r, dueDate: dueDate });
     });
     pending.sort(function(a, b) { return a.dueDate.localeCompare(b.dueDate); });
 
     if (pending.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">Nothing upcoming in the next 14 days.</div>';
+      wrap.innerHTML = '<div class="empty-state">Nothing else due later this month.</div>';
       return;
     }
     var html = pending.map(function(p) {
