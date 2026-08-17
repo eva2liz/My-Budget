@@ -32,10 +32,15 @@ for exactly how that works.
 - **Categories & Budgets table is directly editable** — change a
   category's color, name, or monthly budget right in the table (color
   saves the moment you pick one; name and budget save when you click
-  away or press Enter), no need to open the form and scroll up. The
-  **Edit** button is still there for marking a category as a loan or
-  credit card and setting its balance
-- Recurring expenses (rent, subscriptions, etc.) that auto-log once a month
+  away or press Enter), no need to open the form and scroll up. Tracking
+  a credit card's balance now lives on its own **CC Register** tab instead
+  (see below) — categories here are just for what you spend on
+- Recurring expenses (rent, subscriptions, storage units, pest control,
+  etc.) can be **monthly** (same day every month), **every 2 weeks**, or
+  **every 2 months** — for the every-2 options, just give it any date you
+  know it landed on (past or future) and every other occurrence is
+  calculated from there, same as biweekly income below. They auto-log the
+  next time you open the app once their date arrives
 - Recurring income can be **monthly** (same day every month, like a fixed
   salary date) or **every 2 weeks** (like a biweekly paycheck that lands
   on a different date each cycle — e.g. every other Friday) — for
@@ -190,12 +195,20 @@ for exactly how that works.
     already passed, the bill now logs as unassigned instead of silently
     sticking to the old paycheck — so it always shows up as assignable in
     the current month's dropdown rather than disappearing.)
-- **Loan &amp; credit card balances**: mark any category as a loan or credit
-  card (under Categories &amp; Budgets), enter what you currently owe and
-  as of what date, then log expenses in that category as a **charge**
-  (adds to the balance) or a **payment** (reduces it). A new **Balances**
-  tab shows the running current balance for each one, plus a total across
-  all of them
+- **CC Register**: track what you owe on each credit card completely
+  separately from what you spend it on. Add a card (name, starting balance,
+  as-of date) at the top of the **CC Register** tab, where a row of cards
+  shows every card's current balance at a glance, styled like the
+  Dashboard's paycheck row. Log a transaction into the ledger below it the
+  same way you would in the Check Register — pick the card it goes on, and
+  the row underneath it lets you set the real spending **category** (e.g.
+  Shopping), so a card charge still counts toward that category's budget.
+  Mark it a **charge** (adds to the card's balance) or a **payment**
+  (reduces it, and isn't counted as spending since it's just paying down a
+  balance you already counted when you charged it). Older data from the
+  previous "mark a category as a loan or credit card" feature migrates
+  automatically into its own card the first time you open the app after
+  updating.
 - **Import bank transactions from a CSV** — most banks, including Bank of
   America, let you download recent transactions as a CSV from their
   website; upload it under Settings and the app maps the columns

@@ -564,6 +564,29 @@
   .balance-total-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 2px 14px 2px; font-size: 14px; }
   .balance-total-row .balance-amount { font-size: 20px; }
 
+  /* CC Register: a row of per-card balance cards, styled like the
+     Dashboard's paycheck cards, plus a compact list of existing cards. */
+  #ccCardsWrap { margin-bottom: 16px; }
+  #ccCardsWrap:empty { display: none; }
+  .cc-card-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 12px; }
+  .cc-card-list:empty { display: none; }
+  .cc-card-list-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--gridline); font-size: 13.5px; }
+  .cc-card-list-row:last-child { border-bottom: none; }
+  .cc-card-list-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .cc-card-list-actions { display: flex; gap: 6px; }
+  .cc-register-table th.cc-col-type, .cc-register-table td.cc-col-type { width: 100px; }
+  .cc-register-table th.cc-col-card, .cc-register-table td.cc-col-card { width: 150px; }
+  .cc-register-table th.num, .cc-register-table td.num { text-align: right; width: 110px; }
+  @media (max-width: 640px) {
+    .cc-register-table th.cc-col-card, .cc-register-table td.cc-col-card { width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cc-register-table th.cc-col-type, .cc-register-table td.cc-col-type { width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cc-register-table th.num, .cc-register-table td.num { width: 64px; }
+    .cc-register-table th:not(.reg-col-date):not(.cc-col-card):not(.cc-col-type):not(.num):not(.reg-col-clr),
+    .cc-register-table td:not(.reg-col-date):not(.cc-col-card):not(.cc-col-type):not(.num):not(.reg-col-clr) {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+  }
+
   button.primary {
     background: var(--series-1);
     color: #fff;
@@ -757,7 +780,7 @@
   <button data-panel="recurring"><span class="nav-icon">🔁</span><span>Recurring</span></button>
   <button data-panel="register"><span class="nav-icon">📒</span><span>Check Register</span></button>
   <button data-panel="paychecks"><span class="nav-icon">💵</span><span>Paychecks</span></button>
-  <button data-panel="balances"><span class="nav-icon">💳</span><span>Balances</span></button>
+  <button data-panel="balances"><span class="nav-icon">💳</span><span>CC Register</span></button>
   <button data-panel="categories"><span class="nav-icon">🏷️</span><span>Categories &amp; Budgets</span></button>
   <button data-panel="budgetVsActual"><span class="nav-icon">📊</span><span>Budget vs. Actual</span></button>
   <button data-panel="settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
@@ -846,25 +869,30 @@
           <select id="recCategory" required></select>
         </div>
         <div class="field">
+          <label for="recFrequency">Frequency</label>
+          <select id="recFrequency">
+            <option value="monthly">Monthly (same day each month)</option>
+            <option value="biweekly">Every 2 weeks</option>
+            <option value="bimonthly">Every 2 months</option>
+          </select>
+        </div>
+        <div class="field" id="recDayField">
           <label for="recDay">Day of month</label>
-          <input type="number" id="recDay" min="1" max="28" value="1" required>
+          <input type="number" id="recDay" min="1" max="28" value="1">
+        </div>
+        <div class="field" id="recStartDateField" style="display:none;">
+          <label for="recStartDate">A date it landed on</label>
+          <input type="date" id="recStartDate">
         </div>
         <div class="field">
           <label for="recPaycheck">Default paycheck</label>
           <select id="recPaycheck"><option value="">None</option></select>
         </div>
-        <div class="field" id="recDebtTypeField" style="display:none;">
-          <label for="recDebtType">Charge or payment?</label>
-          <select id="recDebtType">
-            <option value="payment">Payment (reduces balance)</option>
-            <option value="charge">Charge (adds to balance)</option>
-          </select>
-        </div>
         <input type="hidden" id="recEditId">
         <button type="submit" class="primary" id="recurringSubmitBtn">Add recurring</button>
         <button type="button" class="secondary" id="recurringCancelEdit" style="display:none;">Cancel</button>
       </form>
-      <p class="hint">Recurring expenses are automatically logged once per month, on the day you set, next time you open the app. Default paycheck applies to the specific paycheck you pick — since each new paycheck is its own entry, you may need to repick it once that paycheck has passed. Day-to-day, the Paychecks tab is the easiest place to assign bills each pay period.</p>
+      <p class="hint">Recurring expenses are automatically logged next time you open the app. <strong>Monthly</strong> logs on the day you set, every month. <strong>Every 2 weeks</strong> and <strong>every 2 months</strong> log from any date you know it landed on (past or future) — future/past occurrences are calculated from there, same as biweekly income. Default paycheck applies to the specific paycheck you pick — since each new paycheck is its own entry, you may need to repick it once that paycheck has passed. Day-to-day, the Paychecks tab is the easiest place to assign bills each pay period.</p>
     </div>
     <div class="card">
       <h2>Active recurring expenses</h2>
@@ -1010,13 +1038,6 @@
             <label for="expPaycheck">Pay from paycheck</label>
             <select id="expPaycheck"><option value="">None</option></select>
           </div>
-          <div class="field" id="expDebtTypeField" style="display:none;">
-            <label for="expDebtType">Charge or payment?</label>
-            <select id="expDebtType">
-              <option value="charge">Charge (adds to balance)</option>
-              <option value="payment">Payment (reduces balance)</option>
-            </select>
-          </div>
           <div class="field checkbox-field">
             <label><input type="checkbox" id="expPaid"> Paid</label>
           </div>
@@ -1062,24 +1083,11 @@
           <label for="catColor">Color</label>
           <input type="color" id="catColor" value="#a6a49c">
         </div>
-        <div class="field checkbox-field">
-          <label><input type="checkbox" id="catIsDebt"> This is a loan or credit card (track balance)</label>
-        </div>
-        <div id="catDebtFields" class="debt-fields-row" style="display:none;">
-          <div class="field">
-            <label for="catStartingBalance">Current balance owed</label>
-            <input type="number" id="catStartingBalance" step="0.01" min="0" placeholder="0.00">
-          </div>
-          <div class="field">
-            <label for="catBalanceAsOf">As of</label>
-            <input type="date" id="catBalanceAsOf">
-          </div>
-        </div>
         <input type="hidden" id="catEditId">
         <button type="submit" class="primary" id="categorySubmitBtn">Add category</button>
         <button type="button" class="secondary" id="categoryCancelEdit" style="display:none;">Cancel</button>
       </form>
-      <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. Color, name, and monthly budget can also all be changed right in the table below -- no need to open this form unless you're marking something as a loan or credit card. For a loan or credit card, enter what you currently owe and today's date — every charge or payment you log afterward in that category updates the running balance on the Balances tab.</p>
+      <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. Color, name, and monthly budget can also all be changed right in the table below. Tracking a credit card's balance? Head to the CC Register tab instead -- categories here are just for what you spend on.</p>
     </div>
     <div class="card">
       <h2>Reorder categories <span class="muted">drag to change display order everywhere</span></h2>
@@ -1105,12 +1113,42 @@
     </div>
   </section>
 
-  <!-- BALANCES -->
+  <!-- BALANCES / CC REGISTER -->
   <section id="balances" class="panel">
     <div class="card">
-      <h2>Loan &amp; credit card balances</h2>
-      <div id="balancesWrap"></div>
-      <p class="hint">Mark a category as a loan or credit card under Categories &amp; Budgets to see it here. Log expenses in that category as a <strong>charge</strong> (adds to what you owe) or a <strong>payment</strong> (reduces it) — the balance below updates automatically.</p>
+      <h2>Your credit cards</h2>
+      <p class="hint" style="margin-top:0;">Each card keeps its own running balance, separate from your spending categories. Log a transaction below with its real category (e.g. Shopping) <em>and</em> the card it went on — a charge adds to that card's balance, a payment brings it down.</p>
+      <div id="ccCardsWrap"></div>
+      <div id="ccCardListWrap"></div>
+      <form class="inline-form" id="ccCardForm">
+        <div class="field">
+          <label for="ccCardName">Card name</label>
+          <input type="text" id="ccCardName" placeholder="e.g. Chase Freedom" required>
+        </div>
+        <div class="field">
+          <label for="ccCardStartingBalance">Starting balance</label>
+          <input type="number" id="ccCardStartingBalance" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="field">
+          <label for="ccCardBalanceAsOf">As of</label>
+          <input type="date" id="ccCardBalanceAsOf">
+        </div>
+        <div class="field">
+          <label for="ccCardColor">Color</label>
+          <input type="color" id="ccCardColor" value="#4a72d6">
+        </div>
+        <input type="hidden" id="ccCardEditId">
+        <button type="submit" class="primary" id="ccCardSubmitBtn">Add card</button>
+        <button type="button" class="secondary" id="ccCardCancelEdit" style="display:none;">Cancel</button>
+      </form>
+    </div>
+
+    <div class="register-shell">
+      <div class="register-toolbar">
+        <h2>CC Register <span class="muted" id="ccRegisterCount"></span></h2>
+      </div>
+      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every row's Category/Card/Type dropdowns and Delete button are right underneath it.</p>
+      <div id="ccRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
 
@@ -1351,10 +1389,51 @@
 
   // Fills in the debt-tracking fields for categories saved before that
   // feature existed, so older saved data never hits an undefined field.
+  // (The debt/startingBalance/balanceAsOf fields themselves are legacy --
+  // see migrateDebtCategoriesToCreditCards below -- kept here only so old
+  // saved data has something to migrate from.)
   function normalizeCategories(cats) {
     return cats.map(function(c) {
       return Object.assign({ debt: false, startingBalance: 0, balanceAsOf: null, color: null }, c);
     });
+  }
+
+  function normalizeCreditCards(list) {
+    return (list || []).map(function(cc) {
+      return Object.assign({ id: uid(), name: "Card", color: null, startingBalance: 0, balanceAsOf: null }, cc);
+    });
+  }
+
+  // One-time, idempotent migration from the old model (a category flagged
+  // "debt" doubled as both the spending category AND the balance tracker)
+  // to the new one (credit cards are their own thing, in state.creditCards,
+  // completely separate from spending categories). Any category still
+  // flagged debt becomes a credit card; expenses/recurring bills that were
+  // filed under it get tagged with the new creditCardId so their
+  // charge/payment history carries over untouched. The category itself
+  // flips back to an ordinary spending category so it keeps working
+  // normally afterward. Safe to call on every load -- once c.debt is false
+  // there's nothing left to migrate.
+  function migrateDebtCategoriesToCreditCards(s) {
+    var debtCats = s.categories.filter(function(c) { return c.debt; });
+    debtCats.forEach(function(c) {
+      var card = {
+        id: uid(),
+        name: c.name,
+        color: c.color || null,
+        startingBalance: c.startingBalance || 0,
+        balanceAsOf: c.balanceAsOf || null
+      };
+      s.creditCards.push(card);
+      s.expenses.forEach(function(e) {
+        if (e.categoryId === c.id && !e.creditCardId) { e.creditCardId = card.id; }
+      });
+      (s.recurring || []).forEach(function(r) {
+        if (r.categoryId === c.id && !r.creditCardId) { r.creditCardId = card.id; }
+      });
+      c.debt = false;
+    });
+    return s;
   }
 
   function defaultState() {
@@ -1375,6 +1454,7 @@
       recurring: [],
       recurringIncome: [],
       savingsGoals: [],
+      creditCards: [],
       settings: { currency: "$", theme: "auto", openingBalance: 0, openingBalanceDate: null },
       lastRecurringRun: null,
       lastRecurringIncomeRun: null
@@ -1387,17 +1467,19 @@
       if (!raw) return defaultState();
       var parsed = JSON.parse(raw);
       var d = defaultState();
-      return {
+      var s = {
         categories: normalizeCategories(parsed.categories && parsed.categories.length ? parsed.categories : d.categories),
         expenses: parsed.expenses || [],
         income: parsed.income || [],
         recurring: parsed.recurring || [],
         recurringIncome: parsed.recurringIncome || [],
         savingsGoals: parsed.savingsGoals || [],
+        creditCards: normalizeCreditCards(parsed.creditCards),
         settings: Object.assign({}, d.settings, parsed.settings || {}),
         lastRecurringRun: parsed.lastRecurringRun || null,
         lastRecurringIncomeRun: parsed.lastRecurringIncomeRun || null
       };
+      return migrateDebtCategoriesToCreditCards(s);
     } catch (e) {
       console.error("Failed to load saved data, starting fresh.", e);
       return defaultState();
@@ -1555,10 +1637,12 @@
               recurring: incoming.recurring || [],
               recurringIncome: incoming.recurringIncome || [],
               savingsGoals: incoming.savingsGoals || [],
+              creditCards: normalizeCreditCards(incoming.creditCards),
               settings: Object.assign({}, d.settings, incoming.settings || {}),
               lastRecurringRun: incoming.lastRecurringRun || null,
               lastRecurringIncomeRun: incoming.lastRecurringIncomeRun || null
             };
+            state = migrateDebtCategoriesToCreditCards(state);
             saveState();
             applyingRemoteUpdate = false;
           } else {
@@ -1652,6 +1736,51 @@
     return idx < 8 ? PALETTE_HEX_LIGHT[idx] : "#a6a49c";
   }
 
+  // ---------- credit cards (CC Register) ----------
+  //
+  // A credit card is its own bucket, entirely separate from spending
+  // categories -- a charge logged against a card also carries a real
+  // category (e.g. Shopping) so it still shows up in that category's
+  // budget, while the card's balance is tracked independently by summing
+  // every expense tagged with that card's id.
+
+  function creditCardById(id) {
+    for (var i=0;i<state.creditCards.length;i++) if (state.creditCards[i].id === id) return state.creditCards[i];
+    return null;
+  }
+
+  function creditCardColor(cc) {
+    return (cc && cc.color) || "#4a72d6";
+  }
+
+  function creditCardOptionsFor(selectedId, includePlaceholder) {
+    var html = includePlaceholder ? '<option value="">Select a card…</option>' : '';
+    html += state.creditCards.map(function(cc) {
+      return '<option value="' + cc.id + '"' + (cc.id === selectedId ? ' selected' : '') + '>' + escapeHtml(cc.name) + '</option>';
+    }).join("");
+    return html;
+  }
+
+  // Sums every expense tagged with this card's id: charges add to what's
+  // owed, payments bring it down. Payments are excluded from category
+  // spending totals elsewhere (see totalsForMonth) so paying a card down
+  // never double-counts as new spending.
+  function computeCreditCardBalance(cc) {
+    var asOf = cc.balanceAsOf || "0000-00-00";
+    var relevant = state.expenses.filter(function(e) { return e.creditCardId === cc.id && e.date >= asOf; });
+    var totalCharges = relevant.filter(function(e) { return e.debtType !== "payment"; })
+                                .reduce(function(s,e){ return s + e.amount; }, 0);
+    var totalPayments = relevant.filter(function(e) { return e.debtType === "payment"; })
+                                 .reduce(function(s,e){ return s + e.amount; }, 0);
+    var startingBalance = cc.startingBalance || 0;
+    return {
+      startingBalance: startingBalance,
+      totalCharges: totalCharges,
+      totalPayments: totalPayments,
+      currentBalance: startingBalance + totalCharges - totalPayments
+    };
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function(c) {
       return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
@@ -1716,37 +1845,36 @@
 
   function runRecurring(silent) {
     // Re-checked on every load and whenever a recurring item is added/edited.
-    // Idempotent: only ever logs one expense per recurring item per month,
-    // regardless of how many times it runs.
+    // Idempotent: logs at most one expense per recurring item per exact
+    // occurrence date -- monthly and bimonthly only ever have one date in a
+    // given month, but biweekly can land on two.
     var mk = currentMonthKey();
-    var today = new Date();
-    var todayDay = today.getDate();
+    var todayStr = todayISO();
     var added = 0;
     state.recurring.forEach(function(r) {
-      var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === mk; });
-      if (already) return;
-      var day = Math.min(r.day || 1, 28);
-      if (todayDay < day) return; // wait until that day arrives this month
-      var y = today.getFullYear(), m = today.getMonth();
-      var dateStr = y + "-" + String(m+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
-      // Only inherit the template's "default paycheck" if that paycheck
-      // actually falls in the same month as this occurrence. Otherwise it's
-      // a stale reference to a past paycheck, and blindly copying it here
-      // would silently mark this expense "assigned" while hiding it from
-      // every paycheck view that's actually visible this month. Leave it
-      // unassigned instead so it shows up in this month's assign dropdown.
-      var inheritedPaycheckId = null;
-      if (r.paycheckId) {
-        var defaultPcIncome = state.income.find(function(inc) { return inc.id === r.paycheckId; });
-        if (defaultPcIncome && monthKeyOf(defaultPcIncome.date) === mk) inheritedPaycheckId = r.paycheckId;
-      }
-      state.expenses.push({
-        id: uid(), date: dateStr, amount: r.amount, categoryId: r.categoryId,
-        note: r.name + " (recurring)", recurringId: r.id,
-        paid: false, cleared: false, paycheckId: inheritedPaycheckId,
-        debtType: r.debtType || null
+      recurringExpenseOccurrencesInMonth(r, mk).forEach(function(dateStr) {
+        if (dateStr > todayStr) return; // wait until that date arrives
+        var already = state.expenses.some(function(e) { return e.recurringId === r.id && e.date === dateStr; });
+        if (already) return;
+        // Only inherit the template's "default paycheck" if that paycheck
+        // actually falls in the same month as this occurrence. Otherwise it's
+        // a stale reference to a past paycheck, and blindly copying it here
+        // would silently mark this expense "assigned" while hiding it from
+        // every paycheck view that's actually visible this month. Leave it
+        // unassigned instead so it shows up in this month's assign dropdown.
+        var inheritedPaycheckId = null;
+        if (r.paycheckId) {
+          var defaultPcIncome = state.income.find(function(inc) { return inc.id === r.paycheckId; });
+          if (defaultPcIncome && monthKeyOf(defaultPcIncome.date) === mk) inheritedPaycheckId = r.paycheckId;
+        }
+        state.expenses.push({
+          id: uid(), date: dateStr, amount: r.amount, categoryId: r.categoryId,
+          note: r.name + " (recurring)", recurringId: r.id,
+          paid: false, cleared: false, paycheckId: inheritedPaycheckId,
+          debtType: r.debtType || null
+        });
+        added++;
       });
-      added++;
     });
     state.lastRecurringRun = mk;
     saveState();
@@ -1864,8 +1992,6 @@
       filterSelect.appendChild(opt);
     });
     filterSelect.value = prevF;
-    if (typeof updateExpenseDebtTypeVisibility === "function") updateExpenseDebtTypeVisibility();
-    if (typeof updateRecurringDebtTypeVisibility === "function") updateRecurringDebtTypeVisibility();
   }
 
   function paycheckLabel(inc) {
@@ -1936,16 +2062,47 @@
     return [templateDueDateInMonth(r, mk)];
   }
 
+  // Every-2-months occurrence within monthKey, or null if this month isn't
+  // one of the alternating "on" months relative to startDateStr. The day of
+  // month comes from startDateStr itself (capped at 28, same as monthly),
+  // so a bill anchored to the 15th keeps landing on the 15th every other
+  // month going forward and backward from wherever it was first anchored.
+  function bimonthlyOccurrenceInMonth(startDateStr, mk) {
+    if (!startDateStr) return null;
+    var start = new Date(startDateStr + "T00:00:00");
+    var parts = mk.split("-");
+    var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1;
+    var diffMonths = (y - start.getFullYear()) * 12 + (m - start.getMonth());
+    if (diffMonths % 2 !== 0) return null;
+    var day = Math.min(start.getDate(), 28);
+    return parts[0] + "-" + parts[1] + "-" + String(day).padStart(2, "0");
+  }
+
+  // Unified occurrence lookup for a recurring EXPENSE template within a
+  // given month — one date for monthly (the default, including legacy
+  // items saved before "frequency" existed), zero-to-two for biweekly,
+  // zero-or-one for bimonthly.
+  function recurringExpenseOccurrencesInMonth(r, mk) {
+    if (r.frequency === "biweekly") return biweeklyOccurrencesInMonth(r.startDate, mk);
+    if (r.frequency === "bimonthly") {
+      var d = bimonthlyOccurrenceInMonth(r.startDate, mk);
+      return d ? [d] : [];
+    }
+    return [templateDueDateInMonth(r, mk)];
+  }
+
+  // Short label for how often a recurring expense repeats, used in the
+  // Recurring tab's table and the Calendar legend.
+  function recurringScheduleLabel(r) {
+    if (r.frequency === "biweekly") return "Every 2 weeks" + (r.startDate ? " (from " + r.startDate + ")" : "");
+    if (r.frequency === "bimonthly") return "Every 2 months" + (r.startDate ? " (day " + Math.min(new Date(r.startDate + "T00:00:00").getDate(), 28) + ")" : "");
+    return "Day " + (r.day || 1);
+  }
+
   // ---------- EXPENSES ----------
 
   var expenseForm = document.getElementById("expenseForm");
   document.getElementById("expDate").value = todayISO();
-
-  function updateExpenseDebtTypeVisibility() {
-    var cat = categoryById(document.getElementById("expCategory").value);
-    document.getElementById("expDebtTypeField").style.display = (cat && cat.debt) ? "flex" : "none";
-  }
-  document.getElementById("expCategory").addEventListener("change", updateExpenseDebtTypeVisibility);
 
   expenseForm.addEventListener("submit", function(e) {
     e.preventDefault();
@@ -1957,16 +2114,18 @@
     var paycheckId = document.getElementById("expPaycheck").value || null;
     var paid = document.getElementById("expPaid").checked;
     var cleared = document.getElementById("expCleared").checked;
-    var cat = categoryById(categoryId);
-    var debtType = cat && cat.debt ? (document.getElementById("expDebtType").value || "charge") : null;
     if (!date || isNaN(amount) || amount < 0 || !categoryId) return;
 
     if (editId) {
       var ex = state.expenses.find(function(x){ return x.id === editId; });
-      if (ex) { ex.date = date; ex.amount = amount; ex.categoryId = categoryId; ex.note = note; ex.paycheckId = paycheckId; ex.paid = paid; ex.cleared = cleared; ex.debtType = debtType; }
+      // Credit-card fields (creditCardId/debtType) are managed from the CC
+      // Register tab, not this form -- leave them untouched here so editing
+      // a CC-linked expense's date/note/etc. from the register doesn't
+      // accidentally strip its card link.
+      if (ex) { ex.date = date; ex.amount = amount; ex.categoryId = categoryId; ex.note = note; ex.paycheckId = paycheckId; ex.paid = paid; ex.cleared = cleared; }
       showToast("Expense updated");
     } else {
-      state.expenses.push({ id: uid(), date: date, amount: amount, categoryId: categoryId, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, debtType: debtType });
+      state.expenses.push({ id: uid(), date: date, amount: amount, categoryId: categoryId, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, creditCardId: null, debtType: null });
       showToast("Expense added");
     }
     saveState();
@@ -1990,11 +2149,9 @@
     document.getElementById("expPaycheck").value = "";
     document.getElementById("expPaid").checked = false;
     document.getElementById("expCleared").checked = false;
-    document.getElementById("expDebtType").value = "charge";
     document.getElementById("expenseFormTitle").textContent = "Add a one-time expense or payment";
     document.getElementById("expenseSubmitBtn").textContent = "Add expense";
     document.getElementById("expenseCancelEdit").style.display = "none";
-    updateExpenseDebtTypeVisibility();
     document.getElementById("expPaycheckField").style.display = "none";
     document.getElementById("registerEditPanel").style.display = "none";
   }
@@ -2020,8 +2177,6 @@
     document.getElementById("expPaycheckField").style.display = (ex.recurringId || ex.paycheckId) ? "flex" : "none";
     document.getElementById("expPaid").checked = !!ex.paid;
     document.getElementById("expCleared").checked = !!ex.cleared;
-    document.getElementById("expDebtType").value = ex.debtType || "charge";
-    updateExpenseDebtTypeVisibility();
     document.getElementById("expenseFormTitle").textContent = "Edit expense";
     document.getElementById("expenseSubmitBtn").textContent = "Save changes";
     document.getElementById("expenseCancelEdit").style.display = "inline-block";
@@ -2128,7 +2283,7 @@
       state.expenses.push({
         id: uid(), date: ex.date, amount: Math.round(b * 100) / 100, categoryId: ex.categoryId,
         note: ex.note, paycheckId: paycheckB, paid: ex.paid, cleared: ex.cleared,
-        recurringId: ex.recurringId || null, debtType: ex.debtType || null, splitGroupId: groupId
+        recurringId: ex.recurringId || null, creditCardId: ex.creditCardId || null, debtType: ex.debtType || null, splitGroupId: groupId
       });
 
       saveState();
@@ -2574,13 +2729,14 @@
 
       if (hasPayment) {
         if (!categoryId) { showToast("Pick an account (category)"); return; }
-        var cat = categoryById(categoryId);
-        var debtType = cat && cat.debt ? "charge" : null;
         // No paycheckId here on purpose -- expenses typed straight into the
         // register are never linked to a Recurring template, so they aren't
         // paycheck-trackable. Assign a paycheck from the Recurring/Paychecks
         // tabs instead, for bills that actually need to come out of one.
-        state.expenses.push({ id: uid(), date: date, amount: payment, categoryId: categoryId, note: desc, paycheckId: null, paid: paid, cleared: cleared, debtType: debtType });
+        // Credit-card charges/payments belong on the CC Register tab, not
+        // here, so creditCardId/debtType are always null for a row added
+        // straight into the Check Register.
+        state.expenses.push({ id: uid(), date: date, amount: payment, categoryId: categoryId, note: desc, paycheckId: null, paid: paid, cleared: cleared, creditCardId: null, debtType: null });
         showToast("Expense added");
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
@@ -2704,11 +2860,14 @@
 
   var recurringForm = document.getElementById("recurringForm");
 
-  function updateRecurringDebtTypeVisibility() {
-    var cat = categoryById(document.getElementById("recCategory").value);
-    document.getElementById("recDebtTypeField").style.display = (cat && cat.debt) ? "flex" : "none";
+  function updateRecFrequencyFields() {
+    var isMonthly = document.getElementById("recFrequency").value === "monthly";
+    document.getElementById("recDayField").style.display = isMonthly ? "flex" : "none";
+    document.getElementById("recStartDateField").style.display = isMonthly ? "none" : "flex";
+    document.getElementById("recDay").required = isMonthly;
+    document.getElementById("recStartDate").required = !isMonthly;
   }
-  document.getElementById("recCategory").addEventListener("change", updateRecurringDebtTypeVisibility);
+  document.getElementById("recFrequency").addEventListener("change", updateRecFrequencyFields);
 
   recurringForm.addEventListener("submit", function(e) {
     e.preventDefault();
@@ -2716,18 +2875,22 @@
     var name = document.getElementById("recName").value.trim();
     var amount = parseFloat(document.getElementById("recAmount").value);
     var categoryId = document.getElementById("recCategory").value;
+    var frequency = document.getElementById("recFrequency").value;
     var day = parseInt(document.getElementById("recDay").value, 10);
+    var startDate = document.getElementById("recStartDate").value;
     var paycheckId = document.getElementById("recPaycheck").value || null;
-    var cat = categoryById(categoryId);
-    var debtType = cat && cat.debt ? (document.getElementById("recDebtType").value || "payment") : null;
-    if (!name || isNaN(amount) || amount < 0 || !categoryId || !day) return;
+    if (!name || isNaN(amount) || amount < 0 || !categoryId) return;
+    if (frequency === "monthly" && !day) return;
+    if (frequency !== "monthly" && !startDate) return;
+    var recDay = frequency === "monthly" ? day : null;
+    var recStartDate = frequency === "monthly" ? null : startDate;
 
     if (editId) {
       var r = state.recurring.find(function(x){ return x.id === editId; });
-      if (r) { r.name = name; r.amount = amount; r.categoryId = categoryId; r.day = day; r.paycheckId = paycheckId; r.debtType = debtType; }
+      if (r) { r.name = name; r.amount = amount; r.categoryId = categoryId; r.frequency = frequency; r.day = recDay; r.startDate = recStartDate; r.paycheckId = paycheckId; }
       showToast("Recurring item updated");
     } else {
-      state.recurring.push({ id: uid(), name: name, amount: amount, categoryId: categoryId, day: day, paycheckId: paycheckId, debtType: debtType });
+      state.recurring.push({ id: uid(), name: name, amount: amount, categoryId: categoryId, frequency: frequency, day: recDay, startDate: recStartDate, paycheckId: paycheckId });
       showToast("Recurring item added");
     }
     saveState();
@@ -2747,12 +2910,13 @@
   function resetRecurringForm() {
     document.getElementById("recEditId").value = "";
     recurringForm.reset();
+    document.getElementById("recFrequency").value = "monthly";
     document.getElementById("recDay").value = 1;
+    document.getElementById("recStartDate").value = "";
     document.getElementById("recPaycheck").value = "";
-    document.getElementById("recDebtType").value = "payment";
+    updateRecFrequencyFields();
     document.getElementById("recurringSubmitBtn").textContent = "Add recurring";
     document.getElementById("recurringCancelEdit").style.display = "none";
-    updateRecurringDebtTypeVisibility();
   }
 
   function editRecurring(id) {
@@ -2762,11 +2926,12 @@
     document.getElementById("recName").value = r.name;
     document.getElementById("recAmount").value = r.amount;
     document.getElementById("recCategory").value = r.categoryId;
-    document.getElementById("recDay").value = r.day;
+    document.getElementById("recFrequency").value = r.frequency || "monthly";
+    document.getElementById("recDay").value = r.day || 1;
+    document.getElementById("recStartDate").value = r.startDate || "";
+    updateRecFrequencyFields();
     populatePaycheckSelect();
     document.getElementById("recPaycheck").value = r.paycheckId || "";
-    document.getElementById("recDebtType").value = r.debtType || "payment";
-    updateRecurringDebtTypeVisibility();
     document.getElementById("recurringSubmitBtn").textContent = "Save changes";
     document.getElementById("recurringCancelEdit").style.display = "inline-block";
     document.querySelector('nav.tabs button[data-panel="recurring"]').click();
@@ -2791,14 +2956,14 @@
       wrap.innerHTML = '<div class="empty-state">No recurring expenses set up.</div>';
       return;
     }
-    var html = '<table><thead><tr><th>Name</th><th>Category</th><th>Day</th><th>Default paycheck</th><th class="num">Amount</th><th></th></tr></thead><tbody>';
+    var html = '<table><thead><tr><th>Name</th><th>Category</th><th>Schedule</th><th>Default paycheck</th><th class="num">Amount</th><th></th></tr></thead><tbody>';
     state.recurring.forEach(function(r) {
       var cat = categoryById(r.categoryId);
       var pc = r.paycheckId ? state.income.find(function(inc){ return inc.id === r.paycheckId; }) : null;
       html += '<tr>' +
         '<td>' + escapeHtml(r.name) + '</td>' +
         '<td>' + escapeHtml(cat ? cat.name : "(deleted)") + '</td>' +
-        '<td>' + r.day + '</td>' +
+        '<td>' + escapeHtml(recurringScheduleLabel(r)) + '</td>' +
         '<td>' + (pc ? escapeHtml(pc.source) : "—") + '</td>' +
         '<td class="num">' + fmtMoney(r.amount) + '</td>' +
         '<td class="actions-cell">' +
@@ -2967,13 +3132,16 @@
     var startWeekday = firstOfMonth.getDay(); // 0 = Sunday
     var todayStr = todayISO();
 
-    // group recurring items by day-of-month (capped at 28, matching the auto-log logic)
+    // group recurring items by the day(s) they actually fall on this month --
+    // one day for monthly/bimonthly, zero-to-two for biweekly.
     var billsByDay = {}; // day -> [{id, name, amount, color}]
     state.recurring.forEach(function(r) {
-      var day = Math.min(r.day || 1, 28);
       var cat = categoryById(r.categoryId);
-      (billsByDay[day] = billsByDay[day] || []).push({
-        id: r.id, name: r.name, amount: r.amount, color: cat ? categoryColorHex(r.categoryId) : "#a6a49c"
+      recurringExpenseOccurrencesInMonth(r, monthKey).forEach(function(dateStr) {
+        var day = parseInt(dateStr.slice(8, 10), 10);
+        (billsByDay[day] = billsByDay[day] || []).push({
+          id: r.id, name: r.name, amount: r.amount, color: cat ? categoryColorHex(r.categoryId) : "#a6a49c"
+        });
       });
     });
     var incomeByDay = {};
@@ -3075,7 +3243,7 @@
     state.recurring.forEach(function(r) {
       var cat = categoryById(r.categoryId);
       var color = cat ? categoryColorHex(r.categoryId) : "#a6a49c";
-      legendItems.push('<span class="legend-item"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(r.name) + ' (day ' + r.day + ')</span>');
+      legendItems.push('<span class="legend-item"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(r.name) + ' (' + escapeHtml(recurringScheduleLabel(r).toLowerCase()) + ')</span>');
     });
     document.getElementById("calendarLegend").innerHTML = legendItems.join("");
   }
@@ -3110,9 +3278,9 @@
   // optionally jump straight into editing it (e.g. to bump the amount up
   // for a one-off bigger payment, without changing the recurring template's
   // default amount for future months).
-  function logRecurringNow(r, mk, incId) {
+  function logRecurringNow(r, dueDate, incId) {
     var newExpense = {
-      id: uid(), date: templateDueDateInMonth(r, mk), amount: r.amount, categoryId: r.categoryId,
+      id: uid(), date: dueDate, amount: r.amount, categoryId: r.categoryId,
       note: r.name + " (recurring)", recurringId: r.id,
       paid: false, cleared: false, paycheckId: incId, debtType: r.debtType || null
     };
@@ -3125,7 +3293,7 @@
     renderPaycheckPlanner();
     renderBalances();
     renderCategories();
-    showToast(r.name + " logged for " + monthLabel(mk));
+    showToast(r.name + " logged for " + dueDate);
     return newExpense.id;
   }
 
@@ -3196,9 +3364,11 @@
     var pending = [];
     state.recurring.forEach(function(r) {
       [monthKey, nextMonthKey].forEach(function(mk) {
-        var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === mk; });
-        if (already) return;
-        pending.push({ template: r, monthKey: mk, dueDate: templateDueDateInMonth(r, mk) });
+        recurringExpenseOccurrencesInMonth(r, mk).forEach(function(dueDate) {
+          var already = state.expenses.some(function(e) { return e.recurringId === r.id && e.date === dueDate; });
+          if (already) return;
+          pending.push({ template: r, monthKey: mk, dueDate: dueDate });
+        });
       });
     });
 
@@ -3243,7 +3413,7 @@
           '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(cat ? cat.name : "(deleted)") + '</span></td>' +
           '<td><em>' + escapeHtml(p.template.name) + ' — not logged yet</em></td>' +
           '<td class="num">' + fmtMoney(p.template.amount) + '</td>' +
-          '<td class="actions-cell"><button class="row-btn" data-log-now="' + p.template.id + '" data-log-month="' + p.monthKey + '" data-log-paycheck="' + inc.id + '">Log now</button> <button class="row-btn" data-log-edit="' + p.template.id + '" data-log-month="' + p.monthKey + '" data-log-paycheck="' + inc.id + '" title="Log it, then open it for editing (e.g. to pay more than usual this time)">Log &amp; edit amount</button></td>' +
+          '<td class="actions-cell"><button class="row-btn" data-log-now="' + p.template.id + '" data-log-date="' + p.dueDate + '" data-log-paycheck="' + inc.id + '">Log now</button> <button class="row-btn" data-log-edit="' + p.template.id + '" data-log-date="' + p.dueDate + '" data-log-paycheck="' + inc.id + '" title="Log it, then open it for editing (e.g. to pay more than usual this time)">Log &amp; edit amount</button></td>' +
         '</tr>';
       }).join("");
 
@@ -3270,7 +3440,7 @@
         .map(function(p) {
           var cat = categoryById(p.template.categoryId);
           var label = p.dueDate + " (not logged yet) · " + (cat ? cat.name : "?") + " · " + p.template.name + " · " + fmtMoney(p.template.amount);
-          return '<option value="template:' + p.template.id + ":" + p.monthKey + '">' + escapeHtml(label) + '</option>';
+          return '<option value="template:' + p.template.id + ":" + p.dueDate + '">' + escapeHtml(label) + '</option>';
         }).join("");
 
       var hasOptions = unassigned.length > 0 || pendingOptions.length > 0;
@@ -3353,14 +3523,14 @@
       b.addEventListener("click", function() {
         var r = state.recurring.find(function(x){ return x.id === b.dataset.logNow; });
         if (!r) return;
-        logRecurringNow(r, b.dataset.logMonth, b.dataset.logPaycheck);
+        logRecurringNow(r, b.dataset.logDate, b.dataset.logPaycheck);
       });
     });
     wrap.querySelectorAll("[data-log-edit]").forEach(function(b) {
       b.addEventListener("click", function() {
         var r = state.recurring.find(function(x){ return x.id === b.dataset.logEdit; });
         if (!r) return;
-        var newId = logRecurringNow(r, b.dataset.logMonth, b.dataset.logPaycheck);
+        var newId = logRecurringNow(r, b.dataset.logDate, b.dataset.logPaycheck);
         if (newId) editExpense(newId);
       });
     });
@@ -3390,11 +3560,11 @@
           if (!ex) return;
           ex.paycheckId = incId;
         } else if (parts[0] === "template") {
-          var templateId = parts[1], mk = parts[2];
+          var templateId = parts[1], dueDate = parts[2];
           var r = state.recurring.find(function(x){ return x.id === templateId; });
           if (!r) return;
           state.expenses.push({
-            id: uid(), date: templateDueDateInMonth(r, mk), amount: r.amount, categoryId: r.categoryId,
+            id: uid(), date: dueDate, amount: r.amount, categoryId: r.categoryId,
             note: r.name + " (recurring)", recurringId: r.id,
             paid: false, cleared: false, paycheckId: incId, debtType: r.debtType || null
           });
@@ -3416,12 +3586,6 @@
 
   var categoryForm = document.getElementById("categoryForm");
 
-  function updateCatDebtFieldsVisibility() {
-    var isDebt = document.getElementById("catIsDebt").checked;
-    document.getElementById("catDebtFields").style.display = isDebt ? "flex" : "none";
-  }
-  document.getElementById("catIsDebt").addEventListener("change", updateCatDebtFieldsVisibility);
-
   categoryForm.addEventListener("submit", function(e) {
     e.preventDefault();
     var editId = document.getElementById("catEditId").value;
@@ -3429,27 +3593,14 @@
     var budgetRaw = document.getElementById("catBudget").value;
     var budget = budgetRaw === "" ? 0 : parseFloat(budgetRaw);
     var color = document.getElementById("catColor").value || "#a6a49c";
-    var isDebt = document.getElementById("catIsDebt").checked;
-    var startingBalanceRaw = document.getElementById("catStartingBalance").value;
-    var startingBalance = startingBalanceRaw === "" ? 0 : parseFloat(startingBalanceRaw);
-    var balanceAsOf = document.getElementById("catBalanceAsOf").value || todayISO();
     if (!name || isNaN(budget) || budget < 0) return;
-    if (isDebt && (isNaN(startingBalance) || startingBalance < 0)) return;
 
     if (editId) {
       var c = categoryById(editId);
-      if (c) {
-        c.name = name; c.budget = budget; c.color = color; c.debt = isDebt;
-        c.startingBalance = isDebt ? startingBalance : 0;
-        c.balanceAsOf = isDebt ? balanceAsOf : null;
-      }
+      if (c) { c.name = name; c.budget = budget; c.color = color; }
       showToast("Category updated");
     } else {
-      state.categories.push({
-        id: uid(), name: name, budget: budget, color: color, debt: isDebt,
-        startingBalance: isDebt ? startingBalance : 0,
-        balanceAsOf: isDebt ? balanceAsOf : null
-      });
+      state.categories.push({ id: uid(), name: name, budget: budget, color: color, debt: false, startingBalance: 0, balanceAsOf: null });
       showToast("Category added");
     }
     saveState();
@@ -3480,7 +3631,6 @@
     document.getElementById("categoryFormTitle").textContent = "Add a category";
     document.getElementById("categorySubmitBtn").textContent = "Add category";
     document.getElementById("categoryCancelEdit").style.display = "none";
-    updateCatDebtFieldsVisibility();
   }
 
   function editCategoryUI(id) {
@@ -3490,10 +3640,6 @@
     document.getElementById("catName").value = c.name;
     document.getElementById("catBudget").value = c.budget || "";
     document.getElementById("catColor").value = categoryColorHex(c.id);
-    document.getElementById("catIsDebt").checked = !!c.debt;
-    document.getElementById("catStartingBalance").value = c.debt ? (c.startingBalance || 0) : "";
-    document.getElementById("catBalanceAsOf").value = c.debt ? (c.balanceAsOf || todayISO()) : "";
-    updateCatDebtFieldsVisibility();
     document.getElementById("categoryFormTitle").textContent = "Edit category";
     document.getElementById("categorySubmitBtn").textContent = "Save changes";
     document.getElementById("categoryCancelEdit").style.display = "inline-block";
@@ -3522,24 +3668,6 @@
     });
   }
 
-  // Sums charges/payments logged in a debt category since its balance
-  // anchor date, and returns the running current balance.
-  function computeDebtBalance(cat) {
-    var asOf = cat.balanceAsOf || "0000-00-00";
-    var relevant = state.expenses.filter(function(e) { return e.categoryId === cat.id && e.date >= asOf; });
-    var totalCharges = relevant.filter(function(e) { return e.debtType === "charge"; })
-                                .reduce(function(s,e){ return s + e.amount; }, 0);
-    var totalPayments = relevant.filter(function(e) { return e.debtType === "payment"; })
-                                 .reduce(function(s,e){ return s + e.amount; }, 0);
-    var startingBalance = cat.startingBalance || 0;
-    return {
-      startingBalance: startingBalance,
-      totalCharges: totalCharges,
-      totalPayments: totalPayments,
-      currentBalance: startingBalance + totalCharges - totalPayments
-    };
-  }
-
   function renderCategories() {
     renderCategoryDragList();
     var wrap = document.getElementById("categoryTableWrap");
@@ -3547,20 +3675,13 @@
       wrap.innerHTML = '<div class="empty-state">No categories yet.</div>';
       return;
     }
-    var html = '<table><thead><tr><th>Color</th><th>Category</th><th class="num">Monthly budget</th><th>Type</th><th class="num">Balance</th><th></th></tr></thead><tbody>';
+    var html = '<table><thead><tr><th>Color</th><th>Category</th><th class="num">Monthly budget</th><th></th></tr></thead><tbody>';
     state.categories.forEach(function(c) {
       var color = categoryColorHex(c.id);
-      var balanceCell = "—";
-      if (c.debt) {
-        var b = computeDebtBalance(c);
-        balanceCell = fmtMoney(b.currentBalance);
-      }
       html += '<tr>' +
         '<td><input type="color" class="cat-inline-color" data-cat-color="' + c.id + '" value="' + escapeHtml(color) + '" title="Change ' + escapeHtml(c.name) + '\'s color"></td>' +
         '<td><input type="text" class="cat-inline-input" data-cat-name="' + c.id + '" value="' + escapeHtml(c.name) + '" aria-label="Category name"></td>' +
         '<td class="num"><input type="number" class="cat-inline-input cat-inline-budget" data-cat-budget="' + c.id + '" value="' + (c.budget || "") + '" step="0.01" min="0" placeholder="0.00" aria-label="Monthly budget"></td>' +
-        '<td>' + (c.debt ? "Loan/Card" : "—") + '</td>' +
-        '<td class="num">' + balanceCell + '</td>' +
         '<td class="actions-cell">' +
           '<button class="row-btn" data-edit="' + c.id + '">Edit</button>' +
           '<button class="row-btn danger" data-del="' + c.id + '">Delete</button>' +
@@ -3620,35 +3741,298 @@
     });
   }
 
+  // ---------- CC REGISTER (credit cards) ----------
+
   function renderBalances() {
-    var wrap = document.getElementById("balancesWrap");
-    var debtCats = state.categories.filter(function(c) { return c.debt; });
-    if (debtCats.length === 0) {
-      wrap.innerHTML = '<div class="empty-state">No loans or credit cards tracked yet — mark a category as one under Categories &amp; Budgets.</div>';
-      return;
-    }
-    var totalBalance = 0;
-    var html = debtCats.map(function(c) {
-      var color = categoryColorHex(c.id);
-      var b = computeDebtBalance(c);
-      totalBalance += b.currentBalance;
-      var asOfLabel = c.balanceAsOf ? escapeHtml(c.balanceAsOf) : "—";
-      return '<div class="balance-block">' +
-        '<div class="balance-header">' +
-          '<span class="bal-title"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
-        '</div>' +
-        '<div class="balance-amount ' + (b.currentBalance > 0 ? "variance-over" : "") + '">' + fmtMoney(b.currentBalance) + '</div>' +
-        '<div class="balance-meta">' +
-          '<span>Starting balance: <strong>' + fmtMoney(b.startingBalance) + '</strong> (as of ' + asOfLabel + ')</span>' +
-          '<span>Charges since: <strong>+' + fmtMoney(b.totalCharges) + '</strong></span>' +
-          '<span>Payments since: <strong>-' + fmtMoney(b.totalPayments) + '</strong></span>' +
-        '</div>' +
+    renderCCCards();
+    renderCCCardList();
+    renderCCLedger();
+  }
+
+  // The row of per-card balance cards at the top -- same visual pattern as
+  // the Dashboard's "This month's paychecks" row, just not clickable.
+  function renderCCCards() {
+    var wrap = document.getElementById("ccCardsWrap");
+    if (!wrap) return;
+    if (state.creditCards.length === 0) { wrap.innerHTML = ""; return; }
+    var cards = state.creditCards.map(function(cc) {
+      var b = computeCreditCardBalance(cc);
+      return '<div class="pg-card" style="--pg-accent:' + creditCardColor(cc) + '; cursor:default;">' +
+        '<div class="pg-card-title">' + escapeHtml(cc.name) + '</div>' +
+        '<div class="pg-card-date">Current balance</div>' +
+        '<div class="pg-card-amount ' + (b.currentBalance > 0 ? "variance-over" : "") + '">' + fmtMoney(b.currentBalance) + '</div>' +
       '</div>';
     }).join("");
+    wrap.innerHTML = '<div class="pg-cards-row">' + cards + '</div>';
+  }
 
-    wrap.innerHTML =
-      '<div class="balance-total-row"><span>Total across all loans &amp; cards</span><span class="balance-amount">' + fmtMoney(totalBalance) + '</span></div>' +
-      html;
+  // A compact list of the cards themselves, with edit/delete -- the actual
+  // add/edit form lives below it (#ccCardForm, wired further down).
+  function renderCCCardList() {
+    var wrap = document.getElementById("ccCardListWrap");
+    if (!wrap) return;
+    if (state.creditCards.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No credit cards yet — add one below to start tracking its balance.</div>';
+      return;
+    }
+    wrap.innerHTML = '<div class="cc-card-list">' + state.creditCards.map(function(cc) {
+      var b = computeCreditCardBalance(cc);
+      return '<div class="cc-card-list-row">' +
+        '<span class="cc-card-list-name"><span class="swatch" style="background:' + creditCardColor(cc) + '"></span>' + escapeHtml(cc.name) + ' <span class="muted">' + fmtMoney(b.currentBalance) + '</span></span>' +
+        '<span class="cc-card-list-actions">' +
+          '<button class="row-btn" data-cc-card-edit="' + cc.id + '">Edit</button>' +
+          '<button class="row-btn danger" data-cc-card-del="' + cc.id + '">Delete</button>' +
+        '</span>' +
+      '</div>';
+    }).join("") + '</div>';
+    wrap.querySelectorAll("[data-cc-card-edit]").forEach(function(b) { b.addEventListener("click", function(){ editCreditCardUI(b.dataset.ccCardEdit); }); });
+    wrap.querySelectorAll("[data-cc-card-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteCreditCard(b.dataset.ccCardDel); }); });
+  }
+
+  var ccCardForm = document.getElementById("ccCardForm");
+
+  ccCardForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    var editId = document.getElementById("ccCardEditId").value;
+    var name = document.getElementById("ccCardName").value.trim();
+    var startingBalanceRaw = document.getElementById("ccCardStartingBalance").value;
+    var startingBalance = startingBalanceRaw === "" ? 0 : parseFloat(startingBalanceRaw);
+    var balanceAsOf = document.getElementById("ccCardBalanceAsOf").value || todayISO();
+    var color = document.getElementById("ccCardColor").value || "#4a72d6";
+    if (!name || isNaN(startingBalance) || startingBalance < 0) return;
+
+    if (editId) {
+      var cc = creditCardById(editId);
+      if (cc) { cc.name = name; cc.startingBalance = startingBalance; cc.balanceAsOf = balanceAsOf; cc.color = color; }
+      showToast("Card updated");
+    } else {
+      state.creditCards.push({ id: uid(), name: name, color: color, startingBalance: startingBalance, balanceAsOf: balanceAsOf });
+      showToast("Card added");
+    }
+    saveState();
+    resetCCCardForm();
+    renderBalances();
+  });
+
+  document.getElementById("ccCardCancelEdit").addEventListener("click", resetCCCardForm);
+
+  function resetCCCardForm() {
+    document.getElementById("ccCardEditId").value = "";
+    ccCardForm.reset();
+    document.getElementById("ccCardBalanceAsOf").value = todayISO();
+    document.getElementById("ccCardColor").value = "#4a72d6";
+    document.getElementById("ccCardSubmitBtn").textContent = "Add card";
+    document.getElementById("ccCardCancelEdit").style.display = "none";
+  }
+
+  function editCreditCardUI(id) {
+    var cc = creditCardById(id);
+    if (!cc) return;
+    document.getElementById("ccCardEditId").value = cc.id;
+    document.getElementById("ccCardName").value = cc.name;
+    document.getElementById("ccCardStartingBalance").value = cc.startingBalance || 0;
+    document.getElementById("ccCardBalanceAsOf").value = cc.balanceAsOf || todayISO();
+    document.getElementById("ccCardColor").value = cc.color || "#4a72d6";
+    document.getElementById("ccCardSubmitBtn").textContent = "Save changes";
+    document.getElementById("ccCardCancelEdit").style.display = "inline-block";
+    document.getElementById("ccCardName").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function deleteCreditCard(id) {
+    var hasTxns = state.expenses.some(function(e) { return e.creditCardId === id; });
+    var msg = hasTxns
+      ? "Delete this card? Its transactions stay in your register (still counted in their category) but will no longer count toward any card's balance."
+      : "Delete this card?";
+    confirmDialog(msg).then(function(ok) {
+      if (!ok) return;
+      state.creditCards = state.creditCards.filter(function(cc) { return cc.id !== id; });
+      saveState();
+      renderBalances();
+      showToast("Card deleted");
+    });
+  }
+
+  // The ledger itself -- every expense tagged with a creditCardId, styled
+  // like the Check Register (blank row at the bottom to add a new charge or
+  // payment, click a description to edit or delete). A charge is real
+  // spending (it needs a real category, and counts toward that category's
+  // budget); a payment just pays a card down and doesn't need a category.
+  function renderCCLedger() {
+    var wrap = document.getElementById("ccRegisterWrap");
+    if (!wrap) return;
+    var txns = state.expenses.filter(function(e) { return e.creditCardId; })
+                              .slice()
+                              .sort(function(a,b) { return b.date < a.date ? -1 : (b.date > a.date ? 1 : 0); });
+
+    var countEl = document.getElementById("ccRegisterCount");
+    if (countEl) countEl.textContent = "(" + txns.length + ")";
+
+    var bodyHtml = "";
+    txns.forEach(function(e, idx) {
+      var cc = creditCardById(e.creditCardId);
+      var cardLabel = cc ? escapeHtml(cc.name) : '<span class="muted">(deleted card)</span>';
+      var isPayment = e.debtType === "payment";
+      var typeLabel = isPayment ? "Payment" : "Charge";
+      var amtSign = isPayment ? "-" : "+";
+      var amtClass = isPayment ? "variance-under" : "variance-over";
+      var stripe = idx % 2 === 1 ? " register-stripe" : "";
+      var cat = categoryById(e.categoryId);
+      var catLabel = cat ? escapeHtml(cat.name) : '<span class="muted">—</span>';
+
+      bodyHtml += '<tr class="register-txn-main' + stripe + '">' +
+        '<td class="reg-col-date"><input type="date" class="register-inline-date" data-cc-date="' + e.id + '" value="' + e.date + '"></td>' +
+        '<td>' + escapeHtml(e.note || "(no note)") + '</td>' +
+        '<td class="cc-col-card">' + cardLabel + '</td>' +
+        '<td class="cc-col-type">' + typeLabel + '</td>' +
+        '<td class="num ' + amtClass + '">' + amtSign + fmtMoney(e.amount) + '</td>' +
+        '<td class="reg-col-clr"><input type="checkbox" class="row-checkbox" data-cc-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
+      '</tr>';
+
+      var detailInner =
+        '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>' +
+        '<span>Card <select class="register-inline-select" data-cc-card="' + e.id + '">' + creditCardOptionsFor(e.creditCardId) + '</select></span>' +
+        '<span>Type <select class="register-inline-select" data-cc-type="' + e.id + '">' +
+          '<option value="charge"' + (!isPayment ? ' selected' : '') + '>Charge (adds to balance)</option>' +
+          '<option value="payment"' + (isPayment ? ' selected' : '') + '>Payment (reduces balance)</option>' +
+        '</select></span>' +
+        '<span class="reg-detail-actions"><button class="row-btn danger" data-cc-del="' + e.id + '">Delete</button></span>';
+      bodyHtml += '<tr class="register-txn-detail' + stripe + '"><td></td><td colspan="5"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
+    });
+
+    var newRowHtml =
+      '<tr class="register-txn-main register-new-row">' +
+        '<td class="reg-col-date"><input type="date" id="ccNewDate" value="' + todayISO() + '"></td>' +
+        '<td><input type="text" id="ccNewDesc" placeholder="Payee / description"></td>' +
+        '<td class="cc-col-card"><select id="ccNewCard">' + creditCardOptionsFor(null, true) + '</select></td>' +
+        '<td class="cc-col-type"><select id="ccNewType"><option value="charge">Charge</option><option value="payment">Payment</option></select></td>' +
+        '<td class="num"><input type="number" id="ccNewAmount" placeholder="Amount" step="0.01" min="0"></td>' +
+        '<td class="reg-col-clr"><input type="checkbox" id="ccNewCleared"></td>' +
+      '</tr>' +
+      '<tr class="register-txn-detail register-new-row"><td></td><td colspan="5"><div class="register-detail-inline">' +
+        '<span>Category <select id="ccNewCategory">' + categoryOptionsFor(null, true) + '</select></span>' +
+        '<span class="reg-detail-actions"><button type="button" class="primary" id="ccNewAdd">Add transaction</button></span>' +
+      '</div></td></tr>';
+
+    var headHtml = '<thead><tr>' +
+      '<th class="reg-col-date">Date</th>' +
+      '<th>Description</th>' +
+      '<th class="cc-col-card">Card</th>' +
+      '<th class="cc-col-type">Type</th>' +
+      '<th class="num">Amount</th>' +
+      '<th class="reg-col-clr" title="Cleared">&#10003;</th>' +
+      '</tr></thead>';
+
+    if (txns.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No credit card transactions yet.</div>' +
+        '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
+    } else {
+      wrap.innerHTML = '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + bodyHtml + newRowHtml + '</tbody></table>';
+    }
+
+    wrap.querySelectorAll("[data-cc-date]").forEach(function(inp) {
+      inp.addEventListener("change", function() {
+        if (!inp.value) return;
+        var ex = state.expenses.find(function(x) { return x.id === inp.dataset.ccDate; });
+        if (!ex) return;
+        ex.date = inp.value;
+        saveState();
+        renderBalances();
+        renderDashboard();
+        renderExpenses();
+        showToast("Date updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-cleared]").forEach(function(b) {
+      b.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === b.dataset.ccCleared; });
+        if (!ex) return;
+        ex.cleared = b.checked;
+        saveState();
+        showToast("Updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-category]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccCategory; });
+        if (!ex) return;
+        ex.categoryId = sel.value || null;
+        saveState();
+        renderBalances();
+        renderDashboard();
+        renderExpenses();
+        renderCategories();
+        showToast("Category updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-card]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccCard; });
+        if (!ex || !sel.value) return;
+        ex.creditCardId = sel.value;
+        saveState();
+        renderBalances();
+        showToast("Card updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-type]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccType; });
+        if (!ex) return;
+        ex.debtType = sel.value;
+        saveState();
+        renderBalances();
+        renderDashboard();
+        showToast("Updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-del]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        confirmDialog("Delete this transaction?").then(function(ok) {
+          if (!ok) return;
+          state.expenses = state.expenses.filter(function(x) { return x.id !== b.dataset.ccDel; });
+          saveState();
+          renderBalances();
+          renderDashboard();
+          renderExpenses();
+          renderCategories();
+          showToast("Transaction deleted");
+        });
+      });
+    });
+
+    function commitNewCCRow() {
+      var date = document.getElementById("ccNewDate").value;
+      var desc = document.getElementById("ccNewDesc").value.trim();
+      var cardId = document.getElementById("ccNewCard").value;
+      var type = document.getElementById("ccNewType").value;
+      var amount = parseFloat(document.getElementById("ccNewAmount").value);
+      var cleared = document.getElementById("ccNewCleared").checked;
+      var categoryId = document.getElementById("ccNewCategory").value || null;
+
+      if (!date) { showToast("Pick a date first"); return; }
+      if (!cardId) { showToast("Pick a credit card"); return; }
+      if (isNaN(amount) || amount <= 0) { showToast("Enter an amount"); return; }
+      if (type === "charge" && !categoryId) { showToast("Pick a category for this charge"); return; }
+
+      state.expenses.push({
+        id: uid(), date: date, amount: amount, categoryId: categoryId, note: desc,
+        paycheckId: null, paid: false, cleared: cleared,
+        creditCardId: cardId, debtType: type
+      });
+      saveState();
+      renderBalances();
+      renderDashboard();
+      renderExpenses();
+      renderCategories();
+      showToast(type === "payment" ? "Payment added" : "Charge added");
+    }
+
+    var ccAddBtn = document.getElementById("ccNewAdd");
+    if (ccAddBtn) ccAddBtn.addEventListener("click", commitNewCCRow);
+    ["ccNewDate", "ccNewDesc", "ccNewAmount"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); commitNewCCRow(); } });
+    });
   }
 
   // ---------- SAVINGS GOALS ----------
@@ -3878,6 +4262,10 @@
     var totals = {};
     state.categories.forEach(function(c) { totals[c.id] = 0; });
     state.expenses.forEach(function(e) {
+      // A credit card payment isn't new spending -- it's paying down a
+      // balance that was already counted as spending when the charge
+      // happened -- so it's excluded here to avoid double-counting.
+      if (e.creditCardId && e.debtType === "payment") return;
       if (monthKeyOf(e.date) === monthKey) {
         totals[e.categoryId] = (totals[e.categoryId] || 0) + e.amount;
       }
@@ -4281,12 +4669,12 @@
     // Not logged at all yet, but due today or earlier this month (edge
     // case -- normally the app auto-logs these on their due date).
     state.recurring.forEach(function(r) {
-      var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === monthKey; });
-      if (already) return;
-      var dueDate = templateDueDateInMonth(r, monthKey);
-      if (dueDate <= todayStr) {
+      recurringExpenseOccurrencesInMonth(r, monthKey).forEach(function(dueDate) {
+        if (dueDate > todayStr) return;
+        var already = state.expenses.some(function(e) { return e.recurringId === r.id && e.date === dueDate; });
+        if (already) return;
         items.push({ name: r.name, categoryId: r.categoryId, amount: r.amount, dueDate: dueDate, expenseId: null, overdue: dueDate < todayStr });
-      }
+      });
     });
 
     items.sort(function(a, b) { return a.dueDate.localeCompare(b.dueDate); });
@@ -4348,12 +4736,12 @@
 
     // Not logged at all yet, due later this month.
     state.recurring.forEach(function(r) {
-      var already = state.expenses.some(function(e) { return e.recurringId === r.id && monthKeyOf(e.date) === monthKey; });
-      if (already) return;
-      var dueDate = templateDueDateInMonth(r, monthKey);
-      if (dueDate > todayStr) {
+      recurringExpenseOccurrencesInMonth(r, monthKey).forEach(function(dueDate) {
+        if (dueDate <= todayStr) return;
+        var already = state.expenses.some(function(e) { return e.recurringId === r.id && e.date === dueDate; });
+        if (already) return;
         items.push({ name: r.name, categoryId: r.categoryId, amount: r.amount, dueDate: dueDate, expenseId: null });
-      }
+      });
     });
 
     items.sort(function(a, b) { return a.dueDate.localeCompare(b.dueDate); });
@@ -4509,10 +4897,12 @@
             recurring: parsed.recurring || [],
             recurringIncome: parsed.recurringIncome || [],
             savingsGoals: parsed.savingsGoals || [],
+            creditCards: normalizeCreditCards(parsed.creditCards),
             settings: Object.assign({}, d.settings, parsed.settings || {}),
             lastRecurringRun: parsed.lastRecurringRun || null,
             lastRecurringIncomeRun: parsed.lastRecurringIncomeRun || null
           };
+          state = migrateDebtCategoriesToCreditCards(state);
           saveState();
           document.getElementById("currencySymbol").value = state.settings.currency || "$";
           populateCategorySelects();
