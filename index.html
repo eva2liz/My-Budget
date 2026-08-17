@@ -2542,9 +2542,22 @@
   // even though it isn't tied to any category or paycheck. Balance is always
   // computed from the FULL history before any filtering, so the numbers stay
   // meaningful even when the table below is narrowed to one month or category.
+  //
+  // The Check Register is pure bank activity -- money that actually moved
+  // through the checking account -- so a credit card CHARGE is deliberately
+  // left out. Charging something to a card doesn't touch the bank balance;
+  // only paying the card down does (a debtType === "payment" row, entered
+  // either here via "Pay down: <card>" or directly on the CC Register).
+  // Including charges here used to double-count every card purchase you
+  // also paid off: the charge subtracted its amount from this running
+  // balance immediately, and the later payment subtracted it AGAIN, for one
+  // real withdrawal. Charges still live in the CC Register (and still count
+  // toward category spending via totalsForMonth) -- they just don't belong
+  // in a ledger of bank transactions.
   function buildRegisterRows() {
     var rows = [];
     state.expenses.forEach(function(e) {
+      if (e.creditCardId && e.debtType !== "payment") return;
       rows.push({
         kind: "expense", id: e.id, date: e.date, desc: e.note || "",
         categoryId: e.categoryId, paycheckId: e.paycheckId || null,
