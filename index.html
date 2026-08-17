@@ -475,8 +475,11 @@
   .register-table tr.register-row-flagged td { background: rgba(208, 59, 59, 0.07); }
   /* CC Register: a light blue tint for payments that were entered via the
      Check Register / expense form / Recurring tab's "Pay down" option
-     rather than directly on this tab, so it's clear where they came from. */
-  .register-table tr.cc-row-linked td { background: rgba(74, 114, 214, 0.09); }
+     rather than directly on this tab, so it's clear where they came from.
+     Stronger than the zebra-stripe/flagged tints above so it actually reads
+     as "different" at a glance instead of blending into the striping. */
+  .register-table tr.cc-row-linked td { background: rgba(74, 114, 214, 0.18); }
+  .register-table tr.cc-row-linked td:first-child { border-left: 3px solid rgba(74, 114, 214, 0.7); }
   .register-table tr.register-txn-detail td {
     padding-top: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border);
     white-space: normal;
@@ -1150,6 +1153,13 @@
     <div class="register-shell">
       <div class="register-toolbar">
         <h2>CC Register <span class="muted" id="ccRegisterCount"></span></h2>
+        <div class="register-filters">
+          <label class="register-filter-daterange">From <input type="date" id="ccFilterFrom" aria-label="From date"></label>
+          <label class="register-filter-daterange">To <input type="date" id="ccFilterTo" aria-label="To date"></label>
+          <select id="ccFilterCard" aria-label="Filter by card"><option value="">All cards</option></select>
+          <select id="ccFilterCategory" aria-label="Filter by category"><option value="">All categories</option></select>
+          <button type="button" class="secondary" id="ccClearFilters">Clear filters</button>
+        </div>
       </div>
       <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every row's Category/Card/Type dropdowns and Delete button are right underneath it. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab.</p>
       <div id="ccRegisterWrap" class="register-scroll"></div>
@@ -2081,6 +2091,34 @@
       filterSelect.appendChild(opt);
     });
     filterSelect.value = prevF;
+
+    // CC Register's own From/To/Card/Category filter row -- same
+    // preserve-the-current-selection approach as filterCategory above, kept
+    // in sync here since this function already runs after every place a
+    // category or credit card can be added, renamed, or deleted.
+    var ccCardFilterSelect = document.getElementById("ccFilterCard");
+    if (ccCardFilterSelect) {
+      var prevCcCard = ccCardFilterSelect.value;
+      ccCardFilterSelect.innerHTML = '<option value="">All cards</option>';
+      state.creditCards.forEach(function(cc) {
+        var opt = document.createElement("option");
+        opt.value = cc.id; opt.textContent = cc.name;
+        ccCardFilterSelect.appendChild(opt);
+      });
+      ccCardFilterSelect.value = prevCcCard;
+    }
+
+    var ccCatFilterSelect = document.getElementById("ccFilterCategory");
+    if (ccCatFilterSelect) {
+      var prevCcCat = ccCatFilterSelect.value;
+      ccCatFilterSelect.innerHTML = '<option value="">All categories</option>';
+      state.categories.forEach(function(c) {
+        var opt = document.createElement("option");
+        opt.value = c.id; opt.textContent = c.name;
+        ccCatFilterSelect.appendChild(opt);
+      });
+      ccCatFilterSelect.value = prevCcCat;
+    }
   }
 
   function paycheckLabel(inc) {
@@ -2427,6 +2465,21 @@
     document.getElementById("filterTo").value = "";
     document.getElementById("filterCategory").value = "";
     renderExpenses();
+  });
+
+  // CC Register's own From/To/Card/Category filter row -- same idea as the
+  // Check Register's filters above, but scoped to renderCCLedger() alone
+  // since filtering the ledger never changes a card's actual balance.
+  document.getElementById("ccFilterFrom").addEventListener("change", renderCCLedger);
+  document.getElementById("ccFilterTo").addEventListener("change", renderCCLedger);
+  document.getElementById("ccFilterCard").addEventListener("change", renderCCLedger);
+  document.getElementById("ccFilterCategory").addEventListener("change", renderCCLedger);
+  document.getElementById("ccClearFilters").addEventListener("click", function() {
+    document.getElementById("ccFilterFrom").value = "";
+    document.getElementById("ccFilterTo").value = "";
+    document.getElementById("ccFilterCard").value = "";
+    document.getElementById("ccFilterCategory").value = "";
+    renderCCLedger();
   });
 
   // This list intentionally shows only UNASSIGNED expenses. Once an expense
@@ -4046,10 +4099,37 @@
   function renderCCLedger() {
     var wrap = document.getElementById("ccRegisterWrap");
     if (!wrap) return;
-    var rows = sortCCLedgerRows(buildCCLedgerRows());
+    var allRows = buildCCLedgerRows();
+
+    // Filtering happens on the full, already-balanced row set -- each row's
+    // running balance was computed in buildCCLedgerRows() from the true
+    // chronological order across ALL transactions, so hiding some rows here
+    // never changes the balance shown on the ones that remain visible.
+    var fromFilterEl = document.getElementById("ccFilterFrom");
+    var toFilterEl = document.getElementById("ccFilterTo");
+    var cardFilterEl = document.getElementById("ccFilterCard");
+    var catFilterEl = document.getElementById("ccFilterCategory");
+    var fromFilter = fromFilterEl ? fromFilterEl.value : "";
+    var toFilter = toFilterEl ? toFilterEl.value : "";
+    var cardFilter = cardFilterEl ? cardFilterEl.value : "";
+    var catFilter = catFilterEl ? catFilterEl.value : "";
+
+    var rows = allRows.filter(function(row) {
+      var e = row.expense;
+      if (fromFilter && e.date < fromFilter) return false;
+      if (toFilter && e.date > toFilter) return false;
+      if (cardFilter && e.creditCardId !== cardFilter) return false;
+      if (catFilter && e.categoryId !== catFilter) return false;
+      return true;
+    });
+    sortCCLedgerRows(rows);
 
     var countEl = document.getElementById("ccRegisterCount");
-    if (countEl) countEl.textContent = "(" + rows.length + ")";
+    if (countEl) {
+      countEl.textContent = (fromFilter || toFilter || cardFilter || catFilter)
+        ? "(" + rows.length + " of " + allRows.length + ")"
+        : "(" + allRows.length + ")";
+    }
 
     var bodyHtml = "";
     rows.forEach(function(row, idx) {
@@ -4117,8 +4197,11 @@
       '<th class="num reg-col-balance reg-sortable" data-cc-sort-key="balance"><span class="full-label">Balance</span><span class="short-label">Bal</span>' + ccSortArrowHtml("balance") + '</th>' +
       '</tr></thead>';
 
-    if (rows.length === 0) {
+    if (allRows.length === 0) {
       wrap.innerHTML = '<div class="empty-state">No credit card transactions yet.</div>' +
+        '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
+    } else if (rows.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">Nothing matches the current filters.</div>' +
         '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
     } else {
       wrap.innerHTML = '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + bodyHtml + newRowHtml + '</tbody></table>';
