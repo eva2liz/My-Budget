@@ -224,7 +224,11 @@ for exactly how that works.
   also has a running **Balance** column (each card's own balance right
   after that transaction, same idea as the Check Register's) and every
   column header — Date, Card, Type, Amount, cleared, Balance — is
-  click-to-sort, same as the Check Register.
+  click-to-sort, same as the Check Register. A payment entered via the
+  Check Register, expense form, or a recurring "Pay down" item shows up
+  here tinted light blue with a "via Check Register" note, so it's clear
+  at a glance which payments were entered elsewhere versus directly on
+  this tab.
 - **Import bank transactions from a CSV** — most banks, including Bank of
   America, let you download recent transactions as a CSV from their
   website; upload it under Settings and the app maps the columns

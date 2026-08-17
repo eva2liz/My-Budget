@@ -473,6 +473,10 @@
   }
   .register-table tr.register-stripe td { background: rgba(120, 120, 120, 0.045); }
   .register-table tr.register-row-flagged td { background: rgba(208, 59, 59, 0.07); }
+  /* CC Register: a light blue tint for payments that were entered via the
+     Check Register / expense form / Recurring tab's "Pay down" option
+     rather than directly on this tab, so it's clear where they came from. */
+  .register-table tr.cc-row-linked td { background: rgba(74, 114, 214, 0.09); }
   .register-table tr.register-txn-detail td {
     padding-top: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border);
     white-space: normal;
@@ -1147,7 +1151,7 @@
       <div class="register-toolbar">
         <h2>CC Register <span class="muted" id="ccRegisterCount"></span></h2>
       </div>
-      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every row's Category/Card/Type dropdowns and Delete button are right underneath it.</p>
+      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every row's Category/Card/Type dropdowns and Delete button are right underneath it. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab.</p>
       <div id="ccRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1950,7 +1954,8 @@
           id: uid(), date: dateStr, amount: r.amount, categoryId: r.categoryId,
           note: r.name + " (recurring)", recurringId: r.id,
           paid: false, cleared: false, paycheckId: inheritedPaycheckId,
-          creditCardId: r.creditCardId || null, debtType: r.debtType || null
+          creditCardId: r.creditCardId || null, debtType: r.debtType || null,
+          viaAccountPicker: !!r.viaAccountPicker
         });
         added++;
       });
@@ -2374,7 +2379,8 @@
       state.expenses.push({
         id: uid(), date: ex.date, amount: Math.round(b * 100) / 100, categoryId: ex.categoryId,
         note: ex.note, paycheckId: paycheckB, paid: ex.paid, cleared: ex.cleared,
-        recurringId: ex.recurringId || null, creditCardId: ex.creditCardId || null, debtType: ex.debtType || null, splitGroupId: groupId
+        recurringId: ex.recurringId || null, creditCardId: ex.creditCardId || null, debtType: ex.debtType || null,
+        viaAccountPicker: !!ex.viaAccountPicker, splitGroupId: groupId
       });
 
       saveState();
@@ -2555,17 +2561,26 @@
   // to a plain category only clears the card link if this expense WAS a
   // payment -- a charge's card link is managed from the CC Register tab, so
   // just recoloring its category here leaves that link alone.
+  //
+  // viaAccountPicker is stamped true whenever a payment is created/edited
+  // this way -- i.e. from the Check Register, the expense edit form, or the
+  // Recurring tab's Category field, never from the CC Register's own row.
+  // The CC Register highlights these so it's clear which payments were
+  // entered somewhere else and just showed up here automatically, versus
+  // ones entered directly on this tab.
   function applyAccountValue(ex, value) {
     if (value && value.indexOf("cc:") === 0) {
       ex.categoryId = null;
       ex.creditCardId = value.slice(3);
       ex.debtType = "payment";
+      ex.viaAccountPicker = true;
     } else {
       ex.categoryId = value || null;
       if (ex.debtType === "payment") {
         ex.creditCardId = null;
         ex.debtType = null;
       }
+      ex.viaAccountPicker = false;
     }
   }
 
@@ -3446,7 +3461,8 @@
       id: uid(), date: dueDate, amount: r.amount, categoryId: r.categoryId,
       note: r.name + " (recurring)", recurringId: r.id,
       paid: false, cleared: false, paycheckId: incId,
-      creditCardId: r.creditCardId || null, debtType: r.debtType || null
+      creditCardId: r.creditCardId || null, debtType: r.debtType || null,
+      viaAccountPicker: !!r.viaAccountPicker
     };
     state.expenses.push(newExpense);
     saveState();
@@ -3731,7 +3747,8 @@
             id: uid(), date: dueDate, amount: r.amount, categoryId: r.categoryId,
             note: r.name + " (recurring)", recurringId: r.id,
             paid: false, cleared: false, paycheckId: incId,
-            creditCardId: r.creditCardId || null, debtType: r.debtType || null
+            creditCardId: r.creditCardId || null, debtType: r.debtType || null,
+            viaAccountPicker: !!r.viaAccountPicker
           });
         }
         saveState();
@@ -4043,12 +4060,14 @@
       var typeLabel = isPayment ? "Payment" : "Charge";
       var amtSign = isPayment ? "-" : "+";
       var amtClass = isPayment ? "variance-under" : "variance-over";
-      var stripe = idx % 2 === 1 ? " register-stripe" : "";
+      var linked = !!e.viaAccountPicker;
+      var rowClass = linked ? " cc-row-linked" : (idx % 2 === 1 ? " register-stripe" : "");
       var balanceCell = row.balance === null ? '<span class="muted">—</span>' : fmtMoney(row.balance);
+      var linkedTag = linked ? ' <span class="muted" title="Entered via the Check Register, expense form, or a recurring “Pay down” item">· via Check Register</span>' : "";
 
-      bodyHtml += '<tr class="register-txn-main' + stripe + '">' +
+      bodyHtml += '<tr class="register-txn-main' + rowClass + '">' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" data-cc-date="' + e.id + '" value="' + e.date + '"></td>' +
-        '<td>' + escapeHtml(e.note || "(no note)") + '</td>' +
+        '<td>' + escapeHtml(e.note || "(no note)") + linkedTag + '</td>' +
         '<td class="cc-col-card">' + cardLabel + '</td>' +
         '<td class="cc-col-type">' + typeLabel + '</td>' +
         '<td class="num ' + amtClass + '">' + amtSign + fmtMoney(e.amount) + '</td>' +
@@ -4064,7 +4083,7 @@
           '<option value="payment"' + (isPayment ? ' selected' : '') + '>Payment (reduces balance)</option>' +
         '</select></span>' +
         '<span class="reg-detail-actions"><button class="row-btn danger" data-cc-del="' + e.id + '">Delete</button></span>';
-      bodyHtml += '<tr class="register-txn-detail' + stripe + '"><td></td><td colspan="6"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
+      bodyHtml += '<tr class="register-txn-detail' + rowClass + '"><td></td><td colspan="6"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
     });
 
     var newRowHtml =
