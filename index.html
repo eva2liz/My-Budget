@@ -1764,10 +1764,15 @@
   // Sums every expense tagged with this card's id: charges add to what's
   // owed, payments bring it down. Payments are excluded from category
   // spending totals elsewhere (see totalsForMonth) so paying a card down
-  // never double-counts as new spending.
+  // never double-counts as new spending. Only counts transactions dated
+  // today or earlier -- a future-dated charge or payment (e.g. one
+  // early-logged from the Paycheck Planner for a bill that hasn't come due
+  // yet) hasn't actually happened yet, so it shouldn't move the balance
+  // until its date arrives.
   function computeCreditCardBalance(cc) {
     var asOf = cc.balanceAsOf || "0000-00-00";
-    var relevant = state.expenses.filter(function(e) { return e.creditCardId === cc.id && e.date >= asOf; });
+    var todayStr = todayISO();
+    var relevant = state.expenses.filter(function(e) { return e.creditCardId === cc.id && e.date >= asOf && e.date <= todayStr; });
     var totalCharges = relevant.filter(function(e) { return e.debtType !== "payment"; })
                                 .reduce(function(s,e){ return s + e.amount; }, 0);
     var totalPayments = relevant.filter(function(e) { return e.debtType === "payment"; })

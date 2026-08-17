@@ -199,7 +199,10 @@ for exactly how that works.
   separately from what you spend it on. Add a card (name, starting balance,
   as-of date) at the top of the **CC Register** tab, where a row of cards
   shows every card's current balance at a glance, styled like the
-  Dashboard's paycheck row. Log a transaction into the ledger below it the
+  Dashboard's paycheck row — as of today, specifically; a charge or payment
+  dated in the future (e.g. one early-logged from the Paycheck Planner)
+  stays visible in the ledger below but doesn't move the balance until its
+  date actually arrives. Log a transaction into the ledger below it the
   same way you would in the Check Register — pick the card it goes on, and
   the row underneath it lets you set the real spending **category** (e.g.
   Shopping), so a card charge still counts toward that category's budget.
