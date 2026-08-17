@@ -228,7 +228,10 @@ for exactly how that works.
   Check Register, expense form, or a recurring "Pay down" item shows up
   here tinted light blue with a "via Check Register" note, so it's clear
   at a glance which payments were entered elsewhere versus directly on
-  this tab.
+  this tab. Since a payment isn't spending, it never has a category — the
+  Category field is simply absent for payment rows (both existing rows
+  and the blank add-row), whether the payment came from the Check
+  Register or was entered directly here.
 - **Import bank transactions from a CSV** — most banks, including Bank of
   America, let you download recent transactions as a CSV from their
   website; upload it under Settings and the app maps the columns

@@ -4075,8 +4075,14 @@
         '<td class="num reg-col-balance">' + balanceCell + '</td>' +
       '</tr>';
 
+      // A payment isn't spending, so it doesn't get a Category field at all
+      // here -- only a charge does. Switching Type back to "charge" below
+      // brings the Category field back (re-rendered on change, see the
+      // data-cc-type handler).
+      var categoryField = isPayment ? "" :
+        '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>';
       var detailInner =
-        '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>' +
+        categoryField +
         '<span>Card <select class="register-inline-select" data-cc-card="' + e.id + '">' + creditCardOptionsFor(e.creditCardId) + '</select></span>' +
         '<span>Type <select class="register-inline-select" data-cc-type="' + e.id + '">' +
           '<option value="charge"' + (!isPayment ? ' selected' : '') + '>Charge (adds to balance)</option>' +
@@ -4097,7 +4103,7 @@
         '<td class="num reg-col-balance muted">—</td>' +
       '</tr>' +
       '<tr class="register-txn-detail register-new-row"><td></td><td colspan="6"><div class="register-detail-inline">' +
-        '<span>Category <select id="ccNewCategory">' + categoryOptionsFor(null, true) + '</select></span>' +
+        '<span id="ccNewCategoryField">Category <select id="ccNewCategory">' + categoryOptionsFor(null, true) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="ccNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
@@ -4181,9 +4187,15 @@
         var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccType; });
         if (!ex) return;
         ex.debtType = sel.value;
+        // A payment doesn't have a category -- clear it so switching a
+        // charge to a payment here matches what picking "Pay down: <card>"
+        // does everywhere else in the app.
+        if (sel.value === "payment") ex.categoryId = null;
         saveState();
         renderBalances();
         renderDashboard();
+        renderExpenses();
+        renderCategories();
         showToast("Updated");
       });
     });
@@ -4202,6 +4214,17 @@
       });
     });
 
+    // A payment doesn't have a category, so the Category field only shows
+    // up in the blank add-row while "Charge" is selected.
+    var ccNewTypeEl = document.getElementById("ccNewType");
+    var ccNewCategoryFieldEl = document.getElementById("ccNewCategoryField");
+    function updateCcNewCategoryVisibility() {
+      if (!ccNewTypeEl || !ccNewCategoryFieldEl) return;
+      ccNewCategoryFieldEl.style.display = ccNewTypeEl.value === "payment" ? "none" : "";
+    }
+    updateCcNewCategoryVisibility();
+    if (ccNewTypeEl) ccNewTypeEl.addEventListener("change", updateCcNewCategoryVisibility);
+
     function commitNewCCRow() {
       var date = document.getElementById("ccNewDate").value;
       var desc = document.getElementById("ccNewDesc").value.trim();
@@ -4209,7 +4232,7 @@
       var type = document.getElementById("ccNewType").value;
       var amount = parseFloat(document.getElementById("ccNewAmount").value);
       var cleared = document.getElementById("ccNewCleared").checked;
-      var categoryId = document.getElementById("ccNewCategory").value || null;
+      var categoryId = type === "payment" ? null : (document.getElementById("ccNewCategory").value || null);
 
       if (!date) { showToast("Pick a date first"); return; }
       if (!cardId) { showToast("Pick a credit card"); return; }
