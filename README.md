@@ -213,7 +213,11 @@ for exactly how that works.
   on every existing row) offers a **Pay down: &lt;card&gt;** option
   alongside your regular categories — pick that instead of a category and
   it posts straight to that card's balance and shows up on the CC Register
-  automatically, so you never have to enter the same payment twice.
+  automatically, so you never have to enter the same payment twice. The
+  same **Pay down: &lt;card&gt;** option is also available on the
+  **Recurring** tab's Category field, for a card payment that happens on a
+  schedule (a minimum payment, an autopay) — it auto-logs and updates that
+  card's balance right along with your other recurring bills.
 - **Import bank transactions from a CSV** — most banks, including Bank of
   America, let you download recent transactions as a CSV from their
   website; upload it under Settings and the app maps the columns

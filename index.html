@@ -1871,7 +1871,7 @@
           id: uid(), date: dateStr, amount: r.amount, categoryId: r.categoryId,
           note: r.name + " (recurring)", recurringId: r.id,
           paid: false, cleared: false, paycheckId: inheritedPaycheckId,
-          debtType: r.debtType || null
+          creditCardId: r.creditCardId || null, debtType: r.debtType || null
         });
         added++;
       });
@@ -1972,20 +1972,17 @@
   // ---------- category select population ----------
 
   function populateCategorySelects() {
+    // recCategory and expCategory both double as an "Account" field --
+    // real category, or "Pay down: <card>" for a recurring/one-off credit
+    // card payment -- so both need the full accountOptionsFor() list, not
+    // just plain categories. Rebuilt from whichever item is currently open
+    // (or blank categories-only if none is), preserving the current
+    // selection the same way the category-only filter select below does.
     var recSel = document.getElementById("recCategory");
     var prevRec = recSel.value;
-    recSel.innerHTML = "";
-    state.categories.forEach(function(c) {
-      var opt = document.createElement("option");
-      opt.value = c.id; opt.textContent = c.name;
-      recSel.appendChild(opt);
-    });
+    recSel.innerHTML = accountOptionsFor(null, null, null, false);
     if (prevRec) recSel.value = prevRec;
 
-    // expCategory doubles as the expense edit form's Account field, so it
-    // also needs the "Pay down: <card>" options -- rebuilt from whichever
-    // expense is currently open (or blank categories-only if none is),
-    // preserving the current selection the same way recCategory does above.
     var expSel = document.getElementById("expCategory");
     var prevExp = expSel.value;
     expSel.innerHTML = accountOptionsFor(null, null, null, false);
@@ -2947,12 +2944,12 @@
     var editId = document.getElementById("recEditId").value;
     var name = document.getElementById("recName").value.trim();
     var amount = parseFloat(document.getElementById("recAmount").value);
-    var categoryId = document.getElementById("recCategory").value;
+    var accountValue = document.getElementById("recCategory").value;
     var frequency = document.getElementById("recFrequency").value;
     var day = parseInt(document.getElementById("recDay").value, 10);
     var startDate = document.getElementById("recStartDate").value;
     var paycheckId = document.getElementById("recPaycheck").value || null;
-    if (!name || isNaN(amount) || amount < 0 || !categoryId) return;
+    if (!name || isNaN(amount) || amount < 0 || !accountValue) return;
     if (frequency === "monthly" && !day) return;
     if (frequency !== "monthly" && !startDate) return;
     var recDay = frequency === "monthly" ? day : null;
@@ -2960,10 +2957,15 @@
 
     if (editId) {
       var r = state.recurring.find(function(x){ return x.id === editId; });
-      if (r) { r.name = name; r.amount = amount; r.categoryId = categoryId; r.frequency = frequency; r.day = recDay; r.startDate = recStartDate; r.paycheckId = paycheckId; }
+      if (r) {
+        r.name = name; r.amount = amount; r.frequency = frequency; r.day = recDay; r.startDate = recStartDate; r.paycheckId = paycheckId;
+        applyAccountValue(r, accountValue);
+      }
       showToast("Recurring item updated");
     } else {
-      state.recurring.push({ id: uid(), name: name, amount: amount, categoryId: categoryId, frequency: frequency, day: recDay, startDate: recStartDate, paycheckId: paycheckId });
+      var newRecurring = { id: uid(), name: name, amount: amount, categoryId: null, frequency: frequency, day: recDay, startDate: recStartDate, paycheckId: paycheckId, creditCardId: null, debtType: null };
+      applyAccountValue(newRecurring, accountValue);
+      state.recurring.push(newRecurring);
       showToast("Recurring item added");
     }
     saveState();
@@ -2998,7 +3000,7 @@
     document.getElementById("recEditId").value = r.id;
     document.getElementById("recName").value = r.name;
     document.getElementById("recAmount").value = r.amount;
-    document.getElementById("recCategory").value = r.categoryId;
+    document.getElementById("recCategory").innerHTML = accountOptionsFor(r.categoryId, r.creditCardId, r.debtType, false);
     document.getElementById("recFrequency").value = r.frequency || "monthly";
     document.getElementById("recDay").value = r.day || 1;
     document.getElementById("recStartDate").value = r.startDate || "";
@@ -3032,10 +3034,19 @@
     var html = '<table><thead><tr><th>Name</th><th>Category</th><th>Schedule</th><th>Default paycheck</th><th class="num">Amount</th><th></th></tr></thead><tbody>';
     state.recurring.forEach(function(r) {
       var cat = categoryById(r.categoryId);
+      var accountLabel;
+      if (cat) {
+        accountLabel = cat.name;
+      } else if (r.creditCardId && r.debtType === "payment") {
+        var payCard = creditCardById(r.creditCardId);
+        accountLabel = "Pay down: " + (payCard ? payCard.name : "(deleted card)");
+      } else {
+        accountLabel = "(deleted)";
+      }
       var pc = r.paycheckId ? state.income.find(function(inc){ return inc.id === r.paycheckId; }) : null;
       html += '<tr>' +
         '<td>' + escapeHtml(r.name) + '</td>' +
-        '<td>' + escapeHtml(cat ? cat.name : "(deleted)") + '</td>' +
+        '<td>' + escapeHtml(accountLabel) + '</td>' +
         '<td>' + escapeHtml(recurringScheduleLabel(r)) + '</td>' +
         '<td>' + (pc ? escapeHtml(pc.source) : "—") + '</td>' +
         '<td class="num">' + fmtMoney(r.amount) + '</td>' +
@@ -3355,7 +3366,8 @@
     var newExpense = {
       id: uid(), date: dueDate, amount: r.amount, categoryId: r.categoryId,
       note: r.name + " (recurring)", recurringId: r.id,
-      paid: false, cleared: false, paycheckId: incId, debtType: r.debtType || null
+      paid: false, cleared: false, paycheckId: incId,
+      creditCardId: r.creditCardId || null, debtType: r.debtType || null
     };
     state.expenses.push(newExpense);
     saveState();
@@ -3639,7 +3651,8 @@
           state.expenses.push({
             id: uid(), date: dueDate, amount: r.amount, categoryId: r.categoryId,
             note: r.name + " (recurring)", recurringId: r.id,
-            paid: false, cleared: false, paycheckId: incId, debtType: r.debtType || null
+            paid: false, cleared: false, paycheckId: incId,
+            creditCardId: r.creditCardId || null, debtType: r.debtType || null
           });
         }
         saveState();
@@ -3884,6 +3897,7 @@
     }
     saveState();
     resetCCCardForm();
+    populateCategorySelects();
     renderBalances();
     renderExpenses();
   });
@@ -3921,6 +3935,7 @@
       if (!ok) return;
       state.creditCards = state.creditCards.filter(function(cc) { return cc.id !== id; });
       saveState();
+      populateCategorySelects();
       renderBalances();
       renderExpenses();
       showToast("Card deleted");
