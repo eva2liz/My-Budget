@@ -490,16 +490,24 @@
     font-size: 12px; color: var(--text-muted);
   }
   .register-detail-inline .reg-detail-actions { margin-left: auto; display: flex; gap: 6px; }
-  .register-inline-select, .register-inline-date {
+  .register-inline-select, .register-inline-date, .register-inline-text, .register-inline-amount {
     font-family: inherit; font-size: 12.5px;
     padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px;
     background: var(--surface-1); color: var(--text-primary); max-width: 220px;
   }
-  .register-table tr.register-txn-main .register-inline-date {
+  .register-table tr.register-txn-main .register-inline-date,
+  .register-table tr.register-txn-main .register-inline-text,
+  .register-table tr.register-txn-main .register-inline-amount {
     border-color: transparent; background: transparent; font-size: 13px; padding: 4px 4px;
   }
-  .register-inline-select:hover, .register-inline-date:hover { border-color: var(--series-1); }
-  .register-inline-select:focus, .register-inline-date:focus { border-color: var(--series-1); background: var(--surface-1); outline: none; }
+  .register-inline-text { width: 100%; box-sizing: border-box; }
+  /* CC Register's Amount column pairs a fixed +/- sign with the editable
+     number field so editing an amount never changes whether it reads as a
+     charge or a payment -- that's still only controlled by the Type field. */
+  .cc-register-table .register-inline-amount { width: 68px; text-align: right; }
+  .cc-amt-sign { margin-right: 2px; }
+  .register-inline-select:hover, .register-inline-date:hover, .register-inline-text:hover, .register-inline-amount:hover { border-color: var(--series-1); }
+  .register-inline-select:focus, .register-inline-date:focus, .register-inline-text:focus, .register-inline-amount:focus { border-color: var(--series-1); background: var(--surface-1); outline: none; }
   .register-inline-select.register-flagged {
     border-color: var(--critical); background: rgba(208, 59, 59, 0.12);
   }
@@ -541,7 +549,10 @@
     .register-table th.reg-col-paid, .register-table td.reg-col-paid { width: 16px; }
     .register-table th.reg-col-balance, .register-table td.reg-col-balance { width: 58px; }
     .register-table th .sort-arrow { display: none; }
-    .register-table tr.register-txn-main .register-inline-date { font-size: 11px; padding: 2px 0; }
+    .register-table tr.register-txn-main .register-inline-date,
+    .register-table tr.register-txn-main .register-inline-text,
+    .register-table tr.register-txn-main .register-inline-amount { font-size: 11px; padding: 2px 0; }
+    .cc-register-table .register-inline-amount { width: 46px; }
     .register-new-row input, .register-new-row select { font-size: 11.5px; padding: 4px 3px; }
     .full-label { display: none; }
     .short-label { display: inline; }
@@ -1161,7 +1172,7 @@
           <button type="button" class="secondary" id="ccClearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every row's Category/Card/Type dropdowns and Delete button are right underneath it. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab.</p>
+      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place; click Delete to remove it. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above.</p>
       <div id="ccRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1804,10 +1815,14 @@
   // attached -- computed per card, in true chronological order (oldest
   // first), the same way the Check Register threads its running balance
   // through buildRegisterRows(). That's independent of how the table ends
-  // up sorted for display (sortCCLedgerRows can reorder by any column),
-  // and unlike the summary cards up top, it includes future-dated
-  // transactions too -- same as the Check Register's own running balance,
-  // it's a projection, not just "as of today."
+  // up sorted for display (sortCCLedgerRows can reorder by any column).
+  // Future-dated transactions are excluded from the running total, same as
+  // the summary cards up top (computeCreditCardBalance) -- they're shown in
+  // the ledger so you can see what's scheduled, but with no balance number
+  // attached, since they haven't posted yet. Keeping this in lockstep with
+  // the summary cards' "as of today" rule is deliberate: showing a
+  // different running total here than the card's own "Current balance"
+  // above made the two numbers look like they disagreed.
   function buildCCLedgerRows() {
     var byCard = {};
     state.expenses.forEach(function(e) {
@@ -1815,6 +1830,7 @@
       (byCard[e.creditCardId] = byCard[e.creditCardId] || []).push(e);
     });
     var rows = [];
+    var todayStr = todayISO();
     Object.keys(byCard).forEach(function(cardId) {
       var cc = creditCardById(cardId);
       var startingBalance = cc ? (cc.startingBalance || 0) : 0;
@@ -1830,7 +1846,11 @@
         // what the starting balance already accounts for, so there's no
         // meaningful running total to show for it.
         if (asOf && e.date < asOf) {
-          rows.push({ expense: e, balance: null });
+          rows.push({ expense: e, balance: null, upcoming: false });
+          return;
+        }
+        if (e.date > todayStr) {
+          rows.push({ expense: e, balance: null, upcoming: true });
           return;
         }
         running += (e.debtType === "payment") ? -e.amount : e.amount;
@@ -4142,15 +4162,17 @@
       var amtClass = isPayment ? "variance-under" : "variance-over";
       var linked = !!e.viaAccountPicker;
       var rowClass = linked ? " cc-row-linked" : (idx % 2 === 1 ? " register-stripe" : "");
-      var balanceCell = row.balance === null ? '<span class="muted">—</span>' : fmtMoney(row.balance);
+      var balanceCell = row.balance === null
+        ? '<span class="muted" title="' + (row.upcoming ? "Dated after today -- hasn’t posted yet, so it’s not reflected in the balance" : "Dated before this card’s balance anchor") + '">' + (row.upcoming ? "upcoming" : "—") + '</span>'
+        : fmtMoney(row.balance);
       var linkedTag = linked ? ' <span class="muted" title="Entered via the Check Register, expense form, or a recurring “Pay down” item">· via Check Register</span>' : "";
 
       bodyHtml += '<tr class="register-txn-main' + rowClass + '">' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" data-cc-date="' + e.id + '" value="' + e.date + '"></td>' +
-        '<td>' + escapeHtml(e.note || "(no note)") + linkedTag + '</td>' +
+        '<td><input type="text" class="register-inline-text" data-cc-note="' + e.id + '" value="' + escapeHtml(e.note || "") + '" placeholder="Payee / description">' + linkedTag + '</td>' +
         '<td class="cc-col-card">' + cardLabel + '</td>' +
         '<td class="cc-col-type">' + typeLabel + '</td>' +
-        '<td class="num ' + amtClass + '">' + amtSign + fmtMoney(e.amount) + '</td>' +
+        '<td class="num ' + amtClass + '"><span class="cc-amt-sign">' + amtSign + '</span><input type="number" class="register-inline-amount" data-cc-amount="' + e.id + '" value="' + e.amount + '" step="0.01" min="0"></td>' +
         '<td class="reg-col-clr"><input type="checkbox" class="row-checkbox" data-cc-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
         '<td class="num reg-col-balance">' + balanceCell + '</td>' +
       '</tr>';
@@ -4231,6 +4253,36 @@
         renderDashboard();
         renderExpenses();
         showToast("Date updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-note]").forEach(function(inp) {
+      inp.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === inp.dataset.ccNote; });
+        if (!ex) return;
+        ex.note = inp.value.trim();
+        saveState();
+        renderDashboard();
+        renderExpenses();
+        showToast("Description updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-amount]").forEach(function(inp) {
+      inp.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === inp.dataset.ccAmount; });
+        if (!ex) return;
+        var val = parseFloat(inp.value);
+        if (isNaN(val) || val < 0) {
+          showToast("Enter a valid amount");
+          inp.value = ex.amount;
+          return;
+        }
+        ex.amount = val;
+        saveState();
+        renderBalances();
+        renderDashboard();
+        renderExpenses();
+        renderCategories();
+        showToast("Amount updated");
       });
     });
     wrap.querySelectorAll("[data-cc-cleared]").forEach(function(b) {
