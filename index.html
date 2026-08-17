@@ -1786,6 +1786,80 @@
     };
   }
 
+  // Builds the CC Register ledger's rows with each one's running balance
+  // attached -- computed per card, in true chronological order (oldest
+  // first), the same way the Check Register threads its running balance
+  // through buildRegisterRows(). That's independent of how the table ends
+  // up sorted for display (sortCCLedgerRows can reorder by any column),
+  // and unlike the summary cards up top, it includes future-dated
+  // transactions too -- same as the Check Register's own running balance,
+  // it's a projection, not just "as of today."
+  function buildCCLedgerRows() {
+    var byCard = {};
+    state.expenses.forEach(function(e) {
+      if (!e.creditCardId) return;
+      (byCard[e.creditCardId] = byCard[e.creditCardId] || []).push(e);
+    });
+    var rows = [];
+    Object.keys(byCard).forEach(function(cardId) {
+      var cc = creditCardById(cardId);
+      var startingBalance = cc ? (cc.startingBalance || 0) : 0;
+      var asOf = cc && cc.balanceAsOf ? cc.balanceAsOf : null;
+      var list = byCard[cardId].slice().sort(function(a, b) {
+        var c = a.date.localeCompare(b.date);
+        if (c !== 0) return c;
+        return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+      });
+      var running = startingBalance;
+      list.forEach(function(e) {
+        // A transaction dated before the card's balance anchor predates
+        // what the starting balance already accounts for, so there's no
+        // meaningful running total to show for it.
+        if (asOf && e.date < asOf) {
+          rows.push({ expense: e, balance: null });
+          return;
+        }
+        running += (e.debtType === "payment") ? -e.amount : e.amount;
+        rows.push({ expense: e, balance: running });
+      });
+    });
+    return rows;
+  }
+
+  var ccRegisterSort = { key: "date", dir: -1 };
+  var CC_REGISTER_SORT_DEFAULT_DIR = {
+    date: -1, card: 1, type: 1, amount: 1, cleared: -1, balance: -1
+  };
+  function ccRegisterSortValue(row, key) {
+    var e = row.expense;
+    switch (key) {
+      case "date": return e.date;
+      case "card": var cc = creditCardById(e.creditCardId); return (cc ? cc.name : "").toLowerCase();
+      case "type": return e.debtType === "payment" ? 1 : 0;
+      case "amount": return e.amount;
+      case "cleared": return e.cleared ? 1 : 0;
+      case "balance": return row.balance === null ? 0 : row.balance;
+      default: return "";
+    }
+  }
+  function sortCCLedgerRows(rows) {
+    var key = ccRegisterSort.key, dir = ccRegisterSort.dir;
+    rows.sort(function(a, b) {
+      var av = ccRegisterSortValue(a, key), bv = ccRegisterSortValue(b, key);
+      var cmp = (typeof av === "string") ? av.localeCompare(bv) : (av - bv);
+      if (cmp === 0) {
+        cmp = a.expense.date.localeCompare(b.expense.date);
+        if (cmp === 0) cmp = a.expense.id < b.expense.id ? -1 : (a.expense.id > b.expense.id ? 1 : 0);
+      }
+      return cmp * dir;
+    });
+    return rows;
+  }
+  function ccSortArrowHtml(key) {
+    if (ccRegisterSort.key !== key) return "";
+    return '<span class="sort-arrow">' + (ccRegisterSort.dir === 1 ? "▲" : "▼") + '</span>';
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function(c) {
       return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
@@ -3955,15 +4029,14 @@
   function renderCCLedger() {
     var wrap = document.getElementById("ccRegisterWrap");
     if (!wrap) return;
-    var txns = state.expenses.filter(function(e) { return e.creditCardId; })
-                              .slice()
-                              .sort(function(a,b) { return b.date < a.date ? -1 : (b.date > a.date ? 1 : 0); });
+    var rows = sortCCLedgerRows(buildCCLedgerRows());
 
     var countEl = document.getElementById("ccRegisterCount");
-    if (countEl) countEl.textContent = "(" + txns.length + ")";
+    if (countEl) countEl.textContent = "(" + rows.length + ")";
 
     var bodyHtml = "";
-    txns.forEach(function(e, idx) {
+    rows.forEach(function(row, idx) {
+      var e = row.expense;
       var cc = creditCardById(e.creditCardId);
       var cardLabel = cc ? escapeHtml(cc.name) : '<span class="muted">(deleted card)</span>';
       var isPayment = e.debtType === "payment";
@@ -3971,6 +4044,7 @@
       var amtSign = isPayment ? "-" : "+";
       var amtClass = isPayment ? "variance-under" : "variance-over";
       var stripe = idx % 2 === 1 ? " register-stripe" : "";
+      var balanceCell = row.balance === null ? '<span class="muted">—</span>' : fmtMoney(row.balance);
 
       bodyHtml += '<tr class="register-txn-main' + stripe + '">' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" data-cc-date="' + e.id + '" value="' + e.date + '"></td>' +
@@ -3979,6 +4053,7 @@
         '<td class="cc-col-type">' + typeLabel + '</td>' +
         '<td class="num ' + amtClass + '">' + amtSign + fmtMoney(e.amount) + '</td>' +
         '<td class="reg-col-clr"><input type="checkbox" class="row-checkbox" data-cc-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
+        '<td class="num reg-col-balance">' + balanceCell + '</td>' +
       '</tr>';
 
       var detailInner =
@@ -3989,7 +4064,7 @@
           '<option value="payment"' + (isPayment ? ' selected' : '') + '>Payment (reduces balance)</option>' +
         '</select></span>' +
         '<span class="reg-detail-actions"><button class="row-btn danger" data-cc-del="' + e.id + '">Delete</button></span>';
-      bodyHtml += '<tr class="register-txn-detail' + stripe + '"><td></td><td colspan="5"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
+      bodyHtml += '<tr class="register-txn-detail' + stripe + '"><td></td><td colspan="6"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
     });
 
     var newRowHtml =
@@ -4000,27 +4075,42 @@
         '<td class="cc-col-type"><select id="ccNewType"><option value="charge">Charge</option><option value="payment">Payment</option></select></td>' +
         '<td class="num"><input type="number" id="ccNewAmount" placeholder="Amount" step="0.01" min="0"></td>' +
         '<td class="reg-col-clr"><input type="checkbox" id="ccNewCleared"></td>' +
+        '<td class="num reg-col-balance muted">—</td>' +
       '</tr>' +
-      '<tr class="register-txn-detail register-new-row"><td></td><td colspan="5"><div class="register-detail-inline">' +
+      '<tr class="register-txn-detail register-new-row"><td></td><td colspan="6"><div class="register-detail-inline">' +
         '<span>Category <select id="ccNewCategory">' + categoryOptionsFor(null, true) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="ccNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
     var headHtml = '<thead><tr>' +
-      '<th class="reg-col-date">Date</th>' +
+      '<th class="reg-col-date reg-sortable" data-cc-sort-key="date">Date' + ccSortArrowHtml("date") + '</th>' +
       '<th>Description</th>' +
-      '<th class="cc-col-card">Card</th>' +
-      '<th class="cc-col-type">Type</th>' +
-      '<th class="num">Amount</th>' +
-      '<th class="reg-col-clr" title="Cleared">&#10003;</th>' +
+      '<th class="cc-col-card reg-sortable" data-cc-sort-key="card">Card' + ccSortArrowHtml("card") + '</th>' +
+      '<th class="cc-col-type reg-sortable" data-cc-sort-key="type"><span class="full-label">Type</span><span class="short-label">Typ</span>' + ccSortArrowHtml("type") + '</th>' +
+      '<th class="num reg-sortable" data-cc-sort-key="amount"><span class="full-label">Amount</span><span class="short-label">Amt</span>' + ccSortArrowHtml("amount") + '</th>' +
+      '<th class="reg-col-clr reg-sortable" data-cc-sort-key="cleared" title="Sort by cleared">&#10003;' + ccSortArrowHtml("cleared") + '</th>' +
+      '<th class="num reg-col-balance reg-sortable" data-cc-sort-key="balance"><span class="full-label">Balance</span><span class="short-label">Bal</span>' + ccSortArrowHtml("balance") + '</th>' +
       '</tr></thead>';
 
-    if (txns.length === 0) {
+    if (rows.length === 0) {
       wrap.innerHTML = '<div class="empty-state">No credit card transactions yet.</div>' +
         '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
     } else {
       wrap.innerHTML = '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + bodyHtml + newRowHtml + '</tbody></table>';
     }
+
+    wrap.querySelectorAll("[data-cc-sort-key]").forEach(function(th) {
+      th.addEventListener("click", function() {
+        var key = th.dataset.ccSortKey;
+        if (ccRegisterSort.key === key) {
+          ccRegisterSort.dir *= -1;
+        } else {
+          ccRegisterSort.key = key;
+          ccRegisterSort.dir = CC_REGISTER_SORT_DEFAULT_DIR[key] || 1;
+        }
+        renderCCLedger();
+      });
+    });
 
     wrap.querySelectorAll("[data-cc-date]").forEach(function(inp) {
       inp.addEventListener("change", function() {

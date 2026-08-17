@@ -220,7 +220,11 @@ for exactly how that works.
   same **Pay down: &lt;card&gt;** option is also available on the
   **Recurring** tab's Category field, for a card payment that happens on a
   schedule (a minimum payment, an autopay) — it auto-logs and updates that
-  card's balance right along with your other recurring bills.
+  card's balance right along with your other recurring bills. The ledger
+  also has a running **Balance** column (each card's own balance right
+  after that transaction, same idea as the Check Register's) and every
+  column header — Date, Card, Type, Amount, cleared, Balance — is
+  click-to-sort, same as the Check Register.
 - **Import bank transactions from a CSV** — most banks, including Bank of
   America, let you download recent transactions as a CSV from their
   website; upload it under Settings and the app maps the columns
