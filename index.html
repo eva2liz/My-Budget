@@ -1061,7 +1061,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account (category). Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field only shows up for bills that came from the Recurring tab — everyday spending doesn't need one.</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field only shows up for bills that came from the Recurring tab — everyday spending doesn't need one.</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1117,7 +1117,7 @@
   <section id="balances" class="panel">
     <div class="card">
       <h2>Your credit cards</h2>
-      <p class="hint" style="margin-top:0;">Each card keeps its own running balance, separate from your spending categories. Log a transaction below with its real category (e.g. Shopping) <em>and</em> the card it went on — a charge adds to that card's balance, a payment brings it down.</p>
+      <p class="hint" style="margin-top:0;">Each card keeps its own running balance, separate from your spending categories. Log a transaction below with its real category (e.g. Shopping) <em>and</em> the card it went on — a charge adds to that card's balance, a payment brings it down. Already recording card payments in the Check Register? Pick <strong>Pay down: &lt;card&gt;</strong> there instead of a category and it'll show up here automatically.</p>
       <div id="ccCardsWrap"></div>
       <div id="ccCardListWrap"></div>
       <form class="inline-form" id="ccCardForm">
@@ -1972,18 +1972,26 @@
   // ---------- category select population ----------
 
   function populateCategorySelects() {
-    var selects = [document.getElementById("expCategory"), document.getElementById("recCategory")];
-    var filterSelect = document.getElementById("filterCategory");
-    selects.forEach(function(sel) {
-      var prev = sel.value;
-      sel.innerHTML = "";
-      state.categories.forEach(function(c) {
-        var opt = document.createElement("option");
-        opt.value = c.id; opt.textContent = c.name;
-        sel.appendChild(opt);
-      });
-      if (prev) sel.value = prev;
+    var recSel = document.getElementById("recCategory");
+    var prevRec = recSel.value;
+    recSel.innerHTML = "";
+    state.categories.forEach(function(c) {
+      var opt = document.createElement("option");
+      opt.value = c.id; opt.textContent = c.name;
+      recSel.appendChild(opt);
     });
+    if (prevRec) recSel.value = prevRec;
+
+    // expCategory doubles as the expense edit form's Account field, so it
+    // also needs the "Pay down: <card>" options -- rebuilt from whichever
+    // expense is currently open (or blank categories-only if none is),
+    // preserving the current selection the same way recCategory does above.
+    var expSel = document.getElementById("expCategory");
+    var prevExp = expSel.value;
+    expSel.innerHTML = accountOptionsFor(null, null, null, false);
+    if (prevExp) expSel.value = prevExp;
+
+    var filterSelect = document.getElementById("filterCategory");
     var prevF = filterSelect.value;
     filterSelect.innerHTML = '<option value="">All</option>';
     state.categories.forEach(function(c) {
@@ -2109,24 +2117,31 @@
     var editId = document.getElementById("expEditId").value;
     var date = document.getElementById("expDate").value;
     var amount = parseFloat(document.getElementById("expAmount").value);
-    var categoryId = document.getElementById("expCategory").value;
+    var accountValue = document.getElementById("expCategory").value;
     var note = document.getElementById("expNote").value.trim();
     var paycheckId = document.getElementById("expPaycheck").value || null;
     var paid = document.getElementById("expPaid").checked;
     var cleared = document.getElementById("expCleared").checked;
-    if (!date || isNaN(amount) || amount < 0 || !categoryId) return;
+    if (!date || isNaN(amount) || amount < 0 || !accountValue) return;
 
     if (editId) {
       var ex = state.expenses.find(function(x){ return x.id === editId; });
-      // Credit-card fields (creditCardId/debtType) are managed from the CC
-      // Register tab, not this form -- leave them untouched here so editing
-      // a CC-linked expense's date/note/etc. from the register doesn't
-      // accidentally strip its card link.
-      if (ex) { ex.date = date; ex.amount = amount; ex.categoryId = categoryId; ex.note = note; ex.paycheckId = paycheckId; ex.paid = paid; ex.cleared = cleared; }
+      // Picking "Pay down: <card>" in the Account field instead of a real
+      // category applies/clears creditCardId+debtType the same way the
+      // Check Register's inline Account select does -- see
+      // applyAccountValue. A charge's card link (categoryId AND
+      // creditCardId both set) is untouched as long as a real category
+      // stays selected here.
+      if (ex) {
+        ex.date = date; ex.amount = amount; ex.note = note; ex.paycheckId = paycheckId; ex.paid = paid; ex.cleared = cleared;
+        applyAccountValue(ex, accountValue);
+      }
       showToast("Expense updated");
     } else {
-      state.expenses.push({ id: uid(), date: date, amount: amount, categoryId: categoryId, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, creditCardId: null, debtType: null });
-      showToast("Expense added");
+      var newExpense = { id: uid(), date: date, amount: amount, categoryId: null, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, creditCardId: null, debtType: null };
+      applyAccountValue(newExpense, accountValue);
+      state.expenses.push(newExpense);
+      showToast(newExpense.creditCardId ? "Card payment added" : "Expense added");
     }
     saveState();
     resetExpenseForm();
@@ -2165,7 +2180,7 @@
     document.getElementById("expEditId").value = ex.id;
     document.getElementById("expDate").value = ex.date;
     document.getElementById("expAmount").value = ex.amount;
-    document.getElementById("expCategory").value = ex.categoryId;
+    document.getElementById("expCategory").innerHTML = accountOptionsFor(ex.categoryId, ex.creditCardId, ex.debtType, false);
     document.getElementById("expNote").value = ex.note || "";
     populatePaycheckSelect();
     document.getElementById("expPaycheck").value = ex.paycheckId || "";
@@ -2363,7 +2378,8 @@
         categoryId: e.categoryId, paycheckId: e.paycheckId || null,
         amount: -Math.abs(e.amount), paid: !!e.paid, cleared: !!e.cleared,
         imported: !!e.imported, categoryGuessed: !!e.categoryGuessed,
-        splitGroupId: e.splitGroupId || null, recurringId: e.recurringId || null
+        splitGroupId: e.splitGroupId || null, recurringId: e.recurringId || null,
+        creditCardId: e.creditCardId || null, debtType: e.debtType || null
       });
     });
     state.income.forEach(function(inc) {
@@ -2420,6 +2436,61 @@
     return placeholder + state.categories.map(function(c) {
       return '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
     }).join("");
+  }
+
+  // The "Account" dropdown for the Check Register (both the quick-add row
+  // and the inline edit select on every existing row) and the expense edit
+  // form -- same as categoryOptionsFor, but also offers "Pay down: <card>"
+  // options for every credit card. Picking one of those instead of a real
+  // category records the transaction as a payment against that card's
+  // balance, so it shows up on the CC Register automatically -- no need to
+  // enter it a second time over there. Only shown as a payment option here
+  // (not a charge) since a charge doesn't leave your checking account the
+  // way logging it in the Check Register implies.
+  //
+  // A charge that already has both a category AND a card (logged from the
+  // CC Register) still shows its real category here, untouched -- this
+  // dropdown only ever represents "cc:<id>" for an actual payment record
+  // (debtType === "payment"), so editing a charge's category from here
+  // never accidentally reinterprets it as a payment.
+  function accountOptionsFor(categoryId, creditCardId, debtType, includePlaceholder) {
+    var isPayment = !!creditCardId && debtType === "payment";
+    var selectedValue = isPayment ? ("cc:" + creditCardId) : (categoryId || "");
+    var placeholder = includePlaceholder
+      ? '<option value=""' + (selectedValue ? '' : ' selected') + ' disabled>Select…</option>'
+      : '';
+    var catOptions = state.categories.map(function(c) {
+      return '<option value="' + c.id + '"' + (c.id === selectedValue ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+    }).join("");
+    var html = placeholder + catOptions;
+    if (state.creditCards.length) {
+      var ccOptions = state.creditCards.map(function(cc) {
+        var val = "cc:" + cc.id;
+        return '<option value="' + val + '"' + (val === selectedValue ? ' selected' : '') + '>Pay down: ' + escapeHtml(cc.name) + '</option>';
+      }).join("");
+      html += '<optgroup label="Credit card payment">' + ccOptions + '</optgroup>';
+    }
+    return html;
+  }
+
+  // Applies a value picked from accountOptionsFor() to an expense-shaped
+  // object. Switching TO a "Pay down: <card>" option clears the category
+  // (it's not spending) and marks it a payment against that card. Switching
+  // to a plain category only clears the card link if this expense WAS a
+  // payment -- a charge's card link is managed from the CC Register tab, so
+  // just recoloring its category here leaves that link alone.
+  function applyAccountValue(ex, value) {
+    if (value && value.indexOf("cc:") === 0) {
+      ex.categoryId = null;
+      ex.creditCardId = value.slice(3);
+      ex.debtType = "payment";
+    } else {
+      ex.categoryId = value || null;
+      if (ex.debtType === "payment") {
+        ex.creditCardId = null;
+        ex.debtType = null;
+      }
+    }
   }
 
   // Click-a-column-title-to-sort state for the Check Register. Lives outside
@@ -2536,7 +2607,7 @@
           : '';
         var splitBtn = pcTrackable ? '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' : '';
         detailInner =
-          '<span>Account <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + categoryOptionsFor(r.categoryId) + '</select></span>' +
+          '<span>Account <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + accountOptionsFor(r.categoryId, r.creditCardId, r.debtType) + '</select></span>' +
           pcField +
           '<span class="reg-detail-actions">' +
             splitBtn +
@@ -2564,7 +2635,7 @@
         '<td class="num reg-col-balance muted">—</td>' +
       '</tr>' +
       '<tr class="register-txn-detail register-new-row"><td class="reg-col-flag"></td><td colspan="7"><div class="register-detail-inline">' +
-        '<span>Account <select id="regNewCategory">' + categoryOptionsFor(null, true) + '</select></span>' +
+        '<span>Account <select id="regNewCategory">' + accountOptionsFor(null, null, null, true) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
@@ -2653,11 +2724,11 @@
       sel.addEventListener("change", function() {
         var ex = state.expenses.find(function(x) { return x.id === sel.dataset.regCategory; });
         if (!ex) return;
-        ex.categoryId = sel.value;
+        applyAccountValue(ex, sel.value);
         ex.categoryGuessed = false;
         saveState();
         refreshAfterRegisterChange();
-        showToast("Account updated");
+        showToast(ex.creditCardId ? "Marked as a card payment" : "Account updated");
       });
     });
 
@@ -2718,7 +2789,7 @@
       var deposit = parseFloat(document.getElementById("regNewDeposit").value);
       var cleared = document.getElementById("regNewCleared").checked;
       var paid = document.getElementById("regNewPaid").checked;
-      var categoryId = document.getElementById("regNewCategory").value;
+      var accountValue = document.getElementById("regNewCategory").value;
 
       var hasPayment = !isNaN(payment) && payment > 0;
       var hasDeposit = !isNaN(deposit) && deposit > 0;
@@ -2728,16 +2799,18 @@
       if (!hasPayment && !hasDeposit) { showToast("Enter an amount in Payment or Deposit"); return; }
 
       if (hasPayment) {
-        if (!categoryId) { showToast("Pick an account (category)"); return; }
+        if (!accountValue) { showToast("Pick an account (category, or a card to pay down)"); return; }
         // No paycheckId here on purpose -- expenses typed straight into the
         // register are never linked to a Recurring template, so they aren't
         // paycheck-trackable. Assign a paycheck from the Recurring/Paychecks
         // tabs instead, for bills that actually need to come out of one.
-        // Credit-card charges/payments belong on the CC Register tab, not
-        // here, so creditCardId/debtType are always null for a row added
-        // straight into the Check Register.
-        state.expenses.push({ id: uid(), date: date, amount: payment, categoryId: categoryId, note: desc, paycheckId: null, paid: paid, cleared: cleared, creditCardId: null, debtType: null });
-        showToast("Expense added");
+        // Picking "Pay down: <card>" instead of a category records this as
+        // a payment against that card's balance -- it'll show up on the CC
+        // Register automatically, no need to enter it there too.
+        var newExpense = { id: uid(), date: date, amount: payment, categoryId: null, note: desc, paycheckId: null, paid: paid, cleared: cleared, creditCardId: null, debtType: null };
+        applyAccountValue(newExpense, accountValue);
+        state.expenses.push(newExpense);
+        showToast(newExpense.creditCardId ? "Card payment added" : "Expense added");
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
         state.income.push({ id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared });
@@ -3812,6 +3885,7 @@
     saveState();
     resetCCCardForm();
     renderBalances();
+    renderExpenses();
   });
 
   document.getElementById("ccCardCancelEdit").addEventListener("click", resetCCCardForm);
@@ -3841,13 +3915,14 @@
   function deleteCreditCard(id) {
     var hasTxns = state.expenses.some(function(e) { return e.creditCardId === id; });
     var msg = hasTxns
-      ? "Delete this card? Its transactions stay in your register (still counted in their category) but will no longer count toward any card's balance."
+      ? "Delete this card? Its transactions stay in your register (charges keep counting toward their category; payments stay excluded from spending) but will no longer count toward any card's balance."
       : "Delete this card?";
     confirmDialog(msg).then(function(ok) {
       if (!ok) return;
       state.creditCards = state.creditCards.filter(function(cc) { return cc.id !== id; });
       saveState();
       renderBalances();
+      renderExpenses();
       showToast("Card deleted");
     });
   }
@@ -3876,8 +3951,6 @@
       var amtSign = isPayment ? "-" : "+";
       var amtClass = isPayment ? "variance-under" : "variance-over";
       var stripe = idx % 2 === 1 ? " register-stripe" : "";
-      var cat = categoryById(e.categoryId);
-      var catLabel = cat ? escapeHtml(cat.name) : '<span class="muted">—</span>';
 
       bodyHtml += '<tr class="register-txn-main' + stripe + '">' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" data-cc-date="' + e.id + '" value="' + e.date + '"></td>' +

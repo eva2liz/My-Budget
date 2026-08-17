@@ -208,7 +208,12 @@ for exactly how that works.
   balance you already counted when you charged it). Older data from the
   previous "mark a category as a loan or credit card" feature migrates
   automatically into its own card the first time you open the app after
-  updating.
+  updating. Recording a card payment from the **Check Register** instead?
+  Its Account dropdown (both the blank quick-add row and the inline editor
+  on every existing row) offers a **Pay down: &lt;card&gt;** option
+  alongside your regular categories — pick that instead of a category and
+  it posts straight to that card's balance and shows up on the CC Register
+  automatically, so you never have to enter the same payment twice.
 - **Import bank transactions from a CSV** — most banks, including Bank of
   America, let you download recent transactions as a CSV from their
   website; upload it under Settings and the app maps the columns
