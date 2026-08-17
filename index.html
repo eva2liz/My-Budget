@@ -500,6 +500,19 @@
   .register-table tr.register-txn-main .register-inline-amount {
     border-color: transparent; background: transparent; font-size: 13px; padding: 4px 4px;
   }
+  /* A bare transparent border makes these look identical to the plain-text
+     Card/Type cells next to them, so nothing here signals "click to edit."
+     A faint dashed underline plus a text cursor keeps rows just as clean at
+     rest, while still marking Description/Amount as editable in place --
+     the same idea as an underline link, just quieter. */
+  .register-table tr.register-txn-main .register-inline-text,
+  .register-table tr.register-txn-main .register-inline-amount {
+    border-bottom: 1px dashed var(--border); border-radius: 0; cursor: text;
+  }
+  .register-table tr.register-txn-main .register-inline-text:hover,
+  .register-table tr.register-txn-main .register-inline-amount:hover {
+    border-bottom-color: var(--series-1); border-bottom-style: solid;
+  }
   .register-inline-text { width: 100%; box-sizing: border-box; }
   /* CC Register's Amount column pairs a fixed +/- sign with the editable
      number field so editing an amount never changes whether it reads as a
@@ -1135,7 +1148,7 @@
   <section id="balances" class="panel">
     <div class="card">
       <h2>Your credit cards</h2>
-      <p class="hint" style="margin-top:0;">Each card keeps its own running balance, separate from your spending categories. Log a transaction below with its real category (e.g. Shopping) <em>and</em> the card it went on — a charge adds to that card's balance, a payment brings it down. Already recording card payments in the Check Register? Pick <strong>Pay down: &lt;card&gt;</strong> there instead of a category and it'll show up here automatically.</p>
+      <p class="hint" style="margin-top:0;">Each card keeps its own running balance, separate from your spending categories. Log a transaction below with its real category (e.g. Shopping) <em>and</em> the card it went on — a charge adds to that card's balance, a payment brings it down. Already recording card payments in the Check Register? Pick <strong>Pay down: &lt;card&gt;</strong> there instead of a category and it'll show up here automatically. Leave <strong>As of</strong> blank when adding a card so every transaction you've already logged for it counts toward the balance — only set a date there if you specifically want the running balance to start fresh from that point on (anything dated earlier won't show a balance).</p>
       <div id="ccCardsWrap"></div>
       <div id="ccCardListWrap"></div>
       <form class="inline-form" id="ccCardForm">
@@ -1148,8 +1161,8 @@
           <input type="number" id="ccCardStartingBalance" step="0.01" min="0" placeholder="0.00">
         </div>
         <div class="field">
-          <label for="ccCardBalanceAsOf">As of</label>
-          <input type="date" id="ccCardBalanceAsOf">
+          <label for="ccCardBalanceAsOf">As of <span class="muted">(optional)</span></label>
+          <input type="date" id="ccCardBalanceAsOf" title="Leave blank to count every transaction on this card, all the way back. Only set a date if you want the running balance to start fresh from a specific point instead.">
         </div>
         <div class="field">
           <label for="ccCardColor">Color</label>
@@ -1860,9 +1873,13 @@
     return rows;
   }
 
-  var ccRegisterSort = { key: "date", dir: -1 };
+  // Ascending by date, same default as the Check Register's own
+  // registerSort -- oldest at top, today's entries at the bottom next to
+  // the blank add-row, so a newly-added transaction lands right where you
+  // typed it instead of jumping to the top of the table.
+  var ccRegisterSort = { key: "date", dir: 1 };
   var CC_REGISTER_SORT_DEFAULT_DIR = {
-    date: -1, card: 1, type: 1, amount: 1, cleared: -1, balance: -1
+    date: 1, card: 1, type: 1, amount: 1, cleared: -1, balance: 1
   };
   function ccRegisterSortValue(row, key) {
     var e = row.expense;
@@ -2628,6 +2645,29 @@
     return html;
   }
 
+  // The display-label counterpart to accountOptionsFor() -- "what account
+  // did this money move through," as plain text instead of a <select>.
+  // Used anywhere a transaction's category needs to show up as a label:
+  // Search results, the Recurring table, Dashboard's recent-transactions
+  // panel, etc. Distinguishes three cases that a bare categoryById() lookup
+  // can't tell apart on its own: a real category, a credit card payment
+  // (categoryId is always null for those -- see applyAccountValue), and a
+  // categoryId that no longer resolves to anything because the category it
+  // pointed to was actually deleted. Only that last case is truly
+  // "(deleted category)" -- a payment was never miscategorized, it just
+  // never had a category to begin with, so it gets its own label instead of
+  // being lumped in with genuine orphaned data.
+  function accountLabelFor(categoryId, creditCardId, debtType) {
+    var cat = categoryById(categoryId);
+    if (cat) return cat.name;
+    if (creditCardId && debtType === "payment") {
+      var payCard = creditCardById(creditCardId);
+      return "Pay down: " + (payCard ? payCard.name : "(deleted card)");
+    }
+    if (categoryId) return "(deleted category)";
+    return "(needs a category)";
+  }
+
   // Applies a value picked from accountOptionsFor() to an expense-shaped
   // object. Switching TO a "Pay down: <card>" option clears the category
   // (it's not spending) and marks it a payment against that card. Switching
@@ -3200,16 +3240,7 @@
     }
     var html = '<table><thead><tr><th>Name</th><th>Category</th><th>Schedule</th><th>Default paycheck</th><th class="num">Amount</th><th></th></tr></thead><tbody>';
     state.recurring.forEach(function(r) {
-      var cat = categoryById(r.categoryId);
-      var accountLabel;
-      if (cat) {
-        accountLabel = cat.name;
-      } else if (r.creditCardId && r.debtType === "payment") {
-        var payCard = creditCardById(r.creditCardId);
-        accountLabel = "Pay down: " + (payCard ? payCard.name : "(deleted card)");
-      } else {
-        accountLabel = "(deleted)";
-      }
+      var accountLabel = accountLabelFor(r.categoryId, r.creditCardId, r.debtType);
       var pc = r.paycheckId ? state.income.find(function(inc){ return inc.id === r.paycheckId; }) : null;
       html += '<tr>' +
         '<td>' + escapeHtml(r.name) + '</td>' +
@@ -3649,7 +3680,7 @@
           '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-pc-paid="' + e.id + '"' + (e.paid ? ' checked' : '') + '></td>' +
           '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-pc-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
           '<td>' + escapeHtml(e.date) + '</td>' +
-          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(cat ? cat.name : "(deleted)") + '</span></td>' +
+          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(accountLabelFor(e.categoryId, e.creditCardId, e.debtType)) + '</span></td>' +
           '<td class="' + noteClass + '">' + escapeHtml(e.note || "") + splitTag + '</td>' +
           '<td class="num">' + fmtMoney(e.amount) + '</td>' +
           '<td class="actions-cell"><button class="row-btn" data-pc-edit="' + e.id + '">Edit</button> <button class="row-btn" data-split="' + e.id + '">Split</button> <button class="row-btn" data-unassign="' + e.id + '">Unassign</button> <button class="row-btn danger" data-pc-del="' + e.id + '">Delete</button></td>' +
@@ -3663,7 +3694,7 @@
           '<td class="check-cell">—</td>' +
           '<td class="check-cell">—</td>' +
           '<td>' + escapeHtml(p.dueDate) + '</td>' +
-          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(cat ? cat.name : "(deleted)") + '</span></td>' +
+          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(accountLabelFor(p.template.categoryId, p.template.creditCardId, p.template.debtType)) + '</span></td>' +
           '<td><em>' + escapeHtml(p.template.name) + ' — not logged yet</em></td>' +
           '<td class="num">' + fmtMoney(p.template.amount) + '</td>' +
           '<td class="actions-cell"><button class="row-btn" data-log-now="' + p.template.id + '" data-log-date="' + p.dueDate + '" data-log-paycheck="' + inc.id + '">Log now</button> <button class="row-btn" data-log-edit="' + p.template.id + '" data-log-date="' + p.dueDate + '" data-log-paycheck="' + inc.id + '" title="Log it, then open it for editing (e.g. to pay more than usual this time)">Log &amp; edit amount</button></td>' +
@@ -3677,8 +3708,7 @@
           '</tbody></table></div>';
 
       var assignOptions = unassigned.map(function(e) {
-        var cat = categoryById(e.categoryId);
-        var label = e.date + " · " + (cat ? cat.name : "?") + (e.note ? " · " + e.note : "") + " · " + fmtMoney(e.amount);
+        var label = e.date + " · " + accountLabelFor(e.categoryId, e.creditCardId, e.debtType) + (e.note ? " · " + e.note : "") + " · " + fmtMoney(e.amount);
         return '<option value="expense:' + e.id + '">' + escapeHtml(label) + '</option>';
       }).join("");
 
@@ -3691,8 +3721,7 @@
           return !alreadyScheduled;
         })
         .map(function(p) {
-          var cat = categoryById(p.template.categoryId);
-          var label = p.dueDate + " (not logged yet) · " + (cat ? cat.name : "?") + " · " + p.template.name + " · " + fmtMoney(p.template.amount);
+          var label = p.dueDate + " (not logged yet) · " + accountLabelFor(p.template.categoryId, p.template.creditCardId, p.template.debtType) + " · " + p.template.name + " · " + fmtMoney(p.template.amount);
           return '<option value="template:' + p.template.id + ":" + p.dueDate + '">' + escapeHtml(label) + '</option>';
         }).join("");
 
@@ -4052,7 +4081,12 @@
     var name = document.getElementById("ccCardName").value.trim();
     var startingBalanceRaw = document.getElementById("ccCardStartingBalance").value;
     var startingBalance = startingBalanceRaw === "" ? 0 : parseFloat(startingBalanceRaw);
-    var balanceAsOf = document.getElementById("ccCardBalanceAsOf").value || todayISO();
+    // Left blank, this means "no anchor -- count every transaction on this
+    // card, all the way back," not "anchor to today." Defaulting an empty
+    // field to today used to silently blank out a card's entire history the
+    // moment it was added (or re-saved via Edit), since nothing dated
+    // before today would show a running balance until that date arrived.
+    var balanceAsOf = document.getElementById("ccCardBalanceAsOf").value || null;
     var color = document.getElementById("ccCardColor").value || "#4a72d6";
     if (!name || isNaN(startingBalance) || startingBalance < 0) return;
 
@@ -4076,7 +4110,7 @@
   function resetCCCardForm() {
     document.getElementById("ccCardEditId").value = "";
     ccCardForm.reset();
-    document.getElementById("ccCardBalanceAsOf").value = todayISO();
+    document.getElementById("ccCardBalanceAsOf").value = "";
     document.getElementById("ccCardColor").value = "#4a72d6";
     document.getElementById("ccCardSubmitBtn").textContent = "Add card";
     document.getElementById("ccCardCancelEdit").style.display = "none";
@@ -4088,7 +4122,7 @@
     document.getElementById("ccCardEditId").value = cc.id;
     document.getElementById("ccCardName").value = cc.name;
     document.getElementById("ccCardStartingBalance").value = cc.startingBalance || 0;
-    document.getElementById("ccCardBalanceAsOf").value = cc.balanceAsOf || todayISO();
+    document.getElementById("ccCardBalanceAsOf").value = cc.balanceAsOf || "";
     document.getElementById("ccCardColor").value = cc.color || "#4a72d6";
     document.getElementById("ccCardSubmitBtn").textContent = "Save changes";
     document.getElementById("ccCardCancelEdit").style.display = "inline-block";
@@ -4547,8 +4581,7 @@
     }
 
     var expenseRows = state.expenses.map(function(e) {
-      var cat = categoryById(e.categoryId);
-      var catName = cat ? cat.name : "(deleted category)";
+      var catName = accountLabelFor(e.categoryId, e.creditCardId, e.debtType);
       return {
         type: "expense",
         id: e.id,
@@ -4979,8 +5012,7 @@
     }
     var html = rows.map(function(r) {
       var isExpense = r.kind === "expense";
-      var cat = isExpense ? categoryById(r.categoryId) : null;
-      var title = isExpense ? (cat ? cat.name : "(deleted category)") : (r.desc || "Income");
+      var title = isExpense ? accountLabelFor(r.categoryId, r.creditCardId, r.debtType) : (r.desc || "Income");
       var sub = isExpense ? (r.desc || "") : "Income";
       var color = isExpense ? categoryColorHex(r.categoryId) : "var(--success)";
       var amtCls = isExpense ? "variance-over" : "variance-under";
@@ -5150,7 +5182,7 @@
         var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
         return '<tr>' +
           '<td>' + escapeHtml(e.date) + '</td>' +
-          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(cat ? cat.name : "(deleted)") + '</span></td>' +
+          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(accountLabelFor(e.categoryId, e.creditCardId, e.debtType)) + '</span></td>' +
           '<td class="drill-note-cell" data-drill-edit="' + e.id + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(e.note || "(no note)") + splitTag + '</td>' +
           '<td class="num">' + fmtMoney(e.amount) + '</td>' +
         '</tr>';
@@ -5215,8 +5247,7 @@
   document.getElementById("exportCsv").addEventListener("click", function() {
     var rows = [["Date","Type","Category / Source","Note","Amount"]];
     state.expenses.forEach(function(e) {
-      var cat = categoryById(e.categoryId);
-      rows.push([e.date, "Expense", cat ? cat.name : "", e.note || "", e.amount.toFixed(2)]);
+      rows.push([e.date, "Expense", accountLabelFor(e.categoryId, e.creditCardId, e.debtType), e.note || "", e.amount.toFixed(2)]);
     });
     state.income.forEach(function(inc) {
       rows.push([inc.date, "Income", inc.source, inc.note || "", inc.amount.toFixed(2)]);

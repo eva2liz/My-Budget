@@ -231,7 +231,36 @@ for exactly how that works.
   this tab. Since a payment isn't spending, it never has a category — the
   Category field is simply absent for payment rows (both existing rows
   and the blank add-row), whether the payment came from the Check
-  Register or was entered directly here.
+  Register or was entered directly here. It also has its own filter row
+  — From/To date range, a specific card, and a specific category — so a
+  big ledger is easy to narrow down; the running Balance column always
+  reflects the true, unfiltered running total, it just hides some rows.
+  Every field on an existing row — Date, Description, Amount, Category,
+  Card, Type, cleared — is editable right in place (Description and
+  Amount get a light dashed underline so it's clear they're click-to-edit,
+  same as a link), no separate edit screen needed. A transaction dated
+  after today shows **upcoming** instead of a dollar balance, since it
+  hasn't posted yet — that keeps the ledger's running balance in
+  agreement with the "Current balance" card above, which is also always
+  as-of-today only. The ledger sorts oldest-first by default (same as the
+  Check Register), so a newly-added transaction lands at the bottom next
+  to the blank add-row instead of jumping to the top.
+
+  A card's **As of** date is optional — leave it blank and every
+  transaction you've logged for that card counts toward its balance, all
+  the way back. Only set a date there if you want the running balance to
+  start fresh from a specific point on; anything dated earlier than that
+  won't show a balance. (Earlier versions of this app defaulted a blank
+  "As of" to today, which silently hid the balance on any already-logged
+  history — if a card you set up a while ago still shows "—" balances on
+  old transactions, open Edit on that card and clear its As of field.)
+
+  Anywhere a transaction's category shows up as a label — Search results,
+  the Recurring table, the Paycheck Planner, Dashboard's recent
+  transactions — a credit card payment now reads **"Pay down: &lt;card&gt;"**
+  instead of "(deleted category)"; that label was only ever meant for a
+  category that was genuinely deleted after being assigned, not for a
+  payment that never had a category to begin with.
 - **Import bank transactions from a CSV** — most banks, including Bank of
   America, let you download recent transactions as a CSV from their
   website; upload it under Settings and the app maps the columns
