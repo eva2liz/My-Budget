@@ -140,6 +140,15 @@ for exactly how that works.
     or its balance to edit either one directly; every balance below it
     shifts to match, so the running balance is a true reflection of your
     account instead of starting from zero
+  - **Pure bank activity only.** A credit card charge doesn't touch your
+    checking account the moment you make it, so it never shows up here or
+    counts against this running balance — it only lives on the **CC
+    Register**. The only credit-card-related entry you'll ever see in the
+    Check Register is an actual **Pay down: &lt;card&gt;** payment, since
+    that's real money leaving your bank account. (Earlier versions of this
+    app listed every card charge here too and subtracted it from the
+    running balance immediately, then subtracted it again when the
+    matching payment posted — a real double-count bug, now fixed.)
 - **Paycheck assignment only applies to recurring bills.** The whole point
   of assigning bills to paychecks is to know what not to spend so you're
   not left short — that's only meaningful for the committed, recurring
