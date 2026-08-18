@@ -250,6 +250,18 @@
   .card h2 .muted { color: var(--text-muted); font-weight: 400; font-size: 13px; }
   .card-header-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .card-header-row h2 { margin-bottom: 14px; }
+  /* Tells you at a glance which table this entry actually lives in --
+     Check Register (plain bank activity) or CC Register (a card charge,
+     or a payment that's linked into both) -- so a search-result drill-down
+     doesn't leave you guessing which tab to go look at it in. */
+  .source-tag {
+    font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+    margin-bottom: 14px; white-space: nowrap;
+  }
+  .source-tag:empty { display: none; }
+  .source-tag-check { background: rgba(120, 120, 120, 0.14); color: var(--text-secondary); }
+  .source-tag-cc { background: rgba(74, 114, 214, 0.18); color: var(--series-1, #4a72d6); }
+  #searchResultsWrap .source-tag { margin-bottom: 0; }
   .card-header-row input[type="month"] {
     font-family: inherit; font-size: 13px; padding: 6px 10px;
     border: 1px solid var(--border); border-radius: 8px;
@@ -480,6 +492,14 @@
      as "different" at a glance instead of blending into the striping. */
   .register-table tr.cc-row-linked td { background: rgba(74, 114, 214, 0.18); }
   .register-table tr.cc-row-linked td:first-child { border-left: 3px solid rgba(74, 114, 214, 0.7); }
+  /* "You are here" marker: when a search result (or any other drill-down)
+     is opened, the matching row gets a light red/pink wash + left accent so
+     it's easy to spot in whichever register table it actually lives in --
+     wins over the zebra-stripe/flagged/cc-linked tints above since it's
+     declared after them and the search context is the most relevant thing
+     on screen right now. Cleared the moment the edit form closes. */
+  .register-table tr.register-row-search-highlight td { background: rgba(225, 29, 72, 0.16); }
+  .register-table tr.register-row-search-highlight td:first-child { border-left: 3px solid rgba(225, 29, 72, 0.75); }
   .register-table tr.register-txn-detail td {
     padding-top: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border);
     white-space: normal;
@@ -1005,6 +1025,7 @@
       <div class="card" id="incomeFormCard">
         <div class="card-header-row">
           <h2 id="incomeFormTitle">Edit income</h2>
+          <span id="incomeSourceTag" class="source-tag"></span>
         </div>
         <form class="inline-form" id="incomeForm">
           <div class="field">
@@ -1041,12 +1062,14 @@
           <input type="hidden" id="incEditId">
           <button type="submit" class="primary" id="incomeSubmitBtn">Save changes</button>
           <button type="button" class="secondary" id="incomeCancelEdit" style="display:none;">Cancel</button>
+          <button type="button" class="danger-text" id="incomeDeleteBtn" style="display:none;">Delete</button>
         </form>
       </div>
 
       <div class="card" id="expenseFormCard">
         <div class="card-header-row">
           <h2 id="expenseFormTitle">Edit expense</h2>
+          <span id="expenseSourceTag" class="source-tag"></span>
         </div>
         <form class="inline-form" id="expenseForm">
           <div class="field">
@@ -1078,6 +1101,7 @@
           <input type="hidden" id="expEditId">
           <button type="submit" class="primary" id="expenseSubmitBtn">Save changes</button>
           <button type="button" class="secondary" id="expenseCancelEdit" style="display:none;">Cancel</button>
+          <button type="button" class="danger-text" id="expenseDeleteBtn" style="display:none;">Delete</button>
         </form>
       </div>
     </div>
@@ -1212,6 +1236,15 @@
     <div class="card">
       <h2>Backup &amp; export</h2>
       <p class="hint" style="margin-top:0;">Your data lives only in this browser. Export regularly to avoid losing it, or to move it to another device.</p>
+      <p class="hint" style="margin-top:0;">The CSV export includes a <strong>Register</strong> column so you can tell Check Register rows from CC Register rows once it's open in Excel -- or narrow it to just one below before exporting. A card payment counts as both (it's a real bank transaction that also shows on the CC Register), so it's included whenever either box is checked.</p>
+      <div class="inline-form" style="margin-bottom:10px;">
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="exportIncludeCheck" checked> Check Register</label>
+        </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="exportIncludeCC" checked> CC Register</label>
+        </div>
+      </div>
       <div class="section-actions">
         <button type="button" class="secondary" id="exportCsv">Export transactions as CSV (Excel)</button>
         <button type="button" class="secondary" id="exportJson">Export full backup (JSON)</button>
@@ -1873,6 +1906,29 @@
     return rows;
   }
 
+  // Tracks the one transaction a drill-down (Search, Dashboard, a category,
+  // the Paycheck Planner...) just opened the edit form for, so the matching
+  // row can be picked out with a light red/pink "you are here" highlight in
+  // whichever register table it actually lives in -- Check Register, CC
+  // Register, or both (a CC payment shows up as a real row in the Check
+  // Register AND a linked row in the CC Register). Cleared whenever the
+  // edit form closes (Cancel, Save, or Delete).
+  var highlightTxn = null; // { id, kind: "expense" | "income" }
+  function setHighlightTxn(id, kind) {
+    highlightTxn = { id: id, kind: kind };
+    renderCheckRegister();
+    renderCCLedger();
+  }
+  function clearHighlightTxn() {
+    if (!highlightTxn) return;
+    highlightTxn = null;
+    renderCheckRegister();
+    renderCCLedger();
+  }
+  function isHighlightedTxn(id, kind) {
+    return !!highlightTxn && highlightTxn.id === id && highlightTxn.kind === kind;
+  }
+
   // Ascending by date, same default as the Check Register's own
   // registerSort -- oldest at top, today's entries at the bottom next to
   // the blank add-row, so a newly-added transaction lands right where you
@@ -2311,6 +2367,11 @@
   });
 
   document.getElementById("expenseCancelEdit").addEventListener("click", resetExpenseForm);
+  document.getElementById("expenseDeleteBtn").addEventListener("click", function() {
+    var id = document.getElementById("expEditId").value;
+    if (!id) return;
+    deleteExpense(id, resetExpenseForm);
+  });
 
   function resetExpenseForm() {
     document.getElementById("expEditId").value = "";
@@ -2323,8 +2384,13 @@
     document.getElementById("expenseFormTitle").textContent = "Add a one-time expense or payment";
     document.getElementById("expenseSubmitBtn").textContent = "Add expense";
     document.getElementById("expenseCancelEdit").style.display = "none";
+    document.getElementById("expenseDeleteBtn").style.display = "none";
     document.getElementById("expPaycheckField").style.display = "none";
     document.getElementById("registerEditPanel").style.display = "none";
+    var expTag = document.getElementById("expenseSourceTag");
+    expTag.textContent = "";
+    expTag.className = "source-tag";
+    clearHighlightTxn();
   }
 
   function editExpense(id) {
@@ -2333,6 +2399,11 @@
     document.getElementById("registerEditPanel").style.display = "block";
     document.getElementById("expenseFormCard").style.display = "block";
     document.getElementById("incomeFormCard").style.display = "none";
+    var expSource = expenseSourceInfo(ex);
+    var expTag = document.getElementById("expenseSourceTag");
+    expTag.textContent = expSource.detail;
+    expTag.className = "source-tag " + expSource.cls;
+    setHighlightTxn(ex.id, "expense");
     document.getElementById("expEditId").value = ex.id;
     document.getElementById("expDate").value = ex.date;
     document.getElementById("expAmount").value = ex.amount;
@@ -2351,11 +2422,16 @@
     document.getElementById("expenseFormTitle").textContent = "Edit expense";
     document.getElementById("expenseSubmitBtn").textContent = "Save changes";
     document.getElementById("expenseCancelEdit").style.display = "inline-block";
+    document.getElementById("expenseDeleteBtn").style.display = "inline-block";
     document.querySelector('nav.tabs button[data-panel="register"]').click();
     document.getElementById("expDate").scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  function deleteExpense(id) {
+  // onDeleted (optional) fires only after a confirmed delete -- used by the
+  // edit form's own Delete button to close itself back down afterward,
+  // same as clicking Cancel. Existing callers (the Check Register's inline
+  // Delete button) don't pass it and behave exactly as before.
+  function deleteExpense(id, onDeleted) {
     confirmDialog("Delete this expense?").then(function(ok) {
       if (!ok) return;
       state.expenses = state.expenses.filter(function(x){ return x.id !== id; });
@@ -2368,6 +2444,7 @@
       renderCategories();
       renderCalendar();
       showToast("Expense deleted");
+      if (onDeleted) onDeleted();
     });
   }
 
@@ -2681,6 +2758,33 @@
     return "(needs a category)";
   }
 
+  // Which register a transaction actually lives in, for the little badge
+  // shown on the edit form (and used to phrase search results the same
+  // way) -- so a drill-down never leaves you guessing which tab to go
+  // check it in. A credit card CHARGE only ever lives on the CC Register
+  // (Check Register deliberately excludes charges -- see buildRegisterRows).
+  // A card PAYMENT is a real bank transaction, so it's a genuine Check
+  // Register row that also shows up as a linked entry on the CC Register;
+  // everything else (plain expenses, all income) is Check Register only.
+  function expenseSourceInfo(ex) {
+    if (ex.creditCardId && ex.debtType !== "payment") {
+      var chargeCard = creditCardById(ex.creditCardId);
+      var ccLabel = "CC Register" + (chargeCard ? " · " + chargeCard.name : "");
+      return { label: "CC Register", detail: ccLabel, title: ccLabel + " -- credit card charges never appear on the Check Register.", cls: "source-tag-cc" };
+    }
+    if (ex.creditCardId && ex.debtType === "payment") {
+      var payCard = creditCardById(ex.creditCardId);
+      var payName = payCard ? payCard.name : "card";
+      return {
+        label: "Check Register",
+        detail: "Check Register · also on CC Register (" + payName + " payment)",
+        title: "A real bank payment, so it's a Check Register row -- it also shows up as a linked entry on the CC Register (" + payName + ").",
+        cls: "source-tag-check"
+      };
+    }
+    return { label: "Check Register", detail: "Check Register", title: "", cls: "source-tag-check" };
+  }
+
   // Applies a value picked from accountOptionsFor() to an expense-shaped
   // object. Switching TO a "Pay down: <card>" option clears the category
   // (it's not spending) and marks it a payment against that card. Switching
@@ -2786,8 +2890,10 @@
       var flagged = registerRowFlagged(r);
       var catFlagged = r.kind === "expense" && r.imported && r.categoryGuessed;
       var stripe = idx % 2 === 1;
-      var mainRowClass = "register-txn-main" + (flagged ? " register-row-flagged" : (stripe ? " register-stripe" : ""));
-      var detailRowClass = "register-txn-detail" + (flagged ? " register-row-flagged" : (stripe ? " register-stripe" : ""));
+      var highlighted = isHighlightedTxn(r.id, r.kind);
+      var highlightClass = highlighted ? " register-row-search-highlight" : "";
+      var mainRowClass = "register-txn-main" + (flagged ? " register-row-flagged" : (stripe ? " register-stripe" : "")) + highlightClass;
+      var detailRowClass = "register-txn-detail" + (flagged ? " register-row-flagged" : (stripe ? " register-stripe" : "")) + highlightClass;
 
       var splitTag = r.splitGroupId ? ' <span class="muted">(split)</span>' : "";
       var flagTag = flagged ? '<span class="register-flag-inline">needs review</span>' : "";
@@ -3080,6 +3186,11 @@
   });
 
   document.getElementById("incomeCancelEdit").addEventListener("click", resetIncomeForm);
+  document.getElementById("incomeDeleteBtn").addEventListener("click", function() {
+    var id = document.getElementById("incEditId").value;
+    if (!id) return;
+    deleteIncome(id, resetIncomeForm);
+  });
 
   function resetIncomeForm() {
     document.getElementById("incEditId").value = "";
@@ -3092,7 +3203,12 @@
     document.getElementById("incomeFormTitle").textContent = "Add income";
     document.getElementById("incomeSubmitBtn").textContent = "Add income";
     document.getElementById("incomeCancelEdit").style.display = "none";
+    document.getElementById("incomeDeleteBtn").style.display = "none";
     document.getElementById("registerEditPanel").style.display = "none";
+    var incTag = document.getElementById("incomeSourceTag");
+    incTag.textContent = "";
+    incTag.className = "source-tag";
+    clearHighlightTxn();
   }
 
   function editIncome(id) {
@@ -3101,6 +3217,10 @@
     document.getElementById("registerEditPanel").style.display = "block";
     document.getElementById("incomeFormCard").style.display = "block";
     document.getElementById("expenseFormCard").style.display = "none";
+    var incTag = document.getElementById("incomeSourceTag");
+    incTag.textContent = "Check Register";
+    incTag.className = "source-tag source-tag-check";
+    setHighlightTxn(inc.id, "income");
     document.getElementById("incEditId").value = inc.id;
     document.getElementById("incDate").value = inc.date;
     document.getElementById("incAmount").value = inc.amount;
@@ -3111,6 +3231,7 @@
     document.getElementById("incomeFormTitle").textContent = "Edit income";
     document.getElementById("incomeSubmitBtn").textContent = "Save changes";
     document.getElementById("incomeCancelEdit").style.display = "inline-block";
+    document.getElementById("incomeDeleteBtn").style.display = "inline-block";
     document.querySelector('nav.tabs button[data-panel="register"]').click();
     document.getElementById("incDate").scrollIntoView({ behavior: "smooth", block: "center" });
   }
@@ -3124,7 +3245,7 @@
     renderPaycheckPlanner();
   }
 
-  function deleteIncome(id) {
+  function deleteIncome(id, onDeleted) {
     confirmDialog("Delete this income entry? Any expenses assigned to it will become unassigned.").then(function(ok) {
       if (!ok) return;
       state.income = state.income.filter(function(x){ return x.id !== id; });
@@ -3137,6 +3258,7 @@
       populatePaycheckSelect();
       renderPaycheckPlanner();
       showToast("Income entry deleted");
+      if (onDeleted) onDeleted();
     });
   }
 
@@ -4209,6 +4331,7 @@
       var amtClass = isPayment ? "variance-under" : "variance-over";
       var linked = !!e.viaAccountPicker;
       var rowClass = linked ? " cc-row-linked" : (idx % 2 === 1 ? " register-stripe" : "");
+      if (isHighlightedTxn(e.id, "expense")) rowClass += " register-row-search-highlight";
       var balanceCell = row.balance === null
         ? '<span class="muted" title="' + (row.upcoming ? "Dated after today -- hasn’t posted yet, so it’s not reflected in the balance" : "Dated before this card’s balance anchor") + '">' + (row.upcoming ? "upcoming" : "—") + '</span>'
         : fmtMoney(row.balance);
@@ -4595,6 +4718,7 @@
 
     var expenseRows = state.expenses.map(function(e) {
       var catName = accountLabelFor(e.categoryId, e.creditCardId, e.debtType);
+      var src = expenseSourceInfo(e);
       return {
         type: "expense",
         id: e.id,
@@ -4602,6 +4726,7 @@
         amount: e.amount,
         note: e.note || "",
         label: catName,
+        source: src,
         paycheckId: e.paycheckId,
         recurringId: e.recurringId || null,
         searchable: [e.date, e.note || "", catName, String(e.amount), fmtMoney(e.amount)].join(" ").toLowerCase()
@@ -4615,6 +4740,7 @@
         amount: inc.amount,
         note: inc.note || "",
         label: inc.source,
+        source: { label: "Check Register", title: "", cls: "source-tag-check" },
         paycheckId: null,
         searchable: [inc.date, inc.note || "", inc.source, String(inc.amount), fmtMoney(inc.amount)].join(" ").toLowerCase()
       };
@@ -4639,16 +4765,19 @@
         var pc = r.paycheckId ? state.income.find(function(inc) { return inc.id === r.paycheckId; }) : null;
         pcLabel = pc ? escapeHtml(pc.source) : '<span class="muted">Unassigned</span>';
       }
+      var sourceBadge = '<span class="source-tag ' + r.source.cls + '"' +
+        (r.source.title ? ' title="' + escapeHtml(r.source.title) + '"' : '') + '>' + escapeHtml(r.source.label) + '</span>';
       return '<tr class="search-result-row" data-search-type="' + r.type + '" data-search-id="' + r.id + '" tabindex="0">' +
         '<td>' + escapeHtml(r.date) + '</td>' +
         '<td>' + (r.type === "expense" ? "Expense" : "Income") + '</td>' +
+        '<td>' + sourceBadge + '</td>' +
         '<td>' + escapeHtml(r.label) + '</td>' +
         '<td>' + escapeHtml(r.note) + '</td>' +
         '<td class="num">' + fmtMoney(r.amount) + '</td>' +
         '<td>' + pcLabel + '</td>' +
       '</tr>';
     }).join("");
-    wrap.innerHTML = '<table><thead><tr><th>Date</th><th>Type</th><th>Category/Source</th><th>Note</th><th class="num">Amount</th><th>Paycheck</th></tr></thead><tbody>' + body + '</tbody></table>';
+    wrap.innerHTML = '<table><thead><tr><th>Date</th><th>Type</th><th>Where</th><th>Category/Source</th><th>Note</th><th class="num">Amount</th><th>Paycheck</th></tr></thead><tbody>' + body + '</tbody></table>';
 
     wrap.querySelectorAll(".search-result-row").forEach(function(row) {
       row.addEventListener("click", function() {
@@ -5258,13 +5387,34 @@
   });
 
   document.getElementById("exportCsv").addEventListener("click", function() {
-    var rows = [["Date","Type","Category / Source","Note","Amount"]];
+    var includeCheck = document.getElementById("exportIncludeCheck").checked;
+    var includeCC = document.getElementById("exportIncludeCC").checked;
+    if (!includeCheck && !includeCC) {
+      showToast("Pick at least one register to export");
+      return;
+    }
+    var rows = [["Date","Type","Register","Category / Source","Note","Amount"]];
     state.expenses.forEach(function(e) {
-      rows.push([e.date, "Expense", accountLabelFor(e.categoryId, e.creditCardId, e.debtType), e.note || "", e.amount.toFixed(2)]);
+      // A charge only ever lives on the CC Register; a payment is a real
+      // bank transaction (Check Register) that also shows up linked on the
+      // CC Register -- so it's included as soon as either box is checked,
+      // same rule the on-screen "Where" badge uses (see expenseSourceInfo).
+      var isCharge = e.creditCardId && e.debtType !== "payment";
+      var isPayment = e.creditCardId && e.debtType === "payment";
+      var included = isCharge ? includeCC : (isPayment ? (includeCheck || includeCC) : includeCheck);
+      if (!included) return;
+      var registerLabel = expenseSourceInfo(e).label;
+      rows.push([e.date, "Expense", registerLabel, accountLabelFor(e.categoryId, e.creditCardId, e.debtType), e.note || "", e.amount.toFixed(2)]);
     });
-    state.income.forEach(function(inc) {
-      rows.push([inc.date, "Income", inc.source, inc.note || "", inc.amount.toFixed(2)]);
-    });
+    if (includeCheck) {
+      state.income.forEach(function(inc) {
+        rows.push([inc.date, "Income", "Check Register", inc.source, inc.note || "", inc.amount.toFixed(2)]);
+      });
+    }
+    if (rows.length === 1) {
+      showToast("No transactions match that selection");
+      return;
+    }
     rows = [rows[0]].concat(rows.slice(1).sort(function(a,b){ return a[0].localeCompare(b[0]); }));
     var csv = rows.map(function(r) {
       return r.map(function(cell) {

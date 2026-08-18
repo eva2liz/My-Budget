@@ -84,8 +84,17 @@ for exactly how that works.
   the target
 - **Search** (magnifying-glass icon, top right) — find any expense or
   income entry by note, source, category, amount, or date, no matter what
-  month it's in or whether it's been assigned to a paycheck yet. Click a
-  result to jump straight to editing it
+  month it's in or whether it's been assigned to a paycheck yet. Every
+  result has a **Where** badge — **Check Register** or **CC Register** —
+  so you can tell at a glance which table it actually lives in (a credit
+  card charge only ever lives on the CC Register; a card payment is a real
+  bank transaction, so it's a Check Register row that also shows up
+  linked on the CC Register — hover the badge for the specifics). Click a
+  result to jump straight to editing it: the edit form repeats that same
+  badge, and the matching row gets a light red/pink highlight in whichever
+  register table(s) it's in, so you can spot exactly where it is when you
+  scroll down to look — the highlight clears once you close the form
+  (Cancel, Save, or Delete)
 - Calendar view showing when recurring bills are due (as labeled tags in
   their category color, with a red checkmark once that occurrence is
   marked paid) and every income entry — recurring payday or one-time —
@@ -126,7 +135,10 @@ for exactly how that works.
   - Click the **date** to correct it inline, or click the **payee** to open
     the full edit form (amount, paid status, and everything else) in a
     panel that appears above the register and tucks itself away again once
-    you're done
+    you're done — that panel also has its own **Delete** button now, so any
+    time a drill-down (Search, Dashboard, a category, the Paycheck Planner)
+    lands you on this edit screen, you can delete the entry right there
+    instead of backing out to find its row first
   - A From/To date-range filter (plus a category filter), right at the top
     next to the "Check register" heading, narrows what's shown without
     touching the running balance, which is always based on your full history
@@ -278,9 +290,14 @@ for exactly how that works.
   Check Register flagged for review until you assign a real category to
   each one. Nothing is uploaded anywhere — the file is only read in your
   browser
-- Export everything (income + expenses) to CSV (opens directly in
-  Excel/Google Sheets) or export a full JSON backup you can re-import later
-  or on another device
+- Export to CSV (opens directly in Excel/Google Sheets) or export a full
+  JSON backup you can re-import later or on another device. The CSV export
+  has a **Check Register** / **CC Register** checkbox pair (both on by
+  default) so you can export just one side if that's all you need — a
+  card payment is included whenever either box is checked, since it's a
+  real bank transaction that also shows up linked on the CC Register — and
+  every row carries a **Register** column so it's still labeled once it's
+  open in Excel
 - Polished for mobile — tables scroll horizontally instead of squishing,
   and forms, cards, and buttons tighten up and stack on narrow phone screens
 
