@@ -82,6 +82,21 @@ for exactly how that works.
   more aside (or a negative amount to pull some back out); the progress bar
   fills as you go and turns green with a "goal reached!" note once you hit
   the target
+  - **Link a goal to a category** (optional, set when you create or edit
+    the goal) and every Check Register or CC Register transaction filed
+    under that category counts toward it automatically — categorize your
+    monthly transfer as "Savings" and it folds right into the goal's total,
+    no separate **Add money** click needed
+  - **Withdraw from a goal through the Check Register** — when logging a
+    deposit, an optional **From** field lets you pick "From savings:
+    &lt;goal&gt;" instead of leaving it as regular income. That deposit
+    still counts as real income (the money did land back in checking), but
+    it's also subtracted from the goal's total, so pulling $100 out of an
+    emergency fund shows up as a dip in its progress bar right away
+  - Every transaction that's touched a goal — contributions from its
+    linked category and withdrawals logged against it — is listed at the
+    bottom of that goal, newest first, so you can see exactly what added up
+    to its current total. Click any of them to jump straight to editing it
 - **Search** (magnifying-glass icon, top right) — find any expense or
   income entry by note, source, category, amount, or date, no matter what
   month it's in or whether it's been assigned to a paycheck yet. Every

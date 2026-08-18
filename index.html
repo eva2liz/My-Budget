@@ -884,11 +884,15 @@
           <label for="goalColor">Color</label>
           <input type="color" id="goalColor" value="#1baf7a">
         </div>
+        <div class="field">
+          <label for="goalCategory">Link to category <span class="muted">(optional)</span></label>
+          <select id="goalCategory"><option value="">No linked category</option></select>
+        </div>
         <input type="hidden" id="goalEditId">
         <button type="submit" class="primary" id="goalSubmitBtn">Add goal</button>
         <button type="button" class="secondary" id="goalCancelEdit" style="display:none;">Cancel</button>
       </form>
-      <p class="hint" style="margin-top:8px;">Track money you're setting aside for something specific, separate from bills and debt. Use <strong>Add money</strong> on a goal each time you set some aside.</p>
+      <p class="hint" style="margin-top:8px;">Track money you're setting aside for something specific, separate from bills and debt. Use <strong>Add money</strong> to log a contribution directly on a goal, or link a goal to a category (e.g. "Savings") so every Check Register or CC Register transaction filed under that category counts toward it automatically -- its running total folds into "already saved" above, and every matching transaction is listed under that goal so you can see exactly what added up to it.</p>
       <div id="savingsGoalsWrap" style="margin-top:14px;"></div>
     </div>
   </section>
@@ -1042,6 +1046,10 @@
           <div class="field">
             <label for="incColor">Calendar color</label>
             <input type="color" id="incColor" value="#1baf7a">
+          </div>
+          <div class="field">
+            <label for="incLinkedGoal">From <span class="muted">(optional)</span></label>
+            <select id="incLinkedGoal"><option value="">Regular income</option></select>
           </div>
           <div class="field" style="flex:1; min-width:160px;">
             <label for="incNote">Note</label>
@@ -2209,6 +2217,16 @@
       });
       ccCatFilterSelect.value = prevCcCat;
     }
+
+    // Savings goal's "Link to category" field -- kept in sync here too, same
+    // as the CC filter selects above, so a renamed/deleted category never
+    // leaves this dropdown showing a stale name.
+    var goalCatSelect = document.getElementById("goalCategory");
+    if (goalCatSelect) {
+      var prevGoalCat = goalCatSelect.value;
+      goalCatSelect.innerHTML = '<option value="">No linked category</option>' + categoryOptionsFor(null, false);
+      goalCatSelect.value = prevGoalCat;
+    }
   }
 
   function paycheckLabel(inc) {
@@ -2644,7 +2662,8 @@
     state.income.forEach(function(inc) {
       rows.push({
         kind: "income", id: inc.id, date: inc.date, desc: inc.source || "",
-        amount: Math.abs(inc.amount), cleared: !!inc.cleared, imported: !!inc.imported
+        amount: Math.abs(inc.amount), cleared: !!inc.cleared, imported: !!inc.imported,
+        linkedGoalId: inc.linkedGoalId || null
       });
     });
     rows.sort(function(a, b) {
@@ -2732,6 +2751,38 @@
     return html;
   }
 
+  // The income-side counterpart to accountOptionsFor() -- lets a deposit
+  // say where the money actually came FROM. "Regular income" (the default)
+  // is just money arriving from outside the app, same as before this
+  // existed. Picking "From savings: <goal>" instead marks this deposit as a
+  // withdrawal FROM that goal's tracked total -- e.g. moving $100 out of
+  // your emergency fund and back into checking. That amount is subtracted
+  // from the goal's running total (see goalWithdrawals/goalWithdrawalTotal)
+  // and the deposit is listed at the bottom of that goal alongside its
+  // contributions, so it's clear where the dip in "% saved" came from.
+  function incomeSourceOptionsFor(linkedGoalId, includePlaceholder) {
+    var placeholder = includePlaceholder ? '<option value="">Regular income</option>' : '';
+    if (state.savingsGoals.length === 0) return placeholder;
+    var goalOptions = state.savingsGoals.map(function(g) {
+      var val = "goal:" + g.id;
+      return '<option value="' + val + '"' + (val === ("goal:" + linkedGoalId) ? ' selected' : '') + '>From savings: ' + escapeHtml(g.name) + '</option>';
+    }).join("");
+    return placeholder + '<optgroup label="Withdraw from a savings goal">' + goalOptions + '</optgroup>';
+  }
+
+  // Refreshes the income edit form's static "From" <select> (unlike the
+  // Check Register's own selects, which are rebuilt fresh from a template
+  // string on every render, this one lives in static HTML so it needs its
+  // options refreshed by hand) -- called on load and any time a goal is
+  // added, renamed, or deleted, same idea as populateCategorySelects().
+  function populateIncomeGoalSelect() {
+    var sel = document.getElementById("incLinkedGoal");
+    if (!sel) return;
+    var prev = sel.value;
+    sel.innerHTML = incomeSourceOptionsFor(null, true);
+    sel.value = prev;
+  }
+
   // The display-label counterpart to accountOptionsFor() -- "what account
   // did this money move through," as plain text instead of a <select>.
   // Used anywhere a transaction's category needs to show up as a label:
@@ -2809,6 +2860,13 @@
       }
       ex.viaAccountPicker = false;
     }
+  }
+
+  // The income-side counterpart to applyAccountValue() -- applies a value
+  // picked from incomeSourceOptionsFor() to an income-shaped object. Empty
+  // means regular income; "goal:<id>" marks it a withdrawal from that goal.
+  function applyIncomeSourceValue(inc, value) {
+    inc.linkedGoalId = (value && value.indexOf("goal:") === 0) ? value.slice(5) : null;
   }
 
   // Click-a-column-title-to-sort state for the Check Register. Lives outside
@@ -2935,7 +2993,7 @@
           '</span>';
       } else {
         detailInner =
-          '<span class="muted">Income</span>' +
+          '<span>From <select class="register-inline-select" data-reg-income-source="' + r.id + '">' + incomeSourceOptionsFor(r.linkedGoalId, true) + '</select></span>' +
           '<span class="reg-detail-actions">' +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="income">Delete</button>' +
           '</span>';
@@ -2955,7 +3013,8 @@
         '<td class="num reg-col-balance muted">—</td>' +
       '</tr>' +
       '<tr class="register-txn-detail register-new-row"><td class="reg-col-flag"></td><td colspan="7"><div class="register-detail-inline">' +
-        '<span>Account <select id="regNewCategory">' + accountOptionsFor(null, null, null, true) + '</select></span>' +
+        '<span id="regNewCategoryField">Account <select id="regNewCategory">' + accountOptionsFor(null, null, null, true) + '</select></span>' +
+        '<span id="regNewIncomeSourceField" style="display:none;">From <select id="regNewIncomeSource">' + incomeSourceOptionsFor(null, true) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
@@ -3052,6 +3111,17 @@
       });
     });
 
+    wrap.querySelectorAll("[data-reg-income-source]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var inc = state.income.find(function(x) { return x.id === sel.dataset.regIncomeSource; });
+        if (!inc) return;
+        applyIncomeSourceValue(inc, sel.value);
+        saveState();
+        refreshAfterRegisterChange();
+        showToast(inc.linkedGoalId ? "Marked as a savings withdrawal" : "Regular income");
+      });
+    });
+
     wrap.querySelectorAll("[data-reg-paycheck]").forEach(function(sel) {
       sel.addEventListener("change", function() {
         var ex = state.expenses.find(function(x) { return x.id === sel.dataset.regPaycheck; });
@@ -3133,13 +3203,38 @@
         showToast(newExpense.creditCardId ? "Card payment added" : "Expense added");
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
-        state.income.push({ id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared });
-        showToast("Income added");
+        var incomeSourceValue = document.getElementById("regNewIncomeSource").value;
+        var newIncome = { id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared, linkedGoalId: null };
+        applyIncomeSourceValue(newIncome, incomeSourceValue);
+        state.income.push(newIncome);
+        showToast(newIncome.linkedGoalId ? "Withdrawal logged" : "Income added");
       }
 
       saveState();
       refreshAfterRegisterChange();
     }
+
+    // Which of the two "where did this go/come from" selects shows next to
+    // the new-row depends on whether you're filling in Payment or Deposit --
+    // an expense picks a spending category (or a card to pay down), a
+    // deposit picks where the money's coming from (regular income, or a
+    // savings goal withdrawal). Same show/hide-on-input idea as the CC
+    // Register's Category-vs-Type toggle.
+    function updateRegNewAccountFieldVisibility() {
+      var paymentEl = document.getElementById("regNewPayment");
+      var depositEl = document.getElementById("regNewDeposit");
+      var catField = document.getElementById("regNewCategoryField");
+      var incField = document.getElementById("regNewIncomeSourceField");
+      if (!paymentEl || !depositEl || !catField || !incField) return;
+      var depositHasValue = parseFloat(depositEl.value) > 0 && !(parseFloat(paymentEl.value) > 0);
+      catField.style.display = depositHasValue ? "none" : "";
+      incField.style.display = depositHasValue ? "" : "none";
+    }
+    ["regNewPayment", "regNewDeposit"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("input", updateRegNewAccountFieldVisibility);
+    });
+    updateRegNewAccountFieldVisibility();
 
     var addBtn = document.getElementById("regNewAdd");
     if (addBtn) addBtn.addEventListener("click", commitNewRegisterRow);
@@ -3163,14 +3258,20 @@
     var color = document.getElementById("incColor").value || "#1baf7a";
     var note = document.getElementById("incNote").value.trim();
     var cleared = document.getElementById("incCleared").checked;
+    var linkedGoalValue = document.getElementById("incLinkedGoal").value;
     if (!date || isNaN(amount) || amount < 0 || !source) return;
 
     if (editId) {
       var inc = state.income.find(function(x){ return x.id === editId; });
-      if (inc) { inc.date = date; inc.amount = amount; inc.source = source; inc.color = color; inc.note = note; inc.cleared = cleared; }
+      if (inc) {
+        inc.date = date; inc.amount = amount; inc.source = source; inc.color = color; inc.note = note; inc.cleared = cleared;
+        applyIncomeSourceValue(inc, linkedGoalValue);
+      }
       showToast("Income updated");
     } else {
-      state.income.push({ id: uid(), date: date, amount: amount, source: source, color: color, note: note, cleared: cleared });
+      var newIncome = { id: uid(), date: date, amount: amount, source: source, color: color, note: note, cleared: cleared, linkedGoalId: null };
+      applyIncomeSourceValue(newIncome, linkedGoalValue);
+      state.income.push(newIncome);
       showToast("Income added");
     }
     saveState();
@@ -3197,6 +3298,7 @@
     document.getElementById("incColor").value = "#1baf7a";
     document.getElementById("incNote").value = "";
     document.getElementById("incCleared").checked = false;
+    document.getElementById("incLinkedGoal").value = "";
     document.getElementById("incomeFormTitle").textContent = "Add income";
     document.getElementById("incomeSubmitBtn").textContent = "Add income";
     document.getElementById("incomeCancelEdit").style.display = "none";
@@ -3225,6 +3327,8 @@
     document.getElementById("incColor").value = inc.color || "#1baf7a";
     document.getElementById("incNote").value = inc.note || "";
     document.getElementById("incCleared").checked = !!inc.cleared;
+    populateIncomeGoalSelect();
+    document.getElementById("incLinkedGoal").value = inc.linkedGoalId ? "goal:" + inc.linkedGoalId : "";
     document.getElementById("incomeFormTitle").textContent = "Edit income";
     document.getElementById("incomeSubmitBtn").textContent = "Save changes";
     document.getElementById("incomeCancelEdit").style.display = "inline-block";
@@ -4573,27 +4677,32 @@
     var target = parseFloat(document.getElementById("goalTarget").value);
     var current = parseFloat(document.getElementById("goalCurrent").value) || 0;
     var color = document.getElementById("goalColor").value;
+    var linkedCategoryId = document.getElementById("goalCategory").value || null;
     if (!name || isNaN(target) || target <= 0) return;
 
     if (editId) {
       var g = state.savingsGoals.find(function(x){ return x.id === editId; });
-      if (g) { g.name = name; g.target = target; g.current = current; g.color = color; }
+      if (g) { g.name = name; g.target = target; g.current = current; g.color = color; g.linkedCategoryId = linkedCategoryId; }
     } else {
-      state.savingsGoals.push({ id: uid(), name: name, target: target, current: current, color: color });
+      state.savingsGoals.push({ id: uid(), name: name, target: target, current: current, color: color, linkedCategoryId: linkedCategoryId });
     }
     saveState();
     goalForm.reset();
     document.getElementById("goalColor").value = "#1baf7a";
+    document.getElementById("goalCategory").value = "";
     document.getElementById("goalEditId").value = "";
     document.getElementById("goalSubmitBtn").textContent = "Add goal";
     document.getElementById("goalCancelEdit").style.display = "none";
     renderSavingsGoals();
+    populateIncomeGoalSelect();
+    renderCheckRegister();
     showToast(editId ? "Goal updated" : "Goal added");
   });
 
   document.getElementById("goalCancelEdit").addEventListener("click", function() {
     goalForm.reset();
     document.getElementById("goalColor").value = "#1baf7a";
+    document.getElementById("goalCategory").value = "";
     document.getElementById("goalEditId").value = "";
     document.getElementById("goalSubmitBtn").textContent = "Add goal";
     document.getElementById("goalCancelEdit").style.display = "none";
@@ -4607,6 +4716,7 @@
     document.getElementById("goalTarget").value = g.target;
     document.getElementById("goalCurrent").value = g.current;
     document.getElementById("goalColor").value = g.color || "#1baf7a";
+    document.getElementById("goalCategory").value = g.linkedCategoryId || "";
     document.getElementById("goalSubmitBtn").textContent = "Save changes";
     document.getElementById("goalCancelEdit").style.display = "inline-block";
     document.querySelector('nav.tabs button[data-panel="dashboard"]').click();
@@ -4619,6 +4729,8 @@
       state.savingsGoals = state.savingsGoals.filter(function(x){ return x.id !== id; });
       saveState();
       renderSavingsGoals();
+      populateIncomeGoalSelect();
+      renderCheckRegister();
       showToast("Goal deleted");
     });
   }
@@ -4648,6 +4760,31 @@
     document.getElementById("goalContributeDialog").close();
   });
 
+  // Every expense filed under a goal's linked category -- e.g. every Check
+  // Register or CC Register transaction categorized "Savings" -- a
+  // CONTRIBUTION toward the goal. A CC payment never carries a categoryId
+  // (see applyAccountValue), so this naturally only ever picks up real
+  // spending entries and CC charges, never a "Pay down: <card>" row.
+  function goalLinkedExpenses(g) {
+    if (!g.linkedCategoryId) return [];
+    return state.expenses.filter(function(e) { return e.categoryId === g.linkedCategoryId; });
+  }
+
+  function goalLinkedTotal(g) {
+    return goalLinkedExpenses(g).reduce(function(s, e) { return s + e.amount; }, 0);
+  }
+
+  // Every income entry deliberately marked "From savings: <this goal>" --
+  // e.g. depositing $100 back into checking out of an emergency fund -- a
+  // WITHDRAWAL that reduces the goal's running total by that same amount.
+  function goalWithdrawals(g) {
+    return state.income.filter(function(inc) { return inc.linkedGoalId === g.id; });
+  }
+
+  function goalWithdrawalTotal(g) {
+    return goalWithdrawals(g).reduce(function(s, inc) { return s + inc.amount; }, 0);
+  }
+
   function renderSavingsGoals() {
     var wrap = document.getElementById("savingsGoalsWrap");
     if (state.savingsGoals.length === 0) {
@@ -4655,13 +4792,50 @@
       return;
     }
     var html = state.savingsGoals.map(function(g) {
-      var pct = g.target > 0 ? Math.min(100, (g.current / g.target) * 100) : 0;
-      var reached = g.current >= g.target;
+      var linkedCat = g.linkedCategoryId ? categoryById(g.linkedCategoryId) : null;
+      var contributions = linkedCat ? goalLinkedExpenses(g) : [];
+      var withdrawals = goalWithdrawals(g);
+      var saved = g.current + (linkedCat ? goalLinkedTotal(g) : 0) - goalWithdrawalTotal(g);
+      var pct = g.target > 0 ? Math.min(100, (saved / g.target) * 100) : 0;
+      var reached = saved >= g.target;
       var color = g.color || "#1baf7a";
+
+      var linkTag = linkedCat
+        ? ' <span class="muted" title="Every ' + escapeHtml(linkedCat.name) + ' transaction counts toward this goal automatically">· linked to ' + escapeHtml(linkedCat.name) + '</span>'
+        : "";
+
+      // Contributions (category spending) and withdrawals (income marked
+      // "From savings: <goal>") are two different record types, merged into
+      // one newest-first list so it reads as a single running history of
+      // everything that's touched this goal, same as a real account ledger.
+      var txns = contributions.map(function(e) {
+        return { id: e.id, date: e.date, note: e.note, amount: e.amount, kind: "expense" };
+      }).concat(withdrawals.map(function(inc) {
+        return { id: inc.id, date: inc.date, note: inc.note || inc.source, amount: -inc.amount, kind: "income" };
+      })).sort(function(a, b) { return b.date.localeCompare(a.date) || (a.id < b.id ? 1 : -1); });
+
+      var txnListHtml = "";
+      if (linkedCat || withdrawals.length) {
+        if (txns.length === 0) {
+          txnListHtml = '<div class="empty-state" style="margin-top:10px;">No transactions yet -- categorize a Check Register or CC Register entry as "' + escapeHtml(linkedCat.name) + '" and it\'ll show up here.</div>';
+        } else {
+          txnListHtml = '<div class="dash-panel-list" style="margin-top:10px;">' + txns.map(function(t) {
+            var isWithdrawal = t.amount < 0;
+            var amtCls = isWithdrawal ? "variance-over" : "variance-under";
+            var amtSign = isWithdrawal ? "-" : "+";
+            return '<div class="mini-row cal-clickable" data-goal-txn-id="' + t.id + '" data-goal-txn-kind="' + t.kind + '" tabindex="0">' +
+              '<span class="swatch" style="background:' + (isWithdrawal ? "var(--critical)" : escapeHtml(color)) + '"></span>' +
+              '<span class="mini-row-main"><span class="mini-row-title">' + escapeHtml(t.note || "(no note)") + (isWithdrawal ? ' <span class="muted">(withdrawal)</span>' : '') + '</span><span class="mini-row-sub">' + escapeHtml(t.date) + '</span></span>' +
+              '<span class="mini-row-amt ' + amtCls + '">' + amtSign + fmtMoney(Math.abs(t.amount)) + '</span>' +
+            '</div>';
+          }).join("") + '</div>';
+        }
+      }
+
       return '<div class="balance-block">' +
         '<div class="balance-header">' +
-          '<span class="bal-title"><span class="swatch" style="background:' + escapeHtml(color) + '"></span>' + escapeHtml(g.name) + '</span>' +
-          '<span class="balance-amount" style="' + (reached ? "color:var(--success);" : "") + '">' + fmtMoney(g.current) + ' <span class="muted" style="font-size:14px; font-weight:400;">/ ' + fmtMoney(g.target) + '</span></span>' +
+          '<span class="bal-title"><span class="swatch" style="background:' + escapeHtml(color) + '"></span>' + escapeHtml(g.name) + linkTag + '</span>' +
+          '<span class="balance-amount" style="' + (reached ? "color:var(--success);" : "") + '">' + fmtMoney(saved) + ' <span class="muted" style="font-size:14px; font-weight:400;">/ ' + fmtMoney(g.target) + '</span></span>' +
         '</div>' +
         '<div class="track"><div class="fill' + (pct >= 100 ? ' overflow' : '') + '" style="width:' + pct + '%; background:' + (reached ? "var(--success)" : escapeHtml(color)) + ';"></div></div>' +
         '<div class="balance-meta">' +
@@ -4672,12 +4846,20 @@
           '<button type="button" class="secondary" data-goal-edit="' + g.id + '">Edit</button>' +
           '<button type="button" class="danger-text" data-goal-del="' + g.id + '">Delete</button>' +
         '</div>' +
+        txnListHtml +
       '</div>';
     }).join("");
     wrap.innerHTML = html;
     wrap.querySelectorAll("[data-goal-contribute]").forEach(function(b) { b.addEventListener("click", function(){ openGoalContributeDialog(b.dataset.goalContribute); }); });
     wrap.querySelectorAll("[data-goal-edit]").forEach(function(b) { b.addEventListener("click", function(){ editGoal(b.dataset.goalEdit); }); });
     wrap.querySelectorAll("[data-goal-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteGoal(b.dataset.goalDel); }); });
+    wrap.querySelectorAll("[data-goal-txn-id]").forEach(function(row) {
+      row.addEventListener("click", function() {
+        if (row.dataset.goalTxnKind === "income") editIncome(row.dataset.goalTxnId);
+        else editExpense(row.dataset.goalTxnId);
+      });
+      row.addEventListener("keydown", function(e) { if (e.key === "Enter") row.click(); });
+    });
   }
 
   // ---------- SEARCH ----------
@@ -5353,6 +5535,11 @@
     renderDueTodayPanel();
     renderUpcomingPaymentsPanel();
     renderPaycheckCardsRow(todayMonthKey);
+    // A goal linked to a category pulls its running total straight from
+    // state.expenses, so it needs to stay in step with every place that
+    // already calls renderDashboard() after an expense is added, edited,
+    // deleted, or recategorized -- same as the panels above.
+    renderSavingsGoals();
   }
 
   // Budget vs. actual and "Spending by category" now share this tab's one
@@ -5768,6 +5955,7 @@
   function renderAll() {
     populateCategorySelects();
     populatePaycheckSelect();
+    populateIncomeGoalSelect();
     renderExpenses();
     renderIncome();
     renderRecurring();
