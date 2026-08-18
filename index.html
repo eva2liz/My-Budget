@@ -829,11 +829,11 @@
   <button data-panel="dashboard" class="active"><span class="nav-icon">🏠</span><span>Dashboard</span></button>
   <button data-panel="calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
   <button data-panel="recurring"><span class="nav-icon">🔁</span><span>Recurring</span></button>
-  <button data-panel="register"><span class="nav-icon">📒</span><span>Check Register</span></button>
   <button data-panel="paychecks"><span class="nav-icon">💵</span><span>Paychecks</span></button>
+  <button data-panel="register"><span class="nav-icon">📒</span><span>Check Register</span></button>
   <button data-panel="balances"><span class="nav-icon">💳</span><span>CC Register</span></button>
-  <button data-panel="categories"><span class="nav-icon">🏷️</span><span>Categories &amp; Budgets</span></button>
   <button data-panel="budgetVsActual"><span class="nav-icon">📊</span><span>Budget vs. Actual</span></button>
+  <button data-panel="categories"><span class="nav-icon">🏷️</span><span>Categories &amp; Budgets</span></button>
   <button data-panel="settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
 </nav>
 <div id="sidebarBackdrop"></div>
@@ -863,15 +863,6 @@
       <h2>This month's paychecks</h2>
       <p class="hint" style="margin-top:0;">Click a paycheck to see exactly which bills are assigned to it.</p>
       <div id="paycheckCardsWrap"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-header-row">
-        <h2>Spending by category <span class="muted" id="dashMonthLabel"></span></h2>
-        <input type="month" id="dashMonthPicker" aria-label="Month to view">
-      </div>
-      <p class="hint" style="margin-top:0;">For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. To reorder your categories, head to Categories &amp; Budgets -- the order you set there applies everywhere (this list, Budget vs. actual, and dropdowns).</p>
-      <div id="categoryChart"></div>
     </div>
 
     <div class="card">
@@ -1165,6 +1156,12 @@
       </div>
       <p class="hint" style="margin-top:0;">Click any row to see exactly which transactions make up its total.</p>
       <div id="budgetVsActualWrap" class="table-scroll"></div>
+    </div>
+
+    <div class="card">
+      <h2>Spending by category</h2>
+      <p class="hint" style="margin-top:0;">Same month as above. For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. To reorder your categories, head to Categories &amp; Budgets -- the order you set there applies everywhere (this list and dropdowns).</p>
+      <div id="categoryChart"></div>
     </div>
   </section>
 
@@ -5345,8 +5342,6 @@
     document.getElementById("paycheckDrillDialog").close();
   });
 
-  var dashMonthPicker = document.getElementById("dashMonthPicker");
-  dashMonthPicker.addEventListener("change", renderDashboard);
   var bvaMonthPicker = document.getElementById("bvaMonthPicker");
   bvaMonthPicker.addEventListener("change", renderBudgetVsActualTab);
 
@@ -5358,21 +5353,19 @@
     renderDueTodayPanel();
     renderUpcomingPaymentsPanel();
     renderPaycheckCardsRow(todayMonthKey);
-
-    if (!dashMonthPicker.value) dashMonthPicker.value = todayMonthKey;
-    var monthKey = dashMonthPicker.value;
-    document.getElementById("dashMonthLabel").textContent = "· " + monthLabel(monthKey);
-    var totals = totalsForMonth(monthKey);
-    renderCategoryChart(monthKey, totals, { targetId: "categoryChart", readOnly: true });
   }
 
-  // Budget vs. actual now lives on its own tab with its own month picker,
-  // decoupled from the Dashboard's "Spending by category" month.
+  // Budget vs. actual and "Spending by category" now share this tab's one
+  // month picker -- they used to be split across two tabs with two separate
+  // pickers (Dashboard's own "Spending by category" month), which made it
+  // easy to have them silently looking at two different months at once.
   function renderBudgetVsActualTab() {
     if (!bvaMonthPicker.value) bvaMonthPicker.value = currentMonthKey();
     var monthKey = bvaMonthPicker.value;
     document.getElementById("bvaMonthLabel").textContent = "· " + monthLabel(monthKey);
-    renderBudgetVsActualTable(monthKey, totalsForMonth(monthKey));
+    var totals = totalsForMonth(monthKey);
+    renderBudgetVsActualTable(monthKey, totals);
+    renderCategoryChart(monthKey, totals, { targetId: "categoryChart", readOnly: true });
   }
 
   // ---------- SETTINGS ----------

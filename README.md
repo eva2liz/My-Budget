@@ -21,14 +21,14 @@ for exactly how that works.
   note — also right from the **Check Register** tab, alongside expenses,
   since the two are so closely tied together
 - Set a monthly budget per category and see progress bars (with an "over
-  budget" warning) on the dashboard. The first 8 categories you create get
-  their own chart color automatically; pick your own color for any
-  category at any time — it shows up everywhere that category does
+  budget" warning) on the **Budget vs. Actual** tab. The first 8 categories
+  you create get their own chart color automatically; pick your own color
+  for any category at any time — it shows up everywhere that category does
   (charts, the calendar, expense lists, and more). **Reordering categories
   now happens on the Categories & Budgets tab** — drag the handle on any
   row of its "Reorder categories" list, and the new order applies
-  everywhere (the Dashboard, Budget vs. actual, the category table, and
-  every category dropdown)
+  everywhere (Budget vs. actual, the category table, and every category
+  dropdown)
 - **Categories & Budgets table is directly editable** — change a
   category's color, name, or monthly budget right in the table (color
   saves the moment you pick one; name and budget save when you click
@@ -64,18 +64,18 @@ for exactly how that works.
   assigned against it, and what's left over. Click a card to drill into
   exactly which bills make up its "assigned" total, and click any bill's
   note there to jump straight to editing it
-- "Spending by category" chart on the Dashboard — each category's bar fills
-  toward its own budget (full means right at budget, red means over);
-  categories with no budget set are just compared to each other, so one big
-  category no longer makes every other bar look emptier than it really is.
-  This view is read-only — reorder categories from the Categories & Budgets
-  tab instead (see above)
 - **Budget vs. Actual** has its own tab with its own month picker — pick any
   month and see budgeted vs. actual vs. remaining vs. % used, per category
   and in total. Click any row to open a breakdown of every transaction that
   makes up that total, with date, note, amount, and which paycheck (or
   "Unassigned") it belongs to. Click any transaction's note in that
-  breakdown to jump straight to editing it
+  breakdown to jump straight to editing it. A **"Spending by category"**
+  chart sits at the bottom of this same tab, sharing its month picker —
+  each category's bar fills toward its own budget (full means right at
+  budget, red means over); categories with no budget set are just compared
+  to each other, so one big category no longer makes every other bar look
+  emptier than it really is. This view is read-only — reorder categories
+  from the Categories & Budgets tab instead (see above)
 - Savings goals — set aside money for something specific (an emergency
   fund, a trip, a car), separate from bills and budgets. Give it a name,
   target amount, and starting balance; log **Add money** each time you set
