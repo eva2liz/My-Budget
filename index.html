@@ -667,16 +667,18 @@
 
   .budget-row { margin-bottom: 14px; border-top: 2px solid transparent; border-bottom: 2px solid transparent; padding: 2px 4px; border-radius: 8px; touch-action: pan-y; }
   .budget-row:last-child { margin-bottom: 0; }
-  .budget-row.dragging { position: relative; z-index: 20; opacity: 0.85; background: var(--surface-1); box-shadow: 0 6px 18px rgba(0,0,0,0.18); cursor: grabbing; }
-  .budget-row.drop-target-above { border-top-color: var(--series-1); }
-  .budget-row.drop-target-below { border-bottom-color: var(--series-1); }
   .budget-row-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
   .budget-row-top .cat-name { display: flex; align-items: center; color: var(--text-primary); font-weight: 500; }
   .budget-row-top .amounts { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
   .budget-row-top .amounts .over { color: var(--critical); font-weight: 600; }
-  .cat-drag-handle { display: inline-flex; align-items: center; margin-right: 6px; color: var(--text-muted); cursor: grab; touch-action: none; }
+  .cat-drag-handle { display: inline-flex; align-items: center; color: var(--text-muted); cursor: grab; touch-action: none; }
   .cat-drag-handle:hover { color: var(--text-secondary); }
   .cat-drag-handle:active { cursor: grabbing; }
+  .cat-drag-cell { width: 20px; padding-left: 8px !important; padding-right: 0 !important; }
+  tr.cat-drag-row { touch-action: pan-y; }
+  tr.cat-drag-row.dragging, .budget-row.dragging { position: relative; z-index: 20; opacity: 0.85; background: var(--surface-1); box-shadow: 0 6px 18px rgba(0,0,0,0.18); cursor: grabbing; }
+  tr.cat-drag-row.drop-target-above td, .budget-row.drop-target-above { border-top: 2px solid var(--series-1); }
+  tr.cat-drag-row.drop-target-below td, .budget-row.drop-target-below { border-bottom: 2px solid var(--series-1); }
   .track { position: relative; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
   .fill { position: absolute; top:0; left:0; height: 100%; border-radius: 4px 0 0 4px; }
   .fill.overflow { border-radius: 4px; }
@@ -1144,13 +1146,8 @@
       <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. Color, name, and monthly budget can also all be changed right in the table below. Tracking a credit card's balance? Head to the CC Register tab instead -- categories here are just for what you spend on.</p>
     </div>
     <div class="card">
-      <h2>Reorder categories <span class="muted">drag to change display order everywhere</span></h2>
-      <p class="hint" style="margin-top:0;">Drag the handle on the left of any row to reorder your categories -- the new order applies everywhere: the Dashboard, Budget vs. actual, the table below, and every category dropdown. Bar lengths here reflect this month's spending, just for reference.</p>
-      <div id="categoryDragList"></div>
-    </div>
-
-    <div class="card">
       <h2>Your categories</h2>
+      <p class="hint" style="margin-top:0;">Drag the handle on the left of any row to reorder your categories -- the new order applies everywhere: the Dashboard, Budget vs. actual, this table, and every category dropdown.</p>
       <div id="categoryTableWrap" class="table-scroll"></div>
     </div>
   </section>
@@ -4189,16 +4186,22 @@
   }
 
   function renderCategories() {
-    renderCategoryDragList();
     var wrap = document.getElementById("categoryTableWrap");
     if (state.categories.length === 0) {
       wrap.innerHTML = '<div class="empty-state">No categories yet.</div>';
       return;
     }
-    var html = '<table><thead><tr><th>Color</th><th>Category</th><th class="num">Monthly budget</th><th></th></tr></thead><tbody>';
+    var canDrag = state.categories.length > 1;
+    var html = '<table><thead><tr><th></th><th>Color</th><th>Category</th><th class="num">Monthly budget</th><th></th></tr></thead><tbody>';
     state.categories.forEach(function(c) {
       var color = categoryColorHex(c.id);
-      html += '<tr>' +
+      var handle = canDrag
+        ? '<span class="cat-drag-handle" data-drag-handle="' + c.id + '" title="Drag to reorder" aria-hidden="true">' +
+            '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.5"></circle><circle cx="7.5" cy="2.5" r="1.5"></circle><circle cx="2.5" cy="8" r="1.5"></circle><circle cx="7.5" cy="8" r="1.5"></circle><circle cx="2.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle></svg>' +
+          '</span>'
+        : '';
+      html += '<tr class="cat-drag-row" data-cat-id="' + c.id + '">' +
+        '<td class="cat-drag-cell">' + handle + '</td>' +
         '<td><input type="color" class="cat-inline-color" data-cat-color="' + c.id + '" value="' + escapeHtml(color) + '" title="Change ' + escapeHtml(c.name) + '\'s color"></td>' +
         '<td><input type="text" class="cat-inline-input" data-cat-name="' + c.id + '" value="' + escapeHtml(c.name) + '" aria-label="Category name"></td>' +
         '<td class="num"><input type="number" class="cat-inline-input cat-inline-budget" data-cat-budget="' + c.id + '" value="' + (c.budget || "") + '" step="0.01" min="0" placeholder="0.00" aria-label="Monthly budget"></td>' +
@@ -4212,6 +4215,7 @@
     wrap.innerHTML = html;
     wrap.querySelectorAll("[data-edit]").forEach(function(b) { b.addEventListener("click", function(){ editCategoryUI(b.dataset.edit); }); });
     wrap.querySelectorAll("[data-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteCategory(b.dataset.del); }); });
+    if (canDrag) enableCategoryDragReorder(wrap);
 
     // Inline editing -- color, name, and budget can all be changed right in
     // the table, with no need to open the Edit form and scroll up to it.
@@ -4716,7 +4720,13 @@
     document.getElementById("goalTarget").value = g.target;
     document.getElementById("goalCurrent").value = g.current;
     document.getElementById("goalColor").value = g.color || "#1baf7a";
-    document.getElementById("goalCategory").value = g.linkedCategoryId || "";
+    // Shows whichever category is actually feeding this goal right now --
+    // including one that was auto-detected by name (see
+    // goalEffectiveCategoryId) rather than explicitly picked here. Hitting
+    // Save with this dropdown untouched still writes it onto the goal, so
+    // an auto-detected link becomes an explicit one the moment you open
+    // and save this form.
+    document.getElementById("goalCategory").value = goalEffectiveCategoryId(g) || "";
     document.getElementById("goalSubmitBtn").textContent = "Save changes";
     document.getElementById("goalCancelEdit").style.display = "inline-block";
     document.querySelector('nav.tabs button[data-panel="dashboard"]').click();
@@ -4760,14 +4770,31 @@
     document.getElementById("goalContributeDialog").close();
   });
 
-  // Every expense filed under a goal's linked category -- e.g. every Check
-  // Register or CC Register transaction categorized "Savings" -- a
-  // CONTRIBUTION toward the goal. A CC payment never carries a categoryId
-  // (see applyAccountValue), so this naturally only ever picks up real
-  // spending entries and CC charges, never a "Pay down: <card>" row.
+  // Which category actually feeds this goal -- either the one explicitly
+  // set via the goal's own "Link to category" field, or, if that's never
+  // been touched, whichever category has "saving" in its name (so simply
+  // creating a "Savings" category and filing transactions under it works
+  // with zero setup -- no need to open the goal's Edit form at all).
+  // The auto-detect only kicks in with exactly ONE savings goal: with two
+  // or more, a "Savings" category can't unambiguously belong to just one
+  // of them, so each goal needs its own explicit link instead of silently
+  // guessing (and risking double-counting the same transactions).
+  function goalEffectiveCategoryId(g) {
+    if (g.linkedCategoryId) return g.linkedCategoryId;
+    if (state.savingsGoals.length !== 1) return null;
+    var match = state.categories.find(function(c) { return /saving/i.test(c.name); });
+    return match ? match.id : null;
+  }
+
+  // Every expense filed under a goal's (effective) linked category -- e.g.
+  // every Check Register or CC Register transaction categorized "Savings"
+  // -- a CONTRIBUTION toward the goal. A CC payment never carries a
+  // categoryId (see applyAccountValue), so this naturally only ever picks
+  // up real spending entries and CC charges, never a "Pay down: <card>" row.
   function goalLinkedExpenses(g) {
-    if (!g.linkedCategoryId) return [];
-    return state.expenses.filter(function(e) { return e.categoryId === g.linkedCategoryId; });
+    var catId = goalEffectiveCategoryId(g);
+    if (!catId) return [];
+    return state.expenses.filter(function(e) { return e.categoryId === catId; });
   }
 
   function goalLinkedTotal(g) {
@@ -4792,7 +4819,9 @@
       return;
     }
     var html = state.savingsGoals.map(function(g) {
-      var linkedCat = g.linkedCategoryId ? categoryById(g.linkedCategoryId) : null;
+      var effectiveCatId = goalEffectiveCategoryId(g);
+      var linkedCat = effectiveCatId ? categoryById(effectiveCatId) : null;
+      var isAutoLinked = linkedCat && !g.linkedCategoryId;
       var contributions = linkedCat ? goalLinkedExpenses(g) : [];
       var withdrawals = goalWithdrawals(g);
       var saved = g.current + (linkedCat ? goalLinkedTotal(g) : 0) - goalWithdrawalTotal(g);
@@ -4801,7 +4830,7 @@
       var color = g.color || "#1baf7a";
 
       var linkTag = linkedCat
-        ? ' <span class="muted" title="Every ' + escapeHtml(linkedCat.name) + ' transaction counts toward this goal automatically">· linked to ' + escapeHtml(linkedCat.name) + '</span>'
+        ? ' <span class="muted" title="Every ' + escapeHtml(linkedCat.name) + ' transaction counts toward this goal automatically' + (isAutoLinked ? " -- auto-detected since it's your only savings goal and this category's name mentions \\\"saving\\\"; edit this goal to set it explicitly" : "") + '">· linked to ' + escapeHtml(linkedCat.name) + (isAutoLinked ? ' (auto)' : '') + '</span>'
         : "";
 
       // Contributions (category spending) and withdrawals (income marked
@@ -5019,12 +5048,9 @@
     }).join("");
   }
 
-  // opts.targetId lets this same renderer draw into either the read-only
-  // Dashboard chart or the draggable list on Categories & Budgets.
-  // opts.readOnly hides the drag handle and skips wiring up drag-reorder.
-  // opts.showAll includes every category regardless of spending/budget this
-  // month, so the Categories & Budgets tab can reorder categories that
-  // haven't been used yet -- the Dashboard still only shows active ones.
+  // Read-only "spending by category" bars, used on Budget vs. actual.
+  // (Category reordering itself now happens directly in the Categories &
+  // Budgets table -- see renderCategories() / enableCategoryDragReorder().)
   function renderCategoryChart(monthKey, totals, opts) {
     opts = opts || {};
     var el = document.getElementById(opts.targetId || "categoryChart");
@@ -5066,15 +5092,9 @@
         : Math.min(100, (spent / maxUnbudgetedSpend) * 100);
       var fillClass = "fill" + (fillWidth >= 100 ? " overflow" : "");
 
-      var handle = (!opts.readOnly && cats.length > 1)
-        ? '<span class="cat-drag-handle" data-drag-handle="' + c.id + '" title="Drag to reorder" aria-hidden="true">' +
-            '<svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.5"></circle><circle cx="7.5" cy="2.5" r="1.5"></circle><circle cx="2.5" cy="8" r="1.5"></circle><circle cx="7.5" cy="8" r="1.5"></circle><circle cx="2.5" cy="13.5" r="1.5"></circle><circle cx="7.5" cy="13.5" r="1.5"></circle></svg>' +
-          '</span>'
-        : '';
-
       return '<div class="budget-row" data-cat-id="' + c.id + '">' +
         '<div class="budget-row-top">' +
-          '<span class="cat-name">' + handle + '<span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
+          '<span class="cat-name"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
           amountsHtml +
         '</div>' +
         '<div class="track" title="' + escapeHtml(c.name) + ': ' + fmtMoney(spent) + (budget ? ' of ' + fmtMoney(budget) + ' budget (' + Math.round((spent/budget)*100) + '%)' : ' (no budget set)') + '">' +
@@ -5084,15 +5104,6 @@
     }).join("");
 
     el.innerHTML = rows;
-    if (!opts.readOnly) enableCategoryDragReorder(el);
-  }
-
-  // The draggable category list lives on Categories & Budgets -- this month's
-  // spending is just shown for reference on each bar, reordering isn't
-  // month-specific.
-  function renderCategoryDragList() {
-    var monthKey = currentMonthKey();
-    renderCategoryChart(monthKey, totalsForMonth(monthKey), { targetId: "categoryDragList", showAll: true });
   }
 
   // Re-threads just the currently-visible (dragged) categories into their new
@@ -5109,13 +5120,15 @@
     });
   }
 
-  // Drag-to-reorder for the "Spending by category" rows, via each row's grip
+  // Drag-to-reorder for the Categories & Budgets table, via each row's grip
   // handle. Built on Pointer Events (not the HTML5 drag-and-drop API) so the
   // same code works with mouse, touch, and pen. Only the dragged row actually
   // moves (following the pointer); everything else just gets a thin
   // highlighted edge showing where it'll land, and the real reorder commits
-  // (and the whole chart re-renders) on release.
-  function enableCategoryDragReorder(container) {
+  // (and the whole table re-renders) on release. rowSelector defaults to the
+  // table row markup rendered by renderCategories().
+  function enableCategoryDragReorder(container, rowSelector) {
+    rowSelector = rowSelector || "tr.cat-drag-row[data-cat-id]";
     var draggingEl = null, otherRows = [], rowRects = [], targetIndex = -1, startY = 0;
 
     function clearDropIndicators() {
@@ -5151,17 +5164,19 @@
       newOrderIds.splice(targetIndex, 0, draggingEl.dataset.catId);
       reorderCategoriesByVisibleOrder(newOrderIds);
       saveState();
-      renderDashboard();
-      renderCategories();
-      populateCategorySelects();
+      // Same downstream refresh as any other category edit (rename, color,
+      // budget) -- the new order needs to reach the Check Register's Account
+      // dropdown, the Calendar, Paycheck Planner, and CC Register too, not
+      // just the Dashboard and this table.
+      refreshAfterCategoryChange();
       draggingEl = null;
     }
 
     container.querySelectorAll("[data-drag-handle]").forEach(function(handle) {
       handle.addEventListener("pointerdown", function(e) {
-        var row = handle.closest(".budget-row");
+        var row = handle.closest(rowSelector);
         if (!row) return;
-        var rows = Array.from(container.querySelectorAll(".budget-row[data-cat-id]"));
+        var rows = Array.from(container.querySelectorAll(rowSelector));
         if (rows.length < 2) return;
 
         draggingEl = row;

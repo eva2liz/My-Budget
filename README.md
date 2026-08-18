@@ -24,11 +24,10 @@ for exactly how that works.
   budget" warning) on the **Budget vs. Actual** tab. The first 8 categories
   you create get their own chart color automatically; pick your own color
   for any category at any time — it shows up everywhere that category does
-  (charts, the calendar, expense lists, and more). **Reordering categories
-  now happens on the Categories & Budgets tab** — drag the handle on any
-  row of its "Reorder categories" list, and the new order applies
-  everywhere (Budget vs. actual, the category table, and every category
-  dropdown)
+  (charts, the calendar, expense lists, and more). **Reorder categories
+  right in the Categories & Budgets table** — drag the handle on the left
+  of any row, and the new order applies everywhere (the Dashboard, Budget
+  vs. actual, and every category dropdown)
 - **Categories & Budgets table is directly editable** — change a
   category's color, name, or monthly budget right in the table (color
   saves the moment you pick one; name and budget save when you click
@@ -75,18 +74,23 @@ for exactly how that works.
   budget, red means over); categories with no budget set are just compared
   to each other, so one big category no longer makes every other bar look
   emptier than it really is. This view is read-only — reorder categories
-  from the Categories & Budgets tab instead (see above)
+  from the Categories & Budgets table instead (see above)
 - Savings goals — set aside money for something specific (an emergency
   fund, a trip, a car), separate from bills and budgets. Give it a name,
   target amount, and starting balance; log **Add money** each time you set
   more aside (or a negative amount to pull some back out); the progress bar
   fills as you go and turns green with a "goal reached!" note once you hit
   the target
-  - **Link a goal to a category** (optional, set when you create or edit
-    the goal) and every Check Register or CC Register transaction filed
-    under that category counts toward it automatically — categorize your
-    monthly transfer as "Savings" and it folds right into the goal's total,
-    no separate **Add money** click needed
+  - **Link a goal to a category** and every Check Register or CC Register
+    transaction filed under that category counts toward it automatically —
+    categorize your monthly transfer as "Savings" and it folds right into
+    the goal's total, no separate **Add money** click needed. **This
+    happens with zero setup if you only have one savings goal** — the app
+    auto-detects any category with "saving" in its name and links it for
+    you (you'll see "linked to Savings (auto)" on the goal once it kicks
+    in). With two or more goals it can't guess which one a "Savings"
+    category belongs to, so each one needs its category set explicitly via
+    **Edit** on that goal instead
   - **Withdraw from a goal through the Check Register** — when logging a
     deposit, an optional **From** field lets you pick "From savings:
     &lt;goal&gt;" instead of leaving it as regular income. That deposit
