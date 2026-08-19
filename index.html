@@ -775,7 +775,7 @@
 <div id="authGate" class="auth-gate">
   <div class="auth-card">
     <h1 class="auth-logo"><img src="logo-piggy.png" alt="" class="logo-icon"> My Budget</h1>
-    <p class="auth-verse">"But my God shall supply all your needs according to his riches in glory by Christ Jesus." <span class="auth-verse-ref">— Philippians 4:19</span></p>
+    <p class="auth-verse">"But my God shall supply all your need according to his riches in glory by Christ Jesus." <span class="auth-verse-ref">— Philippians 4:19</span></p>
     <div class="auth-tabs">
       <button type="button" class="auth-tab active" id="authTabLogin">Log in</button>
       <button type="button" class="auth-tab" id="authTabSignup">Sign up</button>
@@ -833,11 +833,11 @@
 <nav class="tabs">
   <button data-panel="dashboard" class="active"><span class="nav-icon">🏠</span><span>Dashboard</span></button>
   <button data-panel="calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
-  <button data-panel="budgetVsActual"><span class="nav-icon">📊</span><span>Budget vs. Actual</span></button>
   <button data-panel="recurring"><span class="nav-icon">🔁</span><span>Recurring</span></button>
   <button data-panel="paychecks"><span class="nav-icon">💵</span><span>Paychecks</span></button>
   <button data-panel="register"><span class="nav-icon">📒</span><span>Check Register</span></button>
   <button data-panel="balances"><span class="nav-icon">💳</span><span>CC Register</span></button>
+  <button data-panel="budgetVsActual"><span class="nav-icon">📊</span><span>Budget vs. Actual</span></button>
   <button data-panel="categories"><span class="nav-icon">🏷️</span><span>Categories &amp; Budgets</span></button>
   <button data-panel="settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
 </nav>
@@ -2069,17 +2069,31 @@
 
   function runRecurring(silent) {
     // Re-checked on every load and whenever a recurring item is added/edited.
-    // Idempotent: logs at most one expense per recurring item per exact
-    // occurrence date -- monthly and bimonthly only ever have one date in a
-    // given month, but biweekly can land on two.
+    // Idempotent: logs at most one expense per recurring item per occurrence
+    // slot -- monthly and bimonthly only ever have one slot in a given
+    // month, but biweekly can land on two.
+    //
+    // "Already logged" is matched by POSITION within the month, not by exact
+    // date -- every expense already linked to this bill this month (sorted
+    // by date) is paired up with this month's expected occurrence dates
+    // (also sorted) in order, so occurrence #1 is covered by whichever
+    // linked expense comes first, occurrence #2 by whichever comes second,
+    // and so on. Matching on exact date instead would mean editing a linked
+    // expense's date -- e.g. to reflect when it actually posted -- makes it
+    // stop matching its own occurrence's default date, so this function
+    // would think that occurrence was never logged and auto-log a fresh
+    // duplicate with the template's original date/amount right alongside
+    // the one that was just corrected.
     var mk = currentMonthKey();
     var todayStr = todayISO();
     var added = 0;
     state.recurring.forEach(function(r) {
-      recurringExpenseOccurrencesInMonth(r, mk).forEach(function(dateStr) {
+      var existingThisMonth = state.expenses.filter(function(e) {
+        return e.recurringId === r.id && monthKeyOf(e.date) === mk;
+      }).sort(function(a, b) { return a.date.localeCompare(b.date); });
+      recurringExpenseOccurrencesInMonth(r, mk).forEach(function(dateStr, i) {
         if (dateStr > todayStr) return; // wait until that date arrives
-        var already = state.expenses.some(function(e) { return e.recurringId === r.id && e.date === dateStr; });
-        if (already) return;
+        if (existingThisMonth[i]) return; // this occurrence slot is already covered
         // Only inherit the template's "default paycheck" if that paycheck
         // actually falls in the same month as this occurrence. Otherwise it's
         // a stale reference to a past paycheck, and blindly copying it here
