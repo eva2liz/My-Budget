@@ -63,11 +63,11 @@ for exactly how that works.
   paid it, if the payment was typed straight into the Check Register
   instead of coming from the auto-logged entry the Recurring tab created —
   the app has no way to know a hand-typed "Diezmo" and the "Tithing 10%"
-  bill are the same real-world payment unless you tell it. Open that
-  transaction's edit form and set **Link to recurring bill**, and it'll
-  drop off Due today/past due right away (and silently absorb the
-  now-redundant auto-logged placeholder for that date, so you don't end up
-  with two entries for the same bill)
+  bill are the same real-world payment unless you tell it. Right on that
+  transaction's row (Check Register or CC Register), set its **Recurring
+  bill** field to match, and it'll drop off Due today/past due right away
+  (and silently absorb the now-redundant auto-logged placeholder for that
+  date, so you don't end up with two entries for the same bill)
 - **This month's paychecks**, shown as a row of cards on the Dashboard —
   each card shows the payday, income, a progress bar of what's been
   assigned against it, and what's left over. Click a card to drill into
@@ -161,16 +161,24 @@ for exactly how that works.
     underneath holds its account and Delete, plus, only for bills that
     came from the Recurring tab, its paycheck and a Split button — change
     any of those right there, no extra clicks
-  - Click the **date** to correct it inline, or click the **payee** to open
-    the full edit form (amount, paid status, and everything else) in a
-    panel that appears above the register and tucks itself away again once
-    you're done — that panel also has its own **Delete** button now, so any
-    time a drill-down (Search, Dashboard, a category, the Paycheck Planner)
-    lands you on this edit screen, you can delete the entry right there
+  - **Every field is directly editable right on the row** — date, payee/
+    description, amount, cleared, paid, account, and (for a bill that came
+    from the Recurring tab) paycheck and **Recurring bill** — nothing opens
+    a separate panel anymore; each change saves the moment you leave the
+    field or press Enter. Jumping in from **Search**, the **Dashboard**, a
+    category, or the **Paycheck Planner** still opens the full edit panel
+    above the register — that's just a quick way to land on the right
+    entry from elsewhere, and that panel still has its own **Delete**
+    button, so you can remove an entry right from any of those drill-downs
     instead of backing out to find its row first
   - A From/To date-range filter (plus a category filter), right at the top
     next to the "Check register" heading, narrows what's shown without
-    touching the running balance, which is always based on your full history
+    touching the running balance, which is always based on your full
+    history. **To** defaults to today (not blank) both here and on the CC
+    Register, so future-dated entries -- an already-logged upcoming bill, a
+    post-dated charge -- don't clutter the view by default; clear or push
+    out **To** any time you want to see them, and **Clear filters** resets
+    it back to today rather than wiping it blank
   - Bank transactions you import (see CSV import below) land here
     automatically, flagged with a red **✗** and a red-outlined field until
     you assign a real account to them — once you do, the flag clears itself
@@ -215,6 +223,12 @@ for exactly how that works.
   the recurring bills it needs to cover (right from the Check Register, or
   from the dropdown here), check them off as you pay them, and see what's
   left over to spend
+  - **Collapse or expand each paycheck's activity** with the arrow next to
+    its name — collapsing tucks away its bill table, summary row, and
+    assign row, while still showing the assigned/leftover totals and the
+    paycheck amount right in the header, so it's easy to skim past
+    paychecks you've already sorted out without losing sight of the
+    numbers that matter
   - Recurring bills that haven't come due yet still show up here as
     "pending" options you can assign ahead of time, with a **Log now**
     button to record them early if you want them off your plate
@@ -286,9 +300,9 @@ for exactly how that works.
   big ledger is easy to narrow down; the running Balance column always
   reflects the true, unfiltered running total, it just hides some rows.
   Every field on an existing row — Date, Description, Amount, Category,
-  Card, Type, cleared — is editable right in place (Description and
-  Amount get a light dashed underline so it's clear they're click-to-edit,
-  same as a link), no separate edit screen needed. A transaction dated
+  Card, Type, cleared, and (once you have a recurring bill set up)
+  **Recurring bill** — is editable right in place, no separate edit screen
+  needed. A transaction dated
   after today shows **upcoming** instead of a dollar balance, since it
   hasn't posted yet — that keeps the ledger's running balance in
   agreement with the "Current balance" card above, which is also always

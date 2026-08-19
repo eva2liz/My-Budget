@@ -546,9 +546,6 @@
   }
   .register-flag-x { color: var(--critical); font-weight: 700; }
   .register-flag-inline { color: var(--critical); font-size: 11px; font-weight: 600; margin-left: 6px; }
-  .register-payee-cell { cursor: pointer; }
-  .register-payee-cell:hover { color: var(--series-1); text-decoration: underline; text-decoration-color: var(--series-1); text-underline-offset: 2px; }
-  .register-payee-cell:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
 
   .register-table tr.register-opening-row td { background: rgba(70, 120, 220, 0.08); border-bottom: 1px solid var(--border); }
   .register-opening-label { color: var(--text-muted); font-style: italic; }
@@ -595,10 +592,16 @@
   .paycheck-block:last-child { margin-bottom: 0; }
   .paycheck-block.pending { border-style: dashed; background: var(--surface-2, transparent); opacity: 0.85; }
   .paycheck-block.pending .pc-date { font-style: italic; }
-  .paycheck-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+  .paycheck-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
   .paycheck-header .pc-title { font-weight: 700; font-size: 14px; }
   .paycheck-header .pc-date { color: var(--text-secondary); font-size: 13px; margin-left: 6px; }
   .paycheck-header .pc-amount { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .paycheck-toggle {
+    background: none; border: none; cursor: pointer; padding: 2px 6px 2px 0;
+    font-size: 12px; color: var(--text-secondary); line-height: 1; font-family: inherit;
+  }
+  .paycheck-toggle:hover { color: var(--series-1); }
+  .paycheck-summary-compact { font-size: 12px; font-variant-numeric: tabular-nums; }
   .paycheck-summary-row { display: flex; justify-content: flex-end; gap: 20px; margin-top: 10px; font-size: 13px; padding-top: 10px; border-top: 1px solid var(--gridline); }
   .paycheck-summary-row .leftover { font-weight: 700; }
   .paycheck-assign-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
@@ -1011,7 +1014,7 @@
         <h2>Paycheck planner <span class="muted">assign bills to the paycheck that covers them</span></h2>
         <input type="month" id="paycheckMonthPicker" aria-label="Month to view">
       </div>
-      <p class="hint" style="margin-top:0;">For each paycheck below, assign the bills it needs to cover, check them off as you pay them, and see what's left over to spend. Paying more (or less) than the usual amount this time? Use <strong>Edit</strong> on that bill — for one not logged yet, use <strong>Log &amp; edit amount</strong> to log it and adjust before it's due; either way, it only changes that one occurrence, not the recurring template's default. Paying one bill from two different paychecks? Use its <strong>Split</strong> button (here or in the list below) to divide it into two linked entries with the amount and paycheck you choose for each. Adding income and one-time expenses now happens on the <strong>Check Register</strong> tab.</p>
+      <p class="hint" style="margin-top:0;">For each paycheck below, assign the bills it needs to cover, check them off as you pay them, and see what's left over to spend. Click the <strong>▾</strong>/<strong>▸</strong> arrow next to a paycheck to collapse or expand its bill list — the assigned/leftover totals and the paycheck amount stay visible either way, so it's easy to skim past paychecks you've already sorted out. Paying more (or less) than the usual amount this time? Use <strong>Edit</strong> on that bill — for one not logged yet, use <strong>Log &amp; edit amount</strong> to log it and adjust before it's due; either way, it only changes that one occurrence, not the recurring template's default. Paying one bill from two different paychecks? Use its <strong>Split</strong> button (here or in the list below) to divide it into two linked entries with the amount and paycheck you choose for each. Adding income and one-time expenses now happens on the <strong>Check Register</strong> tab.</p>
       <div id="paycheckPlannerWrap"></div>
     </div>
   </section>
@@ -1121,7 +1124,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field only shows up for bills that came from the Recurring tab — everyday spending doesn't need one. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Open its edit form and set <strong>Link to recurring bill</strong> so it still counts as paid — otherwise the Dashboard has no way to know that transaction and that bill are the same thing, and will keep showing the bill as due or past due even once it's checked off.</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field only shows up for bills that came from the Recurring tab — everyday spending doesn't need one. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Set <strong>Recurring bill</strong> in the row below it so it still counts as paid — otherwise the Dashboard has no way to know that transaction and that bill are the same thing, and will keep showing the bill as due or past due even once it's checked off. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.)</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1215,7 +1218,7 @@
           <button type="button" class="secondary" id="ccClearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place; click Delete to remove it. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above.</p>
+      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type, plus a <strong>Recurring bill</strong> field once you have one set up — is editable right in place, no separate panel; click Delete to remove it. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above.</p>
       <div id="ccRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -2649,12 +2652,19 @@
     renderPaycheckPlanner();
   }
 
+  // "To" defaults to today rather than blank, on load and whenever filters
+  // are cleared -- so both registers open showing everything through today
+  // instead of also including future-dated entries (an already-logged
+  // upcoming bill, a post-dated charge) by default. "From" stays blank
+  // (no lower bound) unless you set one yourself. Change or clear "To"
+  // manually any time you actually want to see future-dated rows too.
+  document.getElementById("filterTo").value = todayISO();
   document.getElementById("filterFrom").addEventListener("change", renderExpenses);
   document.getElementById("filterTo").addEventListener("change", renderExpenses);
   document.getElementById("filterCategory").addEventListener("change", renderExpenses);
   document.getElementById("clearFilters").addEventListener("click", function() {
     document.getElementById("filterFrom").value = "";
-    document.getElementById("filterTo").value = "";
+    document.getElementById("filterTo").value = todayISO();
     document.getElementById("filterCategory").value = "";
     renderExpenses();
   });
@@ -2662,13 +2672,14 @@
   // CC Register's own From/To/Card/Category filter row -- same idea as the
   // Check Register's filters above, but scoped to renderCCLedger() alone
   // since filtering the ledger never changes a card's actual balance.
+  document.getElementById("ccFilterTo").value = todayISO();
   document.getElementById("ccFilterFrom").addEventListener("change", renderCCLedger);
   document.getElementById("ccFilterTo").addEventListener("change", renderCCLedger);
   document.getElementById("ccFilterCard").addEventListener("change", renderCCLedger);
   document.getElementById("ccFilterCategory").addEventListener("change", renderCCLedger);
   document.getElementById("ccClearFilters").addEventListener("click", function() {
     document.getElementById("ccFilterFrom").value = "";
-    document.getElementById("ccFilterTo").value = "";
+    document.getElementById("ccFilterTo").value = todayISO();
     document.getElementById("ccFilterCard").value = "";
     document.getElementById("ccFilterCategory").value = "";
     renderCCLedger();
@@ -3015,8 +3026,12 @@
 
       var splitTag = r.splitGroupId ? ' <span class="muted">(split)</span>' : "";
       var flagTag = flagged ? '<span class="register-flag-inline">needs review</span>' : "";
-      var paymentCell = r.kind === "expense" ? fmtMoney(Math.abs(r.amount)) : "";
-      var depositCell = r.kind === "income" ? fmtMoney(r.amount) : "";
+      var paymentCell = r.kind === "expense"
+        ? '<input type="number" class="register-inline-amount" data-reg-amount="' + r.id + '" data-reg-kind="expense" value="' + Math.abs(r.amount) + '" step="0.01" min="0">'
+        : "";
+      var depositCell = r.kind === "income"
+        ? '<input type="number" class="register-inline-amount" data-reg-amount="' + r.id + '" data-reg-kind="income" value="' + r.amount + '" step="0.01" min="0">'
+        : "";
 
       var paidCell = r.kind === "expense"
         ? '<input type="checkbox" class="row-checkbox" data-reg-paid="' + r.id + '"' + (r.paid ? ' checked' : '') + '>'
@@ -3025,7 +3040,7 @@
       bodyHtml += '<tr class="' + mainRowClass + '">' +
         '<td class="reg-col-flag">' + (flagged ? '<span class="register-flag-x" title="Needs a real category assigned">&#10007;</span>' : '') + '</td>' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" data-reg-date="' + r.id + '" data-reg-kind="' + r.kind + '" value="' + r.date + '"></td>' +
-        '<td class="register-payee-cell" data-drill-edit="' + r.id + '" data-drill-kind="' + r.kind + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(r.desc || "(no note)") + splitTag + flagTag + '</td>' +
+        '<td><input type="text" class="register-inline-text" data-reg-desc="' + r.id + '" data-reg-kind="' + r.kind + '" value="' + escapeHtml(r.desc || "") + '" placeholder="Payee / description">' + splitTag + flagTag + '</td>' +
         '<td class="num reg-col-payment">' + paymentCell + '</td>' +
         '<td class="reg-col-clr"><input type="checkbox" class="row-checkbox" data-reg-cleared="' + r.id + '" data-reg-kind="' + r.kind + '"' + (r.cleared ? ' checked' : '') + '></td>' +
         '<td class="reg-col-paid">' + paidCell + '</td>' +
@@ -3047,8 +3062,17 @@
           ? '<span>Paycheck <select class="register-inline-select" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>'
           : '';
         var splitBtn = pcTrackable ? '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' : '';
+        // Only worth showing once at least one recurring bill exists to link
+        // to -- lets a transaction typed straight into the register (which
+        // never gets a recurringId automatically) be tied back to a
+        // Recurring-tab bill right here, same field as the old edit-panel
+        // had, so the Dashboard's Due today/Upcoming panels recognize it.
+        var recurringField = state.recurring.length > 0
+          ? '<span>Recurring bill <select class="register-inline-select" data-reg-recurring="' + r.id + '">' + recurringBillOptionsFor(r.recurringId) + '</select></span>'
+          : '';
         detailInner =
           '<span>Account <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + accountOptionsFor(r.categoryId, r.creditCardId, r.debtType) + '</select></span>' +
+          recurringField +
           pcField +
           '<span class="reg-detail-actions">' +
             splitBtn +
@@ -3153,13 +3177,61 @@
       });
     });
 
-    wrap.querySelectorAll("[data-drill-edit]").forEach(function(cell) {
-      function openEdit() {
-        if (cell.dataset.drillKind === "income") editIncome(cell.dataset.drillEdit);
-        else editExpense(cell.dataset.drillEdit);
-      }
-      cell.addEventListener("click", openEdit);
-      cell.addEventListener("keydown", function(e) { if (e.key === "Enter") openEdit(); });
+    // Description and Amount used to only be editable by opening the full
+    // edit panel (Click to edit this transaction); both are now inline
+    // fields right on the row, same as every other field here -- so that
+    // panel is no longer part of the normal Check Register editing flow.
+    // (It's still used when jumping in from Search, the Dashboard, Budget
+    // vs. actual, or the Paycheck Planner, since those benefit from landing
+    // somewhere with a Delete button rather than scrolling to find the row.)
+    wrap.querySelectorAll("[data-reg-desc]").forEach(function(inp) {
+      inp.addEventListener("change", function() {
+        var val = inp.value.trim();
+        if (inp.dataset.regKind === "income") {
+          var inc = state.income.find(function(x) { return x.id === inp.dataset.regDesc; });
+          if (!inc) return;
+          inc.source = val;
+        } else {
+          var ex3 = state.expenses.find(function(x) { return x.id === inp.dataset.regDesc; });
+          if (!ex3) return;
+          ex3.note = val;
+        }
+        saveState();
+        refreshAfterRegisterChange();
+        showToast("Description updated");
+      });
+    });
+
+    wrap.querySelectorAll("[data-reg-amount]").forEach(function(inp) {
+      inp.addEventListener("change", function() {
+        var val = parseFloat(inp.value);
+        if (inp.dataset.regKind === "income") {
+          var inc2 = state.income.find(function(x) { return x.id === inp.dataset.regAmount; });
+          if (!inc2) return;
+          if (isNaN(val) || val < 0) { showToast("Enter a valid amount"); inp.value = inc2.amount; return; }
+          inc2.amount = val;
+        } else {
+          var ex4 = state.expenses.find(function(x) { return x.id === inp.dataset.regAmount; });
+          if (!ex4) return;
+          if (isNaN(val) || val < 0) { showToast("Enter a valid amount"); inp.value = ex4.amount; return; }
+          ex4.amount = val;
+        }
+        saveState();
+        refreshAfterRegisterChange();
+        showToast("Amount updated");
+      });
+    });
+
+    wrap.querySelectorAll("[data-reg-recurring]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var ex5 = state.expenses.find(function(x) { return x.id === sel.dataset.regRecurring; });
+        if (!ex5) return;
+        ex5.recurringId = sel.value || null;
+        var mergedDuplicate = clearAutoLoggedDuplicate(ex5.recurringId, ex5.date, ex5.id);
+        saveState();
+        refreshAfterRegisterChange();
+        showToast(mergedDuplicate ? "Linked -- merged with the already-logged bill for this date" : (ex5.recurringId ? "Linked to recurring bill" : "Unlinked from recurring bill"));
+      });
     });
 
     wrap.querySelectorAll("[data-reg-category]").forEach(function(sel) {
@@ -3900,6 +3972,12 @@
     return newIncome.id;
   }
 
+  // Which real (already-logged) paychecks are collapsed in the Paycheck
+  // Planner -- keyed by income id, session-only (like registerSort/
+  // calendarViewDate above), not saved to your account. Expanded by
+  // default so nothing looks different the first time you open the tab.
+  var collapsedPaychecks = {};
+
   function renderPaycheckPlanner() {
     if (!paycheckMonthPicker.value) paycheckMonthPicker.value = currentMonthKey();
     var monthKey = paycheckMonthPicker.value;
@@ -4027,10 +4105,21 @@
 
       var hasOptions = unassigned.length > 0 || pendingOptions.length > 0;
 
+      // Collapsed shows just the header line (name, date, amount, actions)
+      // plus a compact Assigned/Leftover readout, so the totals that matter
+      // most are still visible without expanding -- only the bill table,
+      // summary row, and assign row are what actually hide.
+      var isCollapsed = !!collapsedPaychecks[inc.id];
+      var toggleTitle = isCollapsed ? "Expand this paycheck's activity" : "Collapse this paycheck's activity";
+
       return '<div class="paycheck-block">' +
         '<div class="paycheck-header">' +
-          '<div><span class="pc-title">' + escapeHtml(inc.source) + '</span><span class="pc-date">' + escapeHtml(dateLabel) + '</span></div>' +
+          '<div style="display:flex; align-items:center;">' +
+            '<button type="button" class="paycheck-toggle" data-pc-toggle="' + inc.id + '" title="' + toggleTitle + '" aria-expanded="' + (!isCollapsed) + '">' + (isCollapsed ? "▸" : "▾") + '</button>' +
+            '<span class="pc-title">' + escapeHtml(inc.source) + '</span><span class="pc-date">' + escapeHtml(dateLabel) + '</span>' +
+          '</div>' +
           '<div style="display:flex; align-items:center; gap:12px;">' +
+            '<span class="paycheck-summary-compact muted">Assigned ' + fmtMoney(assignedTotal) + ' · Left ' + fmtMoney(leftover) + '</span>' +
             '<div class="pc-amount">' + fmtMoney(inc.amount) + '</div>' +
             '<label style="display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-secondary); cursor:pointer;">' +
               '<input type="checkbox" class="row-checkbox" data-inc-cleared="' + inc.id + '"' + (inc.cleared ? ' checked' : '') + '> Cleared</label>' +
@@ -4038,16 +4127,18 @@
             '<button class="row-btn danger" data-inc-del="' + inc.id + '">Delete</button>' +
           '</div>' +
         '</div>' +
-        rows +
-        '<div class="paycheck-summary-row">' +
-          '<span>Assigned: ' + fmtMoney(assignedTotal) + '</span>' +
-          '<span class="leftover ' + (leftover < 0 ? "variance-over" : "variance-under") + '">Leftover to spend: ' + fmtMoney(leftover) + '</span>' +
-        '</div>' +
-        '<div class="paycheck-assign-row">' +
-          (hasOptions
-            ? '<select data-assign-select="' + inc.id + '"><option value="">Choose a bill (this or next month)…</option>' + assignOptions + pendingOptions + '</select>' +
-              '<button type="button" class="secondary" data-assign-btn="' + inc.id + '">Assign</button>'
-            : '<span class="hint" style="margin:0;">No unassigned bills left to add.</span>') +
+        '<div class="paycheck-body"' + (isCollapsed ? ' style="display:none;"' : '') + '>' +
+          rows +
+          '<div class="paycheck-summary-row">' +
+            '<span>Assigned: ' + fmtMoney(assignedTotal) + '</span>' +
+            '<span class="leftover ' + (leftover < 0 ? "variance-over" : "variance-under") + '">Leftover to spend: ' + fmtMoney(leftover) + '</span>' +
+          '</div>' +
+          '<div class="paycheck-assign-row">' +
+            (hasOptions
+              ? '<select data-assign-select="' + inc.id + '"><option value="">Choose a bill (this or next month)…</option>' + assignOptions + pendingOptions + '</select>' +
+                '<button type="button" class="secondary" data-assign-btn="' + inc.id + '">Assign</button>'
+              : '<span class="hint" style="margin:0;">No unassigned bills left to add.</span>') +
+          '</div>' +
         '</div>' +
       '</div>';
     }
@@ -4078,6 +4169,13 @@
 
     wrap.innerHTML = html;
 
+    wrap.querySelectorAll("[data-pc-toggle]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var id = b.dataset.pcToggle;
+        collapsedPaychecks[id] = !collapsedPaychecks[id];
+        renderPaycheckPlanner();
+      });
+    });
     wrap.querySelectorAll("[data-pc-paid]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpensePaid(b.dataset.pcPaid); }); });
     wrap.querySelectorAll("[data-pc-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpenseCleared(b.dataset.pcCleared); }); });
     wrap.querySelectorAll("[data-inc-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleIncomeCleared(b.dataset.incCleared); }); });
@@ -4525,6 +4623,12 @@
       // data-cc-type handler).
       var categoryField = isPayment ? "" :
         '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>';
+      // Same "Link to recurring bill" field as the Check Register's detail
+      // row -- covers a recurring card autopay/minimum-payment template
+      // typed in here directly rather than auto-logged.
+      var ccRecurringField = state.recurring.length > 0
+        ? '<span>Recurring bill <select class="register-inline-select" data-cc-recurring="' + e.id + '">' + recurringBillOptionsFor(e.recurringId) + '</select></span>'
+        : '';
       var detailInner =
         categoryField +
         '<span>Card <select class="register-inline-select" data-cc-card="' + e.id + '">' + creditCardOptionsFor(e.creditCardId) + '</select></span>' +
@@ -4532,6 +4636,7 @@
           '<option value="charge"' + (!isPayment ? ' selected' : '') + '>Charge (adds to balance)</option>' +
           '<option value="payment"' + (isPayment ? ' selected' : '') + '>Payment (reduces balance)</option>' +
         '</select></span>' +
+        ccRecurringField +
         '<span class="reg-detail-actions"><button class="row-btn danger" data-cc-del="' + e.id + '">Delete</button></span>';
       bodyHtml += '<tr class="register-txn-detail' + rowClass + '"><td></td><td colspan="6"><div class="register-detail-inline">' + detailInner + '</div></td></tr>';
     });
@@ -4634,6 +4739,20 @@
         ex.cleared = b.checked;
         saveState();
         showToast("Updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-recurring]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccRecurring; });
+        if (!ex) return;
+        ex.recurringId = sel.value || null;
+        var mergedDuplicate = clearAutoLoggedDuplicate(ex.recurringId, ex.date, ex.id);
+        saveState();
+        renderBalances();
+        renderDashboard();
+        renderExpenses();
+        renderPaycheckPlanner();
+        showToast(mergedDuplicate ? "Linked -- merged with the already-logged bill for this date" : (ex.recurringId ? "Linked to recurring bill" : "Unlinked from recurring bill"));
       });
     });
     wrap.querySelectorAll("[data-cc-category]").forEach(function(sel) {
