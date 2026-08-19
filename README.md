@@ -40,6 +40,26 @@ for exactly how that works.
   know it landed on (past or future) and every other occurrence is
   calculated from there, same as biweekly income below. They auto-log the
   next time you open the app once their date arrives
+  - **Editing a recurring template fixes the reminder itself, not just
+    future months.** If this period's occurrence is already logged but
+    still sitting open — not paid, not cleared — correcting the
+    template's amount, category/card, or due day updates that open
+    placeholder to match, instead of leaving the old amount showing until
+    next month. Only fields you haven't already hand-adjusted on that
+    occurrence get synced this way — if you already bumped this month's
+    amount for a one-time reason, that override sticks. And a due-day
+    change moves the still-open placeholder to the corrected date instead
+    of leaving the old one in place and logging a second, duplicate entry
+    alongside it. None of this touches an occurrence you've already paid
+    or cleared — that's real money that already moved, so it's left
+    exactly as it was
+  - **Editing the DATE on an already-logged occurrence's own row — e.g. to
+    reflect when it actually posted — doesn't cause a duplicate either.**
+    Whichever expense is already linked to that bill for the month still
+    counts as covering that month's occurrence no matter what exact day
+    it's dated to now, so the next time you open the app it won't think
+    that occurrence was never logged and auto-log a fresh one with the
+    template's original date and amount right alongside it
 - Recurring income can be **monthly** (same day every month, like a fixed
   salary date) or **every 2 weeks** (like a biweekly paycheck that lands
   on a different date each cycle — e.g. every other Friday) — for
@@ -59,15 +79,21 @@ for exactly how that works.
   Click any recent transaction, due-today, or upcoming-payment item to jump
   straight to editing it
 
-  A recurring bill still shows up here as due/past due even after you've
-  paid it, if the payment was typed straight into the Check Register
-  instead of coming from the auto-logged entry the Recurring tab created —
-  the app has no way to know a hand-typed "Diezmo" and the "Tithing 10%"
-  bill are the same real-world payment unless you tell it. Right on that
-  transaction's row (Check Register or CC Register), set its **Recurring
-  bill** field to match, and it'll drop off Due today/past due right away
-  (and silently absorb the now-redundant auto-logged placeholder for that
-  date, so you don't end up with two entries for the same bill)
+  If you type a recurring bill's payment straight into the Check Register
+  or CC Register instead of using the auto-logged entry the Recurring tab
+  created — a hand-typed "Diezmo" for the "Tithing 10%" bill, say — the app
+  links the two automatically as long as the account (category, or
+  card/type for a card payment) matches: the redundant auto-logged
+  placeholder quietly disappears, and the row picks up a small "Linked to
+  &lt;bill&gt;" tag so it's clear why the Dashboard now treats it as
+  covered. There's an **Unlink** button right next to that tag if it ever
+  guesses wrong. The one case this can't resolve on its own is when two or
+  more recurring bills share the same account and are both still
+  unresolved that month — genuinely ambiguous, so the transaction is left
+  unlinked rather than guessing; jumping to that transaction from Search,
+  the Dashboard, or a category breakdown still opens the full edit panel,
+  which has its own manual **Recurring bill** field for exactly this rare
+  case
 - **This month's paychecks**, shown as a row of cards on the Dashboard —
   each card shows the payday, income, a progress bar of what's been
   assigned against it, and what's left over. Click a card to drill into
@@ -119,11 +145,12 @@ for exactly how that works.
   card charge only ever lives on the CC Register; a card payment is a real
   bank transaction, so it's a Check Register row that also shows up
   linked on the CC Register — hover the badge for the specifics). Click a
-  result to jump straight to editing it: the edit form repeats that same
-  badge, and the matching row gets a light red/pink highlight in whichever
-  register table(s) it's in, so you can spot exactly where it is when you
-  scroll down to look — the highlight clears once you close the form
-  (Cancel, Save, or Delete)
+  result to jump straight to it — no edit panel in the way — landing you
+  on the right tab (Check Register or CC Register) with that row lit up in
+  a light red/pink highlight so it's easy to spot, and it's already
+  editable right there on the row. A card payment highlights on both
+  registers at once, since it's a real row in each. The highlight clears
+  as soon as you navigate to a different tab
 - Calendar view showing when recurring bills are due (as labeled tags in
   their category color, with a red checkmark once that occurrence is
   marked paid) and every income entry — recurring payday or one-time —
@@ -153,24 +180,26 @@ for exactly how that works.
   - **No separate "Add income"/"Add expense" cards** — type a new
     transaction straight into the blank line at the bottom: date, payee,
     an amount in either **Payment** or **Deposit**, and an **account**
-    (category). Everyday spending doesn't need a paycheck picked for it —
-    see **Paycheck assignment only applies to recurring bills** below
+    (category). Assigning it to a paycheck is entirely optional and happens
+    after adding it, right on its own row — see below
   - Every existing transaction's top line shows date, payee, payment or
     deposit, a **cleared** checkbox, a **paid** checkbox (expenses only —
     income doesn't have a "paid" state), and balance; the muted line right
-    underneath holds its account and Delete, plus, only for bills that
-    came from the Recurring tab, its paycheck and a Split button — change
-    any of those right there, no extra clicks
+    underneath holds its account, a **Paycheck** field, and Delete —
+    change any of those right there, no extra clicks
   - **Every field is directly editable right on the row** — date, payee/
-    description, amount, cleared, paid, account, and (for a bill that came
-    from the Recurring tab) paycheck and **Recurring bill** — nothing opens
-    a separate panel anymore; each change saves the moment you leave the
-    field or press Enter. Jumping in from **Search**, the **Dashboard**, a
-    category, or the **Paycheck Planner** still opens the full edit panel
-    above the register — that's just a quick way to land on the right
-    entry from elsewhere, and that panel still has its own **Delete**
-    button, so you can remove an entry right from any of those drill-downs
-    instead of backing out to find its row first
+    description, amount, cleared, paid, account, and paycheck — nothing
+    opens a separate panel anymore; each change saves the moment you leave
+    the field or press Enter. A transaction linked to a recurring bill
+    shows a small **Linked to &lt;bill&gt;** tag instead, with its own
+    **Unlink** button — see the note on automatic recurring-bill linking
+    under the Dashboard section above. Jumping in from **Search**, the
+    **Dashboard**, a category, or the
+    **Paycheck Planner** still opens the full edit panel above the
+    register — that's just a quick way to land on the right entry from
+    elsewhere, and that panel still has its own **Delete** button, so you
+    can remove an entry right from any of those drill-downs instead of
+    backing out to find its row first
   - A From/To date-range filter (plus a category filter), right at the top
     next to the "Check register" heading, narrows what's shown without
     touching the running balance, which is always based on your full
@@ -198,18 +227,21 @@ for exactly how that works.
     app listed every card charge here too and subtracted it from the
     running balance immediately, then subtracted it again when the
     matching payment posted — a real double-count bug, now fixed.)
-- **Paycheck assignment only applies to recurring bills.** The whole point
-  of assigning bills to paychecks is to know what not to spend so you're
-  not left short — that's only meaningful for the committed, recurring
-  payments (rent, utilities, subscriptions, debt), not for everyday
-  spending like food, gas, or shopping that's already tracked by category
-  in the Check Register. So a **Paycheck** field (and the **Split** button)
-  only ever shows up on a bill that came from the **Recurring** tab —
-  either auto-logged, logged early with **Log now**, or assigned straight
-  from the **Paychecks** tab. Anything you type directly into the Check
-  Register's blank row is everyday spending by definition and never gets
-  a Paycheck field at all — one less thing to fill in, and nothing to be
-  flagged for skipping
+- **Paycheck assignment is optional on every expense, but only required for
+  recurring bills.** The whole point of assigning a bill to a paycheck is
+  to know what not to spend so you're not left short — that matters most
+  for the committed, recurring payments (rent, utilities, subscriptions,
+  debt), and those get a paycheck assigned automatically wherever
+  possible: from **Recurring** tab defaults, **Log now**, or the
+  **Paychecks** tab. But a **Paycheck** field is available right on every
+  expense's row in the Check Register too, recurring or not — so a
+  one-off expense (an extra card payment, an irregular purchase you still
+  want to budget against a specific check) can be earmarked the same way,
+  purely as a reminder. Nothing requires picking one; it defaults to
+  **None** and stays that way unless you choose otherwise. The **Split**
+  button (dividing a bill's amount across two paychecks) stays limited to
+  bills that are actually paycheck-trackable — a one-off expense doesn't
+  have a recurring amount to split the same way
 - **Only recurring income counts as a "paycheck" too.** The same logic
   applies on the income side — a "paycheck" is something you plan bills
   against ahead of time, which only makes sense for income that actually
@@ -300,9 +332,11 @@ for exactly how that works.
   big ledger is easy to narrow down; the running Balance column always
   reflects the true, unfiltered running total, it just hides some rows.
   Every field on an existing row — Date, Description, Amount, Category,
-  Card, Type, cleared, and (once you have a recurring bill set up)
-  **Recurring bill** — is editable right in place, no separate edit screen
-  needed. A transaction dated
+  Card, Type, and cleared — is editable right in place, no separate edit
+  screen needed. A payment that matches a recurring card bill (same card
+  and type) links to it automatically, the same way the Check Register
+  does — see the note on automatic recurring-bill linking under the
+  Dashboard section above. A transaction dated
   after today shows **upcoming** instead of a dollar balance, since it
   hasn't posted yet — that keeps the ledger's running balance in
   agreement with the "Current balance" card above, which is also always

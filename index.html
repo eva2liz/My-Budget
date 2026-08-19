@@ -1124,7 +1124,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Set <strong>Recurring bill</strong> in the row below it so it still counts as paid — otherwise the Dashboard has no way to know that transaction and that bill are the same thing, and will keep showing the bill as due or past due even once it's checked off. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.)</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same account (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.)</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1218,7 +1218,7 @@
           <button type="button" class="secondary" id="ccClearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type, plus a <strong>Recurring bill</strong> field once you have one set up — is editable right in place, no separate panel; click Delete to remove it. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above.</p>
+      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above.</p>
       <div id="ccRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1829,6 +1829,10 @@
     return null;
   }
 
+  function recurringById(id) {
+    return state.recurring.find(function(r) { return r.id === id; }) || null;
+  }
+
   function creditCardColor(cc) {
     return (cc && cc.color) || "#4a72d6";
   }
@@ -2357,6 +2361,45 @@
       return !(e.recurringId === recurringId && e.date === date);
     });
     return state.expenses.length < before;
+  }
+
+  // Same "account" as far as recurring-bill matching goes -- same category
+  // (or the same card + payment-vs-charge), regardless of note, amount, or
+  // exact date, all of which can differ from the template (paid a few days
+  // early, a bit more than usual, typed under a different description).
+  function accountsMatchRecurringTemplate(r, ex) {
+    return (r.categoryId || null) === (ex.categoryId || null) &&
+           (r.creditCardId || null) === (ex.creditCardId || null) &&
+           (r.debtType || null) === (ex.debtType || null);
+  }
+
+  // Looks for exactly one still-open, never-touched auto-logged placeholder
+  // this month whose account matches the expense that was just added or
+  // corrected -- if there's a single unambiguous match, silently absorbs it
+  // instead of leaving two separate, unlinked entries for what's really the
+  // same real-world payment. This is what typing a recurring bill's payment
+  // straight into the register (or fixing its account afterward) used to
+  // require picking "Link to recurring bill" by hand for -- now it happens
+  // on its own. If more than one recurring bill could match (rare -- say,
+  // two bills sharing a category, both still open this month), nothing is
+  // linked automatically, since guessing wrong would be worse than leaving
+  // it alone. Returns the matched template, or null if nothing linked.
+  function autoLinkToRecurringBill(ex) {
+    if (ex.recurringId) return null;
+    var mk = monthKeyOf(ex.date);
+    var matches = [];
+    state.recurring.forEach(function(r) {
+      if (!accountsMatchRecurringTemplate(r, ex)) return;
+      var placeholder = state.expenses.find(function(e) {
+        return e.recurringId === r.id && e.id !== ex.id && monthKeyOf(e.date) === mk &&
+               !e.paid && !e.cleared && e.note === (r.name + " (recurring)");
+      });
+      if (placeholder) matches.push({ template: r, placeholder: placeholder });
+    });
+    if (matches.length !== 1) return null;
+    ex.recurringId = matches[0].template.id;
+    state.expenses = state.expenses.filter(function(e) { return e.id !== matches[0].placeholder.id; });
+    return matches[0].template;
   }
 
   function paycheckLabel(inc) {
@@ -3143,13 +3186,16 @@
         var pcTrackable = !!(r.recurringId || r.paycheckId);
         var pcField = '<span>Paycheck <select class="register-inline-select" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>';
         var splitBtn = pcTrackable ? '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' : '';
-        // Only worth showing once at least one recurring bill exists to link
-        // to -- lets a transaction typed straight into the register (which
-        // never gets a recurringId automatically) be tied back to a
-        // Recurring-tab bill right here, same field as the old edit-panel
-        // had, so the Dashboard's Due today/Upcoming panels recognize it.
-        var recurringField = state.recurring.length > 0
-          ? '<span>Recurring bill <select class="register-inline-select" data-reg-recurring="' + r.id + '">' + recurringBillOptionsFor(r.recurringId) + '</select></span>'
+        // A transaction typed straight into the register gets tied back to
+        // a matching Recurring-tab bill automatically (see
+        // autoLinkToRecurringBill) -- there's nothing to pick by hand
+        // anymore. When it IS linked, this just shows which bill so it's
+        // not a mystery why the Dashboard treats it as covered, with a
+        // one-click way to undo it if it's ever wrong.
+        var linkedTemplate = r.recurringId ? recurringById(r.recurringId) : null;
+        var recurringField = r.recurringId
+          ? '<span class="muted">Linked to ' + escapeHtml(linkedTemplate ? linkedTemplate.name : "a deleted bill") +
+            ' <button type="button" class="row-btn" data-reg-unlink-recurring="' + r.id + '" title="Unlink from this recurring bill">Unlink</button></span>'
           : '';
         detailInner =
           '<span>Account <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + accountOptionsFor(r.categoryId, r.creditCardId, r.debtType) + '</select></span>' +
@@ -3303,15 +3349,14 @@
       });
     });
 
-    wrap.querySelectorAll("[data-reg-recurring]").forEach(function(sel) {
-      sel.addEventListener("change", function() {
-        var ex5 = state.expenses.find(function(x) { return x.id === sel.dataset.regRecurring; });
-        if (!ex5) return;
-        ex5.recurringId = sel.value || null;
-        var mergedDuplicate = clearAutoLoggedDuplicate(ex5.recurringId, ex5.date, ex5.id);
+    wrap.querySelectorAll("[data-reg-unlink-recurring]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var ex = state.expenses.find(function(x) { return x.id === b.dataset.regUnlinkRecurring; });
+        if (!ex) return;
+        ex.recurringId = null;
         saveState();
         refreshAfterRegisterChange();
-        showToast(mergedDuplicate ? "Linked -- merged with the already-logged bill for this date" : (ex5.recurringId ? "Linked to recurring bill" : "Unlinked from recurring bill"));
+        showToast("Unlinked from recurring bill");
       });
     });
 
@@ -3321,9 +3366,11 @@
         if (!ex) return;
         applyAccountValue(ex, sel.value);
         ex.categoryGuessed = false;
+        var autoLinked = autoLinkToRecurringBill(ex);
         saveState();
         refreshAfterRegisterChange();
-        showToast(ex.creditCardId ? "Marked as a card payment" : "Account updated");
+        showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it")
+          : (ex.creditCardId ? "Marked as a card payment" : "Account updated"));
       });
     });
 
@@ -3406,18 +3453,18 @@
 
       if (hasPayment) {
         if (!accountValue) { showToast("Pick an account (category, or a card to pay down)"); return; }
-        // No paycheckId or recurringId here on purpose -- a transaction
-        // typed straight into the register isn't auto-linked to a Recurring
-        // template, so it won't be paycheck-trackable and the Dashboard's
-        // Due today/Upcoming panels will still list that template's
-        // occurrence as unpaid. If this row actually IS a recurring bill
-        // (paid a different way than usual, or just typed in ahead of the
-        // auto-log), open its edit form afterward and set "Link to
-        // recurring bill" there to tie the two together.
+        // If this account matches an unresolved recurring bill's own
+        // auto-logged placeholder for this month, autoLinkToRecurringBill
+        // below quietly ties the two together and absorbs the placeholder --
+        // so typing a recurring bill's payment straight into the register,
+        // instead of finding and editing the one already logged for it,
+        // doesn't leave the Dashboard thinking it's still unpaid.
         var newExpense = { id: uid(), date: date, amount: payment, categoryId: null, note: desc, paycheckId: null, paid: paid, cleared: cleared, creditCardId: null, debtType: null, recurringId: null };
         applyAccountValue(newExpense, accountValue);
         state.expenses.push(newExpense);
-        showToast(newExpense.creditCardId ? "Card payment added" : "Expense added");
+        var autoLinkedNew = autoLinkToRecurringBill(newExpense);
+        showToast(autoLinkedNew ? ("Linked to " + autoLinkedNew.name + " automatically -- merged with the reminder already logged for it")
+          : (newExpense.creditCardId ? "Card payment added" : "Expense added"));
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
         var incomeSourceValue = document.getElementById("regNewIncomeSource").value;
@@ -4706,11 +4753,15 @@
       // data-cc-type handler).
       var categoryField = isPayment ? "" :
         '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>';
-      // Same "Link to recurring bill" field as the Check Register's detail
-      // row -- covers a recurring card autopay/minimum-payment template
-      // typed in here directly rather than auto-logged.
-      var ccRecurringField = state.recurring.length > 0
-        ? '<span>Recurring bill <select class="register-inline-select" data-cc-recurring="' + e.id + '">' + recurringBillOptionsFor(e.recurringId) + '</select></span>'
+      // Same auto-link as the Check Register's detail row -- a recurring
+      // card autopay/minimum-payment template typed in here directly gets
+      // tied back to its bill automatically (see autoLinkToRecurringBill).
+      // When it IS linked, this just shows which bill, with a one-click way
+      // to undo it if it's ever wrong.
+      var ccLinkedTemplate = e.recurringId ? recurringById(e.recurringId) : null;
+      var ccRecurringField = e.recurringId
+        ? '<span class="muted">Linked to ' + escapeHtml(ccLinkedTemplate ? ccLinkedTemplate.name : "a deleted bill") +
+          ' <button type="button" class="row-btn" data-cc-unlink-recurring="' + e.id + '" title="Unlink from this recurring bill">Unlink</button></span>'
         : '';
       var detailInner =
         categoryField +
@@ -4824,18 +4875,17 @@
         showToast("Updated");
       });
     });
-    wrap.querySelectorAll("[data-cc-recurring]").forEach(function(sel) {
-      sel.addEventListener("change", function() {
-        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccRecurring; });
+    wrap.querySelectorAll("[data-cc-unlink-recurring]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var ex = state.expenses.find(function(x) { return x.id === b.dataset.ccUnlinkRecurring; });
         if (!ex) return;
-        ex.recurringId = sel.value || null;
-        var mergedDuplicate = clearAutoLoggedDuplicate(ex.recurringId, ex.date, ex.id);
+        ex.recurringId = null;
         saveState();
         renderBalances();
         renderDashboard();
         renderExpenses();
         renderPaycheckPlanner();
-        showToast(mergedDuplicate ? "Linked -- merged with the already-logged bill for this date" : (ex.recurringId ? "Linked to recurring bill" : "Unlinked from recurring bill"));
+        showToast("Unlinked from recurring bill");
       });
     });
     wrap.querySelectorAll("[data-cc-category]").forEach(function(sel) {
@@ -4843,12 +4893,14 @@
         var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccCategory; });
         if (!ex) return;
         ex.categoryId = sel.value || null;
+        var autoLinked = autoLinkToRecurringBill(ex);
         saveState();
         renderBalances();
         renderDashboard();
         renderExpenses();
         renderCategories();
-        showToast("Category updated");
+        renderPaycheckPlanner();
+        showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it") : "Category updated");
       });
     });
     wrap.querySelectorAll("[data-cc-card]").forEach(function(sel) {
@@ -4856,9 +4908,11 @@
         var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccCard; });
         if (!ex || !sel.value) return;
         ex.creditCardId = sel.value;
+        var autoLinked = autoLinkToRecurringBill(ex);
         saveState();
         renderBalances();
-        showToast("Card updated");
+        if (autoLinked) { renderDashboard(); renderExpenses(); renderPaycheckPlanner(); }
+        showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it") : "Card updated");
       });
     });
     wrap.querySelectorAll("[data-cc-type]").forEach(function(sel) {
@@ -4870,12 +4924,14 @@
         // charge to a payment here matches what picking "Pay down: <card>"
         // does everywhere else in the app.
         if (sel.value === "payment") ex.categoryId = null;
+        var autoLinked = autoLinkToRecurringBill(ex);
         saveState();
         renderBalances();
         renderDashboard();
         renderExpenses();
         renderCategories();
-        showToast("Updated");
+        renderPaycheckPlanner();
+        showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it") : "Updated");
       });
     });
     wrap.querySelectorAll("[data-cc-del]").forEach(function(b) {
@@ -4918,17 +4974,24 @@
       if (isNaN(amount) || amount <= 0) { showToast("Enter an amount"); return; }
       if (type === "charge" && !categoryId) { showToast("Pick a category for this charge"); return; }
 
-      state.expenses.push({
+      var newCcExpense = {
         id: uid(), date: date, amount: amount, categoryId: categoryId, note: desc,
         paycheckId: null, paid: false, cleared: cleared,
         creditCardId: cardId, debtType: type
-      });
+      };
+      state.expenses.push(newCcExpense);
+      // A card payment typed straight into the quick-add row gets the same
+      // auto-link treatment as everywhere else (see autoLinkToRecurringBill)
+      // -- charges never match a recurring bill's own placeholder, so this
+      // is only attempted for payments.
+      var autoLinked = type === "payment" ? autoLinkToRecurringBill(newCcExpense) : null;
       saveState();
       renderBalances();
       renderDashboard();
       renderExpenses();
       renderCategories();
-      showToast(type === "payment" ? "Payment added" : "Charge added");
+      showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it")
+        : (type === "payment" ? "Payment added" : "Charge added"));
     }
 
     var ccAddBtn = document.getElementById("ccNewAdd");
