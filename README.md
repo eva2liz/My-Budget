@@ -58,6 +58,16 @@ for exactly how that works.
 
   Click any recent transaction, due-today, or upcoming-payment item to jump
   straight to editing it
+
+  A recurring bill still shows up here as due/past due even after you've
+  paid it, if the payment was typed straight into the Check Register
+  instead of coming from the auto-logged entry the Recurring tab created —
+  the app has no way to know a hand-typed "Diezmo" and the "Tithing 10%"
+  bill are the same real-world payment unless you tell it. Open that
+  transaction's edit form and set **Link to recurring bill**, and it'll
+  drop off Due today/past due right away (and silently absorb the
+  now-redundant auto-logged placeholder for that date, so you don't end up
+  with two entries for the same bill)
 - **This month's paychecks**, shown as a row of cards on the Dashboard —
   each card shows the payday, income, a progress bar of what's been
   assigned against it, and what's left over. Click a card to drill into

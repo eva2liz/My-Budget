@@ -1089,6 +1089,10 @@
             <label for="expNote">Note</label>
             <input type="text" id="expNote" placeholder="Optional">
           </div>
+          <div class="field">
+            <label for="expRecurring">Link to recurring bill <span class="muted">(optional)</span></label>
+            <select id="expRecurring"><option value="">Not linked</option></select>
+          </div>
           <div class="field" id="expPaycheckField" style="display:none;">
             <label for="expPaycheck">Pay from paycheck</label>
             <select id="expPaycheck"><option value="">None</option></select>
@@ -1117,7 +1121,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field only shows up for bills that came from the Recurring tab — everyday spending doesn't need one.</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Click a payee to open the full edit form. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field only shows up for bills that came from the Recurring tab — everyday spending doesn't need one. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Open its edit form and set <strong>Link to recurring bill</strong> so it still counts as paid — otherwise the Dashboard has no way to know that transaction and that bill are the same thing, and will keep showing the bill as due or past due even once it's checked off.</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -2224,6 +2228,52 @@
       goalCatSelect.innerHTML = '<option value="">No linked category</option>' + categoryOptionsFor(null, false);
       goalCatSelect.value = prevGoalCat;
     }
+
+    // Expense edit form's "Link to recurring bill" field -- same
+    // preserve-the-current-selection approach as the selects above.
+    var expRecurringSelect = document.getElementById("expRecurring");
+    if (expRecurringSelect) {
+      var prevExpRecurring = expRecurringSelect.value;
+      expRecurringSelect.innerHTML = recurringBillOptionsFor(prevExpRecurring);
+    }
+  }
+
+  // Options for the expense edit form's "Link to recurring bill" field --
+  // lets a transaction typed straight into the Check Register (which never
+  // gets a recurringId automatically, see commitNewRegisterRow) be tied back
+  // to a Recurring-tab bill after the fact, so the Dashboard's Due
+  // today/Upcoming panels recognize it as that bill's occurrence instead of
+  // still listing the bill as unpaid.
+  function recurringBillOptionsFor(selectedId) {
+    var opts = '<option value="">Not linked</option>';
+    state.recurring.slice().sort(function(a, b) { return a.name.localeCompare(b.name); }).forEach(function(r) {
+      var sel = r.id === selectedId ? ' selected' : '';
+      opts += '<option value="' + r.id + '"' + sel + '>' + escapeHtml(r.name) + ' — ' + fmtMoney(r.amount) + '</option>';
+    });
+    return opts;
+  }
+
+  // runRecurring() auto-logs an unpaid placeholder expense for a bill the
+  // moment its due date arrives (see "recurring auto-log" below) -- so if a
+  // transaction is then also typed straight into the register by hand for
+  // that same bill and linked back to it here, there'd be two expenses
+  // sitting on the same occurrence: the untouched auto-logged placeholder
+  // (still unpaid) and the real one. The rest of the app already treats
+  // "one expense per recurringId+date" as a hard invariant (runRecurring's
+  // own dedup check, the Calendar's paid checkmark, the Due today panel),
+  // so once a different expense claims that same slot, the stale
+  // placeholder is superseded, not kept alongside it -- otherwise the
+  // Dashboard would keep flagging the placeholder as due forever, even
+  // though the bill it stands for has genuinely been paid. Returns true if
+  // a duplicate was actually found and removed.
+  function clearAutoLoggedDuplicate(recurringId, date, keepId) {
+    if (!recurringId) return false;
+    var before = state.expenses.length;
+    state.expenses = state.expenses.filter(function(e) {
+      if (e.id === keepId) return true;
+      return !(e.recurringId === recurringId && e.date === date);
+    });
+    return state.expenses.length < before;
   }
 
   function paycheckLabel(inc) {
@@ -2343,11 +2393,13 @@
     var amount = parseFloat(document.getElementById("expAmount").value);
     var accountValue = document.getElementById("expCategory").value;
     var note = document.getElementById("expNote").value.trim();
+    var recurringLinkId = document.getElementById("expRecurring").value || null;
     var paycheckId = document.getElementById("expPaycheck").value || null;
     var paid = document.getElementById("expPaid").checked;
     var cleared = document.getElementById("expCleared").checked;
     if (!date || isNaN(amount) || amount < 0 || !accountValue) return;
 
+    var mergedDuplicate = false;
     if (editId) {
       var ex = state.expenses.find(function(x){ return x.id === editId; });
       // Picking "Pay down: <card>" in the Account field instead of a real
@@ -2357,15 +2409,17 @@
       // creditCardId both set) is untouched as long as a real category
       // stays selected here.
       if (ex) {
-        ex.date = date; ex.amount = amount; ex.note = note; ex.paycheckId = paycheckId; ex.paid = paid; ex.cleared = cleared;
+        ex.date = date; ex.amount = amount; ex.note = note; ex.paycheckId = paycheckId; ex.paid = paid; ex.cleared = cleared; ex.recurringId = recurringLinkId;
         applyAccountValue(ex, accountValue);
+        mergedDuplicate = clearAutoLoggedDuplicate(recurringLinkId, date, ex.id);
       }
-      showToast("Expense updated");
+      showToast(mergedDuplicate ? "Expense updated -- merged with the already-logged bill for this date" : "Expense updated");
     } else {
-      var newExpense = { id: uid(), date: date, amount: amount, categoryId: null, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, creditCardId: null, debtType: null };
+      var newExpense = { id: uid(), date: date, amount: amount, categoryId: null, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, creditCardId: null, debtType: null, recurringId: recurringLinkId };
+      mergedDuplicate = clearAutoLoggedDuplicate(recurringLinkId, date, newExpense.id);
       applyAccountValue(newExpense, accountValue);
       state.expenses.push(newExpense);
-      showToast(newExpense.creditCardId ? "Card payment added" : "Expense added");
+      showToast(mergedDuplicate ? "Added -- merged with the already-logged bill for this date" : (newExpense.creditCardId ? "Card payment added" : "Expense added"));
     }
     saveState();
     resetExpenseForm();
@@ -2385,11 +2439,22 @@
     deleteExpense(id, resetExpenseForm);
   });
 
+  // Linking a Check-Register-typed transaction to a recurring bill often
+  // means you'll also want to assign it to a paycheck (the two go together
+  // for anything from the Recurring tab) -- so reveal that field the moment
+  // a bill is picked here, same as it already shows for anything that came
+  // in with a paycheckId or recurringId already set.
+  document.getElementById("expRecurring").addEventListener("change", function() {
+    var show = this.value || document.getElementById("expPaycheck").value;
+    document.getElementById("expPaycheckField").style.display = show ? "flex" : "none";
+  });
+
   function resetExpenseForm() {
     document.getElementById("expEditId").value = "";
     document.getElementById("expDate").value = todayISO();
     document.getElementById("expAmount").value = "";
     document.getElementById("expNote").value = "";
+    document.getElementById("expRecurring").value = "";
     document.getElementById("expPaycheck").value = "";
     document.getElementById("expPaid").checked = false;
     document.getElementById("expCleared").checked = false;
@@ -2421,6 +2486,7 @@
     document.getElementById("expAmount").value = ex.amount;
     document.getElementById("expCategory").innerHTML = accountOptionsFor(ex.categoryId, ex.creditCardId, ex.debtType, false);
     document.getElementById("expNote").value = ex.note || "";
+    document.getElementById("expRecurring").innerHTML = recurringBillOptionsFor(ex.recurringId || "");
     populatePaycheckSelect();
     document.getElementById("expPaycheck").value = ex.paycheckId || "";
     // Paycheck assignment only applies to bills generated from a Recurring
@@ -3187,14 +3253,15 @@
 
       if (hasPayment) {
         if (!accountValue) { showToast("Pick an account (category, or a card to pay down)"); return; }
-        // No paycheckId here on purpose -- expenses typed straight into the
-        // register are never linked to a Recurring template, so they aren't
-        // paycheck-trackable. Assign a paycheck from the Recurring/Paychecks
-        // tabs instead, for bills that actually need to come out of one.
-        // Picking "Pay down: <card>" instead of a category records this as
-        // a payment against that card's balance -- it'll show up on the CC
-        // Register automatically, no need to enter it there too.
-        var newExpense = { id: uid(), date: date, amount: payment, categoryId: null, note: desc, paycheckId: null, paid: paid, cleared: cleared, creditCardId: null, debtType: null };
+        // No paycheckId or recurringId here on purpose -- a transaction
+        // typed straight into the register isn't auto-linked to a Recurring
+        // template, so it won't be paycheck-trackable and the Dashboard's
+        // Due today/Upcoming panels will still list that template's
+        // occurrence as unpaid. If this row actually IS a recurring bill
+        // (paid a different way than usual, or just typed in ahead of the
+        // auto-log), open its edit form afterward and set "Link to
+        // recurring bill" there to tie the two together.
+        var newExpense = { id: uid(), date: date, amount: payment, categoryId: null, note: desc, paycheckId: null, paid: paid, cleared: cleared, creditCardId: null, debtType: null, recurringId: null };
         applyAccountValue(newExpense, accountValue);
         state.expenses.push(newExpense);
         showToast(newExpense.creditCardId ? "Card payment added" : "Expense added");
