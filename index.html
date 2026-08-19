@@ -1124,7 +1124,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field only shows up for bills that came from the Recurring tab — everyday spending doesn't need one. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Set <strong>Recurring bill</strong> in the row below it so it still counts as paid — otherwise the Dashboard has no way to know that transaction and that bill are the same thing, and will keep showing the bill as due or past due even once it's checked off. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.)</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Set <strong>Recurring bill</strong> in the row below it so it still counts as paid — otherwise the Dashboard has no way to know that transaction and that bill are the same thing, and will keep showing the bill as due or past due even once it's checked off. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.)</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -3116,17 +3116,18 @@
 
       var detailInner;
       if (r.kind === "expense") {
-        // Paycheck assignment (and splitting across two paychecks) only
-        // applies to bills that came from a Recurring template -- day-to-day
-        // spending typed straight into the register never had a paycheck to
-        // begin with, so there's no field/button to show for it here. Also
-        // show it for anything that already has a paycheckId (from before
-        // this behavior existed), so older assignments stay visible/editable
-        // instead of just vanishing from view.
+        // The Paycheck field is available on every expense row, not just
+        // ones that came from a Recurring template -- a one-off expense
+        // typed straight into the register (an extra card payment, say)
+        // can still be earmarked against a paycheck as a reminder of what
+        // it's meant to come out of, even though nothing requires picking
+        // one. Splitting across two paychecks, though, stays limited to
+        // bills that are actually paycheck-trackable (came from Recurring,
+        // or already have a paycheckId from before this changed) -- a
+        // one-off expense doesn't have a recurring amount to divide up the
+        // same way.
         var pcTrackable = !!(r.recurringId || r.paycheckId);
-        var pcField = pcTrackable
-          ? '<span>Paycheck <select class="register-inline-select" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>'
-          : '';
+        var pcField = '<span>Paycheck <select class="register-inline-select" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>';
         var splitBtn = pcTrackable ? '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' : '';
         // Only worth showing once at least one recurring bill exists to link
         // to -- lets a transaction typed straight into the register (which
