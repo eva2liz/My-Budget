@@ -1938,6 +1938,35 @@
     return !!highlightTxn && highlightTxn.id === id && highlightTxn.kind === kind;
   }
 
+  // Jumps straight to a transaction's own row -- highlighted red, scrolled
+  // into view -- instead of opening the edit panel. Used by Search, since
+  // every field on a Check Register / CC Register row is directly editable
+  // right there now (see above), so there's no reason to detour through a
+  // separate panel just to find and change it.
+  function jumpToRegisterRow(id, kind) {
+    if (kind === "income") {
+      setHighlightTxn(id, "income");
+      document.querySelector('nav.tabs button[data-panel="register"]').click();
+      scrollToHighlightedRow("checkRegisterWrap");
+      return;
+    }
+    var ex = state.expenses.find(function(x) { return x.id === id; });
+    if (!ex) return;
+    setHighlightTxn(ex.id, "expense");
+    // A credit card charge only ever lives on the CC Register (see
+    // expenseSourceInfo above) -- a payment (and every plain expense) has
+    // a real row on the Check Register.
+    var chargeOnly = ex.creditCardId && ex.debtType !== "payment";
+    document.querySelector('nav.tabs button[data-panel="' + (chargeOnly ? "balances" : "register") + '"]').click();
+    scrollToHighlightedRow(chargeOnly ? "ccRegisterWrap" : "checkRegisterWrap");
+  }
+
+  function scrollToHighlightedRow(wrapId) {
+    var wrap = document.getElementById(wrapId);
+    var row = wrap && wrap.querySelector(".register-row-search-highlight");
+    if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   // Ascending by date, same default as the Check Register's own
   // registerSort -- oldest at top, today's entries at the bottom next to
   // the blank add-row, so a newly-added transaction lands right where you
@@ -2078,6 +2107,38 @@
     return added;
   }
 
+  // Editing a recurring template is meant to fix the reminder itself, not
+  // just what shows up starting next month -- so any expense it already
+  // auto-logged that's still just sitting there open (not paid, not
+  // cleared -- nothing real has happened with it yet) gets synced to match
+  // the correction. Only fields that still match what the template USED to
+  // say are touched -- if you already hand-adjusted this occurrence's
+  // amount or account (e.g. paid a bit more this one time), that override
+  // is left alone. A schedule change (the due day moving, etc.) also
+  // relocates any such open placeholder to the newly correct date instead
+  // of leaving it stranded -- otherwise runRecurring() below would see the
+  // new date as a fresh, not-yet-logged occurrence and log a duplicate
+  // right alongside it.
+  function syncOpenRecurringExpenses(r, oldAmount, oldCategoryId, oldCreditCardId, oldDebtType) {
+    state.expenses.forEach(function(e) {
+      if (e.recurringId !== r.id || e.paid || e.cleared) return;
+      if (e.amount === oldAmount) e.amount = r.amount;
+      if (e.categoryId === oldCategoryId && e.creditCardId === oldCreditCardId && e.debtType === oldDebtType) {
+        e.categoryId = r.categoryId;
+        e.creditCardId = r.creditCardId || null;
+        e.debtType = r.debtType || null;
+      }
+      var validDates = recurringExpenseOccurrencesInMonth(r, monthKeyOf(e.date));
+      if (validDates.length > 0 && validDates.indexOf(e.date) === -1) {
+        var oldDateMs = new Date(e.date + "T00:00:00").getTime();
+        var closest = validDates.slice().sort(function(a, b) {
+          return Math.abs(new Date(a + "T00:00:00").getTime() - oldDateMs) - Math.abs(new Date(b + "T00:00:00").getTime() - oldDateMs);
+        })[0];
+        e.date = closest;
+      }
+    });
+  }
+
   function runRecurringIncome(silent) {
     var mk = currentMonthKey();
     var todayStr = todayISO();
@@ -2145,6 +2206,11 @@
       document.getElementById(btn.dataset.panel).classList.add("active");
       if (btn.dataset.panel === "dashboard") renderDashboard();
       if (btn.dataset.panel === "budgetVsActual") renderBudgetVsActualTab();
+      // A search's red "you are here" highlight only makes sense while
+      // you're actually looking at the register it landed you on -- clear
+      // it the moment you navigate elsewhere, so it doesn't turn up again,
+      // stale, next time you're back on Check Register or CC Register.
+      if (btn.dataset.panel !== "register" && btn.dataset.panel !== "balances") clearHighlightTxn();
       closeSidebar();
     });
   });
@@ -3537,8 +3603,10 @@
     if (editId) {
       var r = state.recurring.find(function(x){ return x.id === editId; });
       if (r) {
+        var oldAmount = r.amount, oldCategoryId = r.categoryId, oldCreditCardId = r.creditCardId, oldDebtType = r.debtType;
         r.name = name; r.amount = amount; r.frequency = frequency; r.day = recDay; r.startDate = recStartDate; r.paycheckId = paycheckId;
         applyAccountValue(r, accountValue);
+        syncOpenRecurringExpenses(r, oldAmount, oldCategoryId, oldCreditCardId, oldDebtType);
       }
       showToast("Recurring item updated");
     } else {
@@ -5176,8 +5244,7 @@
     wrap.querySelectorAll(".search-result-row").forEach(function(row) {
       row.addEventListener("click", function() {
         searchDialog.close();
-        if (row.dataset.searchType === "expense") editExpense(row.dataset.searchId);
-        else editIncome(row.dataset.searchId);
+        jumpToRegisterRow(row.dataset.searchId, row.dataset.searchType);
       });
       row.addEventListener("keydown", function(e) {
         if (e.key === "Enter") row.click();
