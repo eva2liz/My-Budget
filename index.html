@@ -292,9 +292,9 @@
     font-size: 11px;
     font-weight: 700;
     line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
   }
   .cal-chip {
     font-size: 10.5px;
@@ -302,12 +302,27 @@
     padding: 2px 5px;
     border-radius: 5px;
     color: #fff;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
   }
   .cal-chip.expense-chip { color: var(--text-primary); background: var(--surface-1); border-left: 3px solid; }
   .cal-paid-check { color: var(--critical); font-weight: 700; margin-right: 3px; }
+  /* The description truncates first -- the amount is what you're scanning
+     the calendar for, so it always stays fully visible rather than getting
+     clipped along with a long bill name. */
+  .cal-chip-name, .cal-income-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .cal-chip-amt, .cal-income-amt {
+    flex: 0 0 auto;
+    opacity: 0.8;
+    font-variant-numeric: tabular-nums;
+  }
   .cal-clickable { cursor: pointer; }
   .cal-clickable:hover { filter: brightness(0.94); }
   .cal-clickable:focus-visible { outline: 2px solid var(--series-1); outline-offset: 1px; }
@@ -1003,7 +1018,7 @@
       </div>
       <div id="calendarGrid"></div>
       <div class="legend" id="calendarLegend"></div>
-      <p class="hint">Every income entry — recurring payday or one-time — highlights the whole day in the color you picked for it. Recurring bills show as labeled tags in their category color on the day they're due, with a <span class="cal-paid-check" style="margin-right:0;">✓</span> once that occurrence is marked paid. Click any income or bill to open and edit it. One-time expenses aren't shown here — see the Paychecks tab for those.</p>
+      <p class="hint">Every recurring payday highlights the whole day in the color you picked for it. Recurring bills show as labeled tags in their category color on the day they're due, with a <span class="cal-paid-check" style="margin-right:0;">✓</span> once that occurrence is marked paid. Click any payday or bill to open and edit it. One-time expenses and one-time income aren't shown here, since they don't repeat month to month — see the Check Register or the Paychecks tab for those.</p>
     </div>
   </section>
 
@@ -2088,12 +2103,24 @@
     // would think that occurrence was never logged and auto-log a fresh
     // duplicate with the template's original date/amount right alongside
     // the one that was just corrected.
+    //
+    // "This month" itself is judged by occurrenceMonth, a snapshot stamped
+    // on the expense the moment it's first tied to an occurrence (below,
+    // and in autoLinkToRecurringBill / the manual-link save handler) --
+    // NOT by re-deriving the month from the live date field. If it were
+    // re-derived from date, editing that date across a month boundary (the
+    // bill actually posted a few days into next month, say) would make the
+    // expense silently stop counting toward THIS month's occurrence, and
+    // this function would log a fresh duplicate for the month it just
+    // "vacated" -- the positional fix above only protects same-month edits.
+    // Expenses from before this field existed fall back to the live date's
+    // month, same as before.
     var mk = currentMonthKey();
     var todayStr = todayISO();
     var added = 0;
     state.recurring.forEach(function(r) {
       var existingThisMonth = state.expenses.filter(function(e) {
-        return e.recurringId === r.id && monthKeyOf(e.date) === mk;
+        return e.recurringId === r.id && (e.occurrenceMonth || monthKeyOf(e.date)) === mk;
       }).sort(function(a, b) { return a.date.localeCompare(b.date); });
       recurringExpenseOccurrencesInMonth(r, mk).forEach(function(dateStr, i) {
         if (dateStr > todayStr) return; // wait until that date arrives
@@ -2111,7 +2138,7 @@
         }
         state.expenses.push({
           id: uid(), date: dateStr, amount: r.amount, categoryId: r.categoryId,
-          note: r.name + " (recurring)", recurringId: r.id,
+          note: r.name + " (recurring)", recurringId: r.id, occurrenceMonth: mk,
           paid: false, cleared: false, paycheckId: inheritedPaycheckId,
           creditCardId: r.creditCardId || null, debtType: r.debtType || null,
           viaAccountPicker: !!r.viaAccountPicker
@@ -2391,13 +2418,18 @@
     state.recurring.forEach(function(r) {
       if (!accountsMatchRecurringTemplate(r, ex)) return;
       var placeholder = state.expenses.find(function(e) {
-        return e.recurringId === r.id && e.id !== ex.id && monthKeyOf(e.date) === mk &&
+        return e.recurringId === r.id && e.id !== ex.id && (e.occurrenceMonth || monthKeyOf(e.date)) === mk &&
                !e.paid && !e.cleared && e.note === (r.name + " (recurring)");
       });
       if (placeholder) matches.push({ template: r, placeholder: placeholder });
     });
     if (matches.length !== 1) return null;
     ex.recurringId = matches[0].template.id;
+    // Inherit the placeholder's occurrence month rather than re-deriving it
+    // from ex's own date -- the two usually agree at link time, but keeping
+    // this explicit is what lets runRecurring() above stay correct even if
+    // ex's date is later edited across a month boundary (see its comment).
+    ex.occurrenceMonth = matches[0].placeholder.occurrenceMonth || monthKeyOf(matches[0].placeholder.date);
     state.expenses = state.expenses.filter(function(e) { return e.id !== matches[0].placeholder.id; });
     return matches[0].template;
   }
@@ -2535,13 +2567,23 @@
       // creditCardId both set) is untouched as long as a real category
       // stays selected here.
       if (ex) {
+        // occurrenceMonth is only (re)stamped when the recurring link is
+        // newly set or changed here, or was never stamped to begin with --
+        // NOT on every save. Otherwise a plain date correction on an
+        // already-linked expense (moving it later, to reflect when it
+        // actually posted) would silently follow the date to a new month
+        // and reopen the exact cross-month duplicate bug runRecurring()
+        // guards against (see its comment).
+        var linkChanging = ex.recurringId !== recurringLinkId;
         ex.date = date; ex.amount = amount; ex.note = note; ex.paycheckId = paycheckId; ex.paid = paid; ex.cleared = cleared; ex.recurringId = recurringLinkId;
         applyAccountValue(ex, accountValue);
         mergedDuplicate = clearAutoLoggedDuplicate(recurringLinkId, date, ex.id);
+        if (!recurringLinkId) ex.occurrenceMonth = null;
+        else if (linkChanging || !ex.occurrenceMonth) ex.occurrenceMonth = monthKeyOf(date);
       }
       showToast(mergedDuplicate ? "Expense updated -- merged with the already-logged bill for this date" : "Expense updated");
     } else {
-      var newExpense = { id: uid(), date: date, amount: amount, categoryId: null, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, creditCardId: null, debtType: null, recurringId: recurringLinkId };
+      var newExpense = { id: uid(), date: date, amount: amount, categoryId: null, note: note, paycheckId: paycheckId, paid: paid, cleared: cleared, creditCardId: null, debtType: null, recurringId: recurringLinkId, occurrenceMonth: recurringLinkId ? monthKeyOf(date) : null };
       mergedDuplicate = clearAutoLoggedDuplicate(recurringLinkId, date, newExpense.id);
       applyAccountValue(newExpense, accountValue);
       state.expenses.push(newExpense);
@@ -3354,6 +3396,7 @@
         var ex = state.expenses.find(function(x) { return x.id === b.dataset.regUnlinkRecurring; });
         if (!ex) return;
         ex.recurringId = null;
+        ex.occurrenceMonth = null;
         saveState();
         refreshAfterRegisterChange();
         showToast("Unlinked from recurring bill");
@@ -3937,17 +3980,13 @@
         });
       });
     });
-    // One-time (non-recurring) income shows too, on its actual date. Income
-    // generated BY a recurring template is skipped here since that template's
-    // day-of-month already represents it above — this avoids showing it twice.
-    state.income.forEach(function(inc) {
-      if (inc.recurringId) return;
-      if (monthKeyOf(inc.date) !== monthKey) return;
-      var day = parseInt(inc.date.slice(8, 10), 10);
-      (incomeByDay[day] = incomeByDay[day] || []).push({
-        kind: "income-onetime", id: inc.id, name: inc.source, amount: inc.amount, color: inc.color || "#1baf7a"
-      });
-    });
+    // One-time (non-recurring) income deliberately does NOT show here -- the
+    // Calendar is meant to be a schedule of things that repeat every month
+    // (bills and paydays), not a ledger of everything that happened. A
+    // one-off deposit doesn't tell you anything about NEXT month, so mixing
+    // it in among the recurring paydays would make the calendar noisier
+    // without being any more useful for planning ahead. It's still fully
+    // visible in the Check Register and on the Dashboard.
 
     var weekdayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
     var html = weekdayNames.map(function(w) { return '<div class="cal-weekday">' + w + '</div>'; }).join("");
@@ -3977,7 +4016,8 @@
           var dataAttrs = item.kind === "income-onetime"
             ? 'data-kind="income-onetime" data-id="' + item.id + '"'
             : 'data-kind="income" data-recid="' + item.recid + '" data-date="' + dateStr + '"';
-          return '<div class="cal-income-label cal-clickable" ' + dataAttrs + ' style="color:' + textColor + ';" title="' + escapeHtml(item.name) + ': ' + fmtMoney(item.amount) + ' — click to view/edit" tabindex="0" role="button">' + escapeHtml(item.name) + '</div>';
+          return '<div class="cal-income-label cal-clickable" ' + dataAttrs + ' style="color:' + textColor + ';" title="' + escapeHtml(item.name) + ': ' + fmtMoney(item.amount) + ' — click to view/edit" tabindex="0" role="button">' +
+            '<span class="cal-income-name">' + escapeHtml(item.name) + '</span><span class="cal-income-amt">' + fmtMoney(item.amount) + '</span></div>';
         }).join("");
       }
 
@@ -3990,7 +4030,8 @@
         var loggedExpense = state.expenses.find(function(e) { return e.recurringId === item.id && e.date === dateStr; });
         var paid = !!(loggedExpense && loggedExpense.paid);
         var checkMark = paid ? '<span class="cal-paid-check" aria-hidden="true">✓</span>' : '';
-        return '<div class="cal-chip expense-chip cal-clickable' + (paid ? ' cal-chip-paid' : '') + '" data-kind="bill" data-recid="' + item.id + '" data-date="' + dateStr + '" style="border-left-color:' + escapeHtml(item.color) + '" title="' + escapeHtml(item.name) + ' due: ' + fmtMoney(item.amount) + (paid ? " — paid" : "") + ' — click to view/edit" tabindex="0" role="button">' + checkMark + escapeHtml(item.name) + '</div>';
+        return '<div class="cal-chip expense-chip cal-clickable' + (paid ? ' cal-chip-paid' : '') + '" data-kind="bill" data-recid="' + item.id + '" data-date="' + dateStr + '" style="border-left-color:' + escapeHtml(item.color) + '" title="' + escapeHtml(item.name) + ' due: ' + fmtMoney(item.amount) + (paid ? " — paid" : "") + ' — click to view/edit" tabindex="0" role="button">' +
+          checkMark + '<span class="cal-chip-name">' + escapeHtml(item.name) + '</span><span class="cal-chip-amt">' + fmtMoney(item.amount) + '</span></div>';
       }).join("");
 
       html += '<div class="cal-day' + (isToday ? ' today' : '') + (incomeItems.length ? ' has-income' : '') + '"' + cellStyleAttr + '>' +
@@ -4880,6 +4921,7 @@
         var ex = state.expenses.find(function(x) { return x.id === b.dataset.ccUnlinkRecurring; });
         if (!ex) return;
         ex.recurringId = null;
+        ex.occurrenceMonth = null;
         saveState();
         renderBalances();
         renderDashboard();
