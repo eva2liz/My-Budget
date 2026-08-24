@@ -1139,7 +1139,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same account (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.)</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same account (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1233,7 +1233,7 @@
           <button type="button" class="secondary" id="ccClearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above.</p>
+      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above. <strong>Uncleared rows always sink to the bottom</strong> of whatever order the ledger's currently sorted in, so an unreconciled charge never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</p>
       <div id="ccRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -2005,9 +2005,19 @@
       default: return "";
     }
   }
+  // Same "uncleared sinks to the bottom, no matter the active sort column"
+  // rule as the Check Register's sortRegisterRows -- see the comment
+  // there for the full reasoning. A row drops back into its normal place
+  // the moment it's checked off cleared. Sorting explicitly BY the ✓
+  // column is still its own plain single-column sort, same exception.
   function sortCCLedgerRows(rows) {
     var key = ccRegisterSort.key, dir = ccRegisterSort.dir;
+    var groupUnclearedLast = key !== "cleared";
     rows.sort(function(a, b) {
+      if (groupUnclearedLast) {
+        var ag = a.expense.cleared ? 0 : 1, bg = b.expense.cleared ? 0 : 1;
+        if (ag !== bg) return ag - bg;
+      }
       var av = ccRegisterSortValue(a, key), bv = ccRegisterSortValue(b, key);
       var cmp = (typeof av === "string") ? av.localeCompare(bv) : (av - bv);
       if (cmp === 0) {
@@ -3166,9 +3176,30 @@
       default: return "";
     }
   }
+  // Uncleared rows sink to the bottom no matter which column the register
+  // is currently sorted by -- reconciling against a bank statement means
+  // walking down the list matching what's already cleared there, and an
+  // uncleared row sitting in the middle of that (in date order or any
+  // other order) throws the running balance you're checking against off.
+  // The moment a row gets checked off as cleared it drops back into its
+  // normal place among the rest, in whatever order is currently active
+  // (plain date order by default). This is a pure DISPLAY grouping, same
+  // as any other column sort -- it never touches the balance column
+  // itself, which is always the true running total computed in real date
+  // order regardless of how the table is currently sorted (see
+  // buildRegisterRows). Explicitly sorting BY the ✓ column itself is the
+  // one exception: that's already a deliberate cleared/uncleared grouping
+  // the user asked for by clicking that header, so it's left as a plain
+  // single-column sort instead of stacking another cleared grouping on
+  // top of it.
   function sortRegisterRows(rows) {
     var key = registerSort.key, dir = registerSort.dir;
+    var groupUnclearedLast = key !== "cleared";
     rows.sort(function(a, b) {
+      if (groupUnclearedLast) {
+        var ag = a.cleared ? 0 : 1, bg = b.cleared ? 0 : 1;
+        if (ag !== bg) return ag - bg;
+      }
       var av = registerSortValue(a, key), bv = registerSortValue(b, key);
       var cmp = (typeof av === "string") ? av.localeCompare(bv) : (av - bv);
       if (cmp === 0) {

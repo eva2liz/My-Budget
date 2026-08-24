@@ -192,6 +192,16 @@ for exactly how that works.
   **Date** to go back to plain chronological order. The running balance
   never recalculates when you sort — it's always the true running total in
   date order, just displayed in whatever order you're currently sorted by
+  - **Uncleared rows always sink to the bottom**, no matter which column
+    the table's currently sorted by (Date, Payee, whatever) — so an
+    unreconciled transaction never sits in the middle of the list
+    throwing off the balance you're checking against while going down
+    your bank statement. The moment you check a row off **cleared**, it
+    drops right back into its normal place in the current sort order. The
+    one exception is sorting explicitly BY the **✓** column itself —
+    clicking that header is already a deliberate cleared/uncleared
+    grouping, so it's left as a plain sort instead of adding another
+    grouping on top of it. Same behavior on the **CC Register**
 - **Check Register tab**: a full-width ledger styled like a desktop
   checkbook register (QuickBooks-style) — two lines per transaction, a
   **balance column** that runs down the page so you can reconcile against
