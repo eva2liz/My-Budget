@@ -1470,7 +1470,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
 <script>
 (function () {
   "use strict";
@@ -2902,7 +2901,7 @@
       rows.push({
         kind: "income", id: inc.id, date: inc.date, desc: inc.source || "",
         amount: Math.abs(inc.amount), cleared: !!inc.cleared, imported: !!inc.imported,
-        linkedGoalId: inc.linkedGoalId || null
+        linkedGoalId: inc.linkedGoalId || null, reclassCategoryId: inc.reclassCategoryId || null
       });
     });
     rows.sort(function(a, b) {
@@ -2999,21 +2998,41 @@
   // from the goal's running total (see goalWithdrawals/goalWithdrawalTotal)
   // and the deposit is listed at the bottom of that goal alongside its
   // contributions, so it's clear where the dip in "% saved" came from.
-  function incomeSourceOptionsFor(linkedGoalId, includePlaceholder) {
+  //
+  // Picking "Reclass to: <category>" instead marks this deposit as money
+  // coming BACK OUT of that category's spending for the month -- e.g. you
+  // withdrew $400 as cash under "Other," only spent $250 of it, and
+  // redeposited the leftover $150. That $150 still counts as real income
+  // (it did land back in checking), but it's also subtracted from
+  // "Other"'s spending total everywhere that total shows up (Budget vs.
+  // Actual, the category chart, the category drill-down) -- see
+  // totalsForMonth. Deliberately mutually exclusive with a savings
+  // withdrawal above: a single deposit is either regular income, a
+  // withdrawal from one goal, or a reclass against one category, never
+  // more than one at a time.
+  function incomeSourceOptionsFor(linkedGoalId, includePlaceholder, reclassCategoryId) {
     var placeholder = includePlaceholder ? '<option value="">Regular income</option>' : '';
-    if (state.savingsGoals.length === 0) return placeholder;
-    var goalOptions = state.savingsGoals.map(function(g) {
-      var val = "goal:" + g.id;
-      return '<option value="' + val + '"' + (val === ("goal:" + linkedGoalId) ? ' selected' : '') + '>From savings: ' + escapeHtml(g.name) + '</option>';
-    }).join("");
-    return placeholder + '<optgroup label="Withdraw from a savings goal">' + goalOptions + '</optgroup>';
+    var goalOptions = state.savingsGoals.length
+      ? '<optgroup label="Withdraw from a savings goal">' + state.savingsGoals.map(function(g) {
+          var val = "goal:" + g.id;
+          return '<option value="' + val + '"' + (val === ("goal:" + linkedGoalId) ? ' selected' : '') + '>From savings: ' + escapeHtml(g.name) + '</option>';
+        }).join("") + '</optgroup>'
+      : '';
+    var reclassOptions = state.categories.length
+      ? '<optgroup label="Reclass against a category">' + state.categories.map(function(c) {
+          var val = "cat:" + c.id;
+          return '<option value="' + val + '"' + (val === ("cat:" + reclassCategoryId) ? ' selected' : '') + '>Reclass to: ' + escapeHtml(c.name) + '</option>';
+        }).join("") + '</optgroup>'
+      : '';
+    return placeholder + goalOptions + reclassOptions;
   }
 
   // Refreshes the income edit form's static "From" <select> (unlike the
   // Check Register's own selects, which are rebuilt fresh from a template
   // string on every render, this one lives in static HTML so it needs its
-  // options refreshed by hand) -- called on load and any time a goal is
-  // added, renamed, or deleted, same idea as populateCategorySelects().
+  // options refreshed by hand) -- called on load and any time a goal OR a
+  // category is added, renamed, or deleted, same idea as
+  // populateCategorySelects().
   function populateIncomeGoalSelect() {
     var sel = document.getElementById("incLinkedGoal");
     if (!sel) return;
@@ -3103,9 +3122,27 @@
 
   // The income-side counterpart to applyAccountValue() -- applies a value
   // picked from incomeSourceOptionsFor() to an income-shaped object. Empty
-  // means regular income; "goal:<id>" marks it a withdrawal from that goal.
+  // means regular income; "goal:<id>" marks it a withdrawal from that goal;
+  // "cat:<id>" marks it a reclass against that category's spending. The two
+  // are mutually exclusive by construction -- setting one always clears the
+  // other, since the value can only ever start with one prefix.
   function applyIncomeSourceValue(inc, value) {
     inc.linkedGoalId = (value && value.indexOf("goal:") === 0) ? value.slice(5) : null;
+    inc.reclassCategoryId = (value && value.indexOf("cat:") === 0) ? value.slice(4) : null;
+  }
+
+  // A short toast description of what an income entry's "From" value just
+  // got set to, shared by every place that calls applyIncomeSourceValue so
+  // the wording stays consistent. `regularLabel` is what to say when it's
+  // plain regular income (callers phrase that differently -- "Regular
+  // income" for an edit, "Income added" for a brand new row).
+  function incomeSourceToastLabel(inc, regularLabel) {
+    if (inc.linkedGoalId) return "Marked as a savings withdrawal";
+    if (inc.reclassCategoryId) {
+      var cat = categoryById(inc.reclassCategoryId);
+      return "Reclassed to " + (cat ? cat.name : "category");
+    }
+    return regularLabel;
   }
 
   // Click-a-column-title-to-sort state for the Check Register. Lives outside
@@ -3249,7 +3286,7 @@
           '</span>';
       } else {
         detailInner =
-          '<span>From <select class="register-inline-select" data-reg-income-source="' + r.id + '">' + incomeSourceOptionsFor(r.linkedGoalId, true) + '</select></span>' +
+          '<span>From <select class="register-inline-select" data-reg-income-source="' + r.id + '">' + incomeSourceOptionsFor(r.linkedGoalId, true, r.reclassCategoryId) + '</select></span>' +
           '<span class="reg-detail-actions">' +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="income">Delete</button>' +
           '</span>';
@@ -3424,7 +3461,7 @@
         applyIncomeSourceValue(inc, sel.value);
         saveState();
         refreshAfterRegisterChange();
-        showToast(inc.linkedGoalId ? "Marked as a savings withdrawal" : "Regular income");
+        showToast(incomeSourceToastLabel(inc, "Regular income"));
       });
     });
 
@@ -3511,10 +3548,10 @@
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
         var incomeSourceValue = document.getElementById("regNewIncomeSource").value;
-        var newIncome = { id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared, linkedGoalId: null };
+        var newIncome = { id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared, linkedGoalId: null, reclassCategoryId: null };
         applyIncomeSourceValue(newIncome, incomeSourceValue);
         state.income.push(newIncome);
-        showToast(newIncome.linkedGoalId ? "Withdrawal logged" : "Income added");
+        showToast(newIncome.linkedGoalId ? "Withdrawal logged" : incomeSourceToastLabel(newIncome, "Income added"));
       }
 
       saveState();
@@ -3576,7 +3613,7 @@
       }
       showToast("Income updated");
     } else {
-      var newIncome = { id: uid(), date: date, amount: amount, source: source, color: color, note: note, cleared: cleared, linkedGoalId: null };
+      var newIncome = { id: uid(), date: date, amount: amount, source: source, color: color, note: note, cleared: cleared, linkedGoalId: null, reclassCategoryId: null };
       applyIncomeSourceValue(newIncome, linkedGoalValue);
       state.income.push(newIncome);
       showToast("Income added");
@@ -3635,7 +3672,8 @@
     document.getElementById("incNote").value = inc.note || "";
     document.getElementById("incCleared").checked = !!inc.cleared;
     populateIncomeGoalSelect();
-    document.getElementById("incLinkedGoal").value = inc.linkedGoalId ? "goal:" + inc.linkedGoalId : "";
+    document.getElementById("incLinkedGoal").value = inc.linkedGoalId ? "goal:" + inc.linkedGoalId
+      : (inc.reclassCategoryId ? "cat:" + inc.reclassCategoryId : "");
     document.getElementById("incomeFormTitle").textContent = "Edit income";
     document.getElementById("incomeSubmitBtn").textContent = "Save changes";
     document.getElementById("incomeCancelEdit").style.display = "inline-block";
@@ -4469,6 +4507,7 @@
   // places (charts, the calendar, expense lists, category dropdowns).
   function refreshAfterCategoryChange() {
     populateCategorySelects();
+    populateIncomeGoalSelect();
     renderCategories();
     renderDashboard();
     renderExpenses();
@@ -4511,6 +4550,7 @@
       state.categories = state.categories.filter(function(c){ return c.id !== id; });
       saveState();
       populateCategorySelects();
+      populateIncomeGoalSelect();
       renderCategories();
       renderDashboard();
       renderExpenses();
@@ -4930,6 +4970,7 @@
         showToast("Unlinked from recurring bill");
       });
     });
+
     wrap.querySelectorAll("[data-cc-category]").forEach(function(sel) {
       sel.addEventListener("change", function() {
         var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccCategory; });
@@ -5386,6 +5427,17 @@
         totals[e.categoryId] = (totals[e.categoryId] || 0) + e.amount;
       }
     });
+    // A deposit marked "Reclass to: <category>" (see incomeSourceOptionsFor)
+    // is money coming back OUT of that category's spending -- e.g. $150 of a
+    // $400 cash withdrawal under "Other" gets redeposited, so "Other"'s
+    // total for the month drops by $150. It's still real income (counted in
+    // incomeForMonth same as any deposit), just netted against the category
+    // here rather than tied to the one specific expense it's offsetting.
+    state.income.forEach(function(inc) {
+      if (!inc.reclassCategoryId) return;
+      if (monthKeyOf(inc.date) !== monthKey) return;
+      totals[inc.reclassCategoryId] = (totals[inc.reclassCategoryId] || 0) - inc.amount;
+    });
     return totals;
   }
 
@@ -5620,28 +5672,46 @@
 
   // Answers "what exactly makes up this number" -- every expense dated in
   // the given month under the given category, regardless of which paycheck
-  // (if any) it's assigned to. This is the ground truth behind every total
-  // on the dashboard: if a category ever looks off, this is where to check.
+  // (if any) it's assigned to, PLUS any deposit reclassed against this same
+  // category (see incomeSourceOptionsFor/totalsForMonth) shown as a
+  // negative line so the total here always matches the one on Budget vs.
+  // Actual. This is the ground truth behind every total on the dashboard:
+  // if a category ever looks off, this is where to check.
   function openCategoryDrillDialog(catId, monthKey) {
     var cat = categoryById(catId);
-    var rows = state.expenses.filter(function(e) { return e.categoryId === catId && monthKeyOf(e.date) === monthKey; })
-                              .sort(function(a,b) { return a.date.localeCompare(b.date); });
+    var expenseRows = state.expenses.filter(function(e) { return e.categoryId === catId && monthKeyOf(e.date) === monthKey; })
+      .map(function(e) {
+        return { kind: "expense", id: e.id, date: e.date, note: e.note, amount: e.amount, paycheckId: e.paycheckId, recurringId: e.recurringId, splitGroupId: e.splitGroupId };
+      });
+    var reclassRows = state.income.filter(function(inc) { return inc.reclassCategoryId === catId && monthKeyOf(inc.date) === monthKey; })
+      .map(function(inc) {
+        return { kind: "reclass", id: inc.id, date: inc.date, note: inc.source, amount: -inc.amount };
+      });
+    var rows = expenseRows.concat(reclassRows).sort(function(a,b) { return a.date.localeCompare(b.date); });
     document.getElementById("categoryDrillTitle").textContent = (cat ? cat.name : "(deleted category)") + " — " + monthLabel(monthKey);
-    var total = rows.reduce(function(s,e){ return s + e.amount; }, 0);
+    var total = rows.reduce(function(s,r){ return s + r.amount; }, 0);
     document.getElementById("categoryDrillSummary").textContent = rows.length + " transaction" + (rows.length === 1 ? "" : "s") + " totaling " + fmtMoney(total) + ".";
     var wrap = document.getElementById("categoryDrillWrap");
     if (rows.length === 0) {
       wrap.innerHTML = '<div class="empty-state">No transactions found.</div>';
     } else {
-      var body = rows.map(function(e) {
-        var pc = e.paycheckId ? state.income.find(function(inc){ return inc.id === e.paycheckId; }) : null;
+      var body = rows.map(function(r) {
+        if (r.kind === "reclass") {
+          return '<tr>' +
+            '<td>' + escapeHtml(r.date) + '</td>' +
+            '<td class="drill-note-cell" data-drill-edit="' + r.id + '" data-drill-kind="income" tabindex="0" role="button" title="Click to edit this deposit">' + escapeHtml(r.note || "(no note)") + ' <span class="muted">(reclassed deposit)</span></td>' +
+            '<td class="num variance-under">' + fmtMoney(r.amount) + '</td>' +
+            '<td><span class="muted">—</span></td>' +
+          '</tr>';
+        }
+        var pc = r.paycheckId ? state.income.find(function(inc){ return inc.id === r.paycheckId; }) : null;
         var pcLabel = pc ? (escapeHtml(pc.source) + " · " + escapeHtml(pc.date))
-          : (e.recurringId ? '<span class="muted">Unassigned</span>' : '<span class="muted">—</span>');
-        var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
+          : (r.recurringId ? '<span class="muted">Unassigned</span>' : '<span class="muted">—</span>');
+        var splitTag = r.splitGroupId ? ' <span class="muted">(split)</span>' : "";
         return '<tr>' +
-          '<td>' + escapeHtml(e.date) + '</td>' +
-          '<td class="drill-note-cell" data-drill-edit="' + e.id + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(e.note || "(no note)") + splitTag + '</td>' +
-          '<td class="num">' + fmtMoney(e.amount) + '</td>' +
+          '<td>' + escapeHtml(r.date) + '</td>' +
+          '<td class="drill-note-cell" data-drill-edit="' + r.id + '" data-drill-kind="expense" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(r.note || "(no note)") + splitTag + '</td>' +
+          '<td class="num">' + fmtMoney(r.amount) + '</td>' +
           '<td>' + pcLabel + '</td>' +
         '</tr>';
       }).join("");
@@ -5649,7 +5719,8 @@
       wrap.querySelectorAll("[data-drill-edit]").forEach(function(cell) {
         function openEdit() {
           document.getElementById("categoryDrillDialog").close();
-          editExpense(cell.dataset.drillEdit);
+          if (cell.dataset.drillKind === "income") editIncome(cell.dataset.drillEdit);
+          else editExpense(cell.dataset.drillEdit);
         }
         cell.addEventListener("click", openEdit);
         cell.addEventListener("keydown", function(e) { if (e.key === "Enter") openEdit(); });
@@ -5961,6 +6032,21 @@
       showToast("Pick at least one register to export");
       return;
     }
+    // Type and Amount both use the exact same words the registers
+    // themselves already use on screen -- the Check Register's own amount
+    // columns are literally labeled "Payment" and "Deposit" (see
+    // regNewPayment/regNewDeposit above), and the CC Register's own type
+    // picker is "Charge" vs "Payment" (see ccNewType) -- so "Payment" here
+    // always means a Check Register row (a plain expense OR a card
+    // payment; the Category/Source column already spells out "Pay down:
+    // <card>" for the latter) and "Charge" always means a CC Register row.
+    // Amount is signed so the column is usable straight in Excel/Sheets
+    // (SUM, running totals, "negative = red") without opening every row to
+    // see what it was -- money leaving the register it's printed under is
+    // negative, money staying/arriving is positive. A charge ADDS to what's
+    // owed on the card, so it's positive there -- the exact same
+    // +charges/-payments convention computeCreditCardBalance already uses
+    // for a card's running balance, just applied per row instead of summed.
     var rows = [["Date","Type","Register","Category / Source","Note","Amount"]];
     state.expenses.forEach(function(e) {
       // A charge only ever lives on the CC Register; a payment is a real
@@ -5972,11 +6058,14 @@
       var included = isCharge ? includeCC : (isPayment ? (includeCheck || includeCC) : includeCheck);
       if (!included) return;
       var registerLabel = expenseSourceInfo(e).label;
-      rows.push([e.date, "Expense", registerLabel, accountLabelFor(e.categoryId, e.creditCardId, e.debtType), e.note || "", e.amount.toFixed(2)]);
+      var typeLabel = isCharge ? "Charge" : "Payment";
+      var signedAmount = isCharge ? e.amount : -e.amount;
+      rows.push([e.date, typeLabel, registerLabel, accountLabelFor(e.categoryId, e.creditCardId, e.debtType), e.note || "", signedAmount.toFixed(2)]);
     });
     if (includeCheck) {
       state.income.forEach(function(inc) {
-        rows.push([inc.date, "Income", "Check Register", inc.source, inc.note || "", inc.amount.toFixed(2)]);
+        var typeLabel = inc.reclassCategoryId ? "Deposit (reclass)" : "Deposit";
+        rows.push([inc.date, typeLabel, "Check Register", inc.source, inc.note || "", inc.amount.toFixed(2)]);
       });
     }
     if (rows.length === 1) {

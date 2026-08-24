@@ -137,6 +137,25 @@ for exactly how that works.
     linked category and withdrawals logged against it — is listed at the
     bottom of that goal, newest first, so you can see exactly what added up
     to its current total. Click any of them to jump straight to editing it
+- **Reclass a redeposit against a category** — for when you pull out more
+  cash (or otherwise spend) than you end up using and put some of it back:
+  say $400 gets withdrawn and logged as an expense under "Other," but only
+  $250 actually gets spent, so the leftover $150 goes back into the bank.
+  Logging that as a deposit, the same optional **From** field used for
+  savings withdrawals also offers "Reclass to: &lt;category&gt;" for every
+  category you have. Picking it still counts the deposit as real income
+  (the money did land back in checking), but it's also subtracted from
+  that category's spending total for the month everywhere that total shows
+  up — Budget vs. Actual, the "Spending by category" chart, and the
+  category's own drill-down (which lists the reclassed deposit as its own
+  line, in green, right alongside the expenses it's offsetting, so the
+  numbers always reconcile). Unlike a goal withdrawal, this nets against
+  the category as a whole rather than tying to one specific expense — it
+  doesn't matter which withdrawal the leftover cash technically came from,
+  only that the category's true spending is $150 less than what was
+  originally logged. Mutually exclusive with a savings withdrawal on the
+  same deposit — a deposit is regular income, a goal withdrawal, or a
+  category reclass, never more than one
 - **Search** (magnifying-glass icon, top right) — find any expense or
   income entry by note, source, category, amount, or date, no matter what
   month it's in or whether it's been assigned to a paycheck yet. Every
@@ -152,11 +171,13 @@ for exactly how that works.
   registers at once, since it's a real row in each. The highlight clears
   as soon as you navigate to a different tab
 - Calendar view showing when recurring bills are due (as labeled tags in
-  their category color, with a red checkmark once that occurrence is
-  marked paid) and every income entry — recurring payday or one-time —
-  highlighted across the whole day in a color you choose yourself, with a
-  legend and month navigation — click any bill or income entry to open and
-  edit it
+  their category color, amount included right next to the name, with a red
+  checkmark once that occurrence is marked paid) and every recurring
+  payday highlighted across the whole day in a color you choose yourself,
+  with a legend and month navigation — click any bill or payday to open
+  and edit it. A one-time expense or deposit doesn't show up here — the
+  Calendar is a schedule of what repeats every month, not a full ledger;
+  find those in the Check Register or on the Dashboard instead
 - Filter the Check Register by a custom date range (From/To) or category to
   narrow what's shown
 - Light/dark theme toggle
@@ -374,7 +395,16 @@ for exactly how that works.
   card payment is included whenever either box is checked, since it's a
   real bank transaction that also shows up linked on the CC Register — and
   every row carries a **Register** column so it's still labeled once it's
-  open in Excel
+  open in Excel. Every row also carries a **Type** column using the exact
+  same words the app itself uses on screen — **Payment** for money leaving
+  the Check Register (a plain expense or a card payment), **Deposit** for
+  income (or **Deposit (reclass)** for one reclassed against a category —
+  see above), and **Charge** for a CC Register charge — and the **Amount**
+  column is signed to match: negative for a Payment, positive for a
+  Deposit or a Charge (mirroring how a charge adds to what a card owes,
+  the same +charge/-payment math the card balance itself uses). That means
+  the column sums correctly and reads at a glance in Excel — no more
+  opening every row to tell a payment from a deposit
 - Polished for mobile — tables scroll horizontally instead of squishing,
   and forms, cards, and buttons tighten up and stack on narrow phone screens
 
@@ -464,7 +494,6 @@ Your data lives in two places at once, kept in sync automatically:
   `localStorage` on whatever device you're using, so it keeps working
   (and stays fast) even with no signal — anything you do offline quietly
   syncs up to your account the next time you're back online.
-
 There's no tracking, no analytics, and no ad network involved. Nobody but
 you can see your data — it's private to your account, governed by the
 Firestore security rules on the project, not by the data being hidden
