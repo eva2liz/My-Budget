@@ -189,9 +189,12 @@ for exactly how that works.
   **Payee** to group every transaction with the same payee together
   alphabetically (click again to reverse), click the **✓** column to bring
   cleared items to the top, or **P** to bring paid items to the top. Click
-  **Date** to go back to plain chronological order. The running balance
-  never recalculates when you sort — it's always the true running total in
-  date order, just displayed in whatever order you're currently sorted by
+  **Date** to go back to plain chronological order. The **Balance** column
+  itself is no longer a sortable column — it recalculates instead: it's
+  always a running total of exactly the rows currently on screen, added up
+  top to bottom in whatever order they're displayed, so it stays reconcilable
+  against a bank statement no matter how you've filtered or sorted (see the
+  filter note below)
   - **Uncleared rows always sink to the bottom**, no matter which column
     the table's currently sorted by (Date, Payee, whatever) — so an
     unreconciled transaction never sits in the middle of the list
@@ -232,13 +235,20 @@ for exactly how that works.
     can remove an entry right from any of those drill-downs instead of
     backing out to find its row first
   - A From/To date-range filter (plus a category filter), right at the top
-    next to the "Check register" heading, narrows what's shown without
-    touching the running balance, which is always based on your full
-    history. **To** defaults to today (not blank) both here and on the CC
-    Register, so future-dated entries -- an already-logged upcoming bill, a
-    post-dated charge -- don't clutter the view by default; clear or push
-    out **To** any time you want to see them, and **Clear filters** resets
-    it back to today rather than wiping it blank
+    next to the "Check register" heading, narrows what's shown. **The
+    Balance column recalculates from exactly what's visible** — filter to
+    one category, for instance, and Balance becomes a running total of
+    only that category's rows, seeded from the Beginning balance row (or
+    from zero if it's filtered out too), not your true full account
+    balance. That's on purpose: the point is a balance you can check
+    line-by-line against whatever's actually on screen, the same way you'd
+    reconcile a paper register. Clear the filters to see the true,
+    full-history running balance again. **To** defaults to today (not
+    blank) both here and on the CC Register, so future-dated entries -- an
+    already-logged upcoming bill, a post-dated charge -- don't clutter the
+    view by default; clear or push out **To** any time you want to see
+    them, and **Clear filters** resets it back to today rather than
+    wiping it blank
   - Bank transactions you import (see CSV import below) land here
     automatically, flagged with a red **✗** and a red-outlined field until
     you assign a real account to them — once you do, the flag clears itself
@@ -350,8 +360,9 @@ for exactly how that works.
   card's balance right along with your other recurring bills. The ledger
   also has a running **Balance** column (each card's own balance right
   after that transaction, same idea as the Check Register's) and every
-  column header — Date, Card, Type, Amount, cleared, Balance — is
-  click-to-sort, same as the Check Register. A payment entered via the
+  other column header — Date, Card, Type, Amount, cleared — is
+  click-to-sort, same as the Check Register (Balance itself isn't
+  sortable, for the same reason noted below). A payment entered via the
   Check Register, expense form, or a recurring "Pay down" item shows up
   here tinted light blue with a "via Check Register" note, so it's clear
   at a glance which payments were entered elsewhere versus directly on
@@ -360,9 +371,12 @@ for exactly how that works.
   and the blank add-row), whether the payment came from the Check
   Register or was entered directly here. It also has its own filter row
   — From/To date range, a specific card, and a specific category — so a
-  big ledger is easy to narrow down; the running Balance column always
-  reflects the true, unfiltered running total, it just hides some rows.
-  Every field on an existing row — Date, Description, Amount, Category,
+  big ledger is easy to narrow down, and the running **Balance** column
+  recalculates per card from exactly what's visible, same as the Check
+  Register — filter down to a handful of charges and Balance becomes a
+  running total of just those, not the card's true full balance. Clear
+  the filters to see the true running balance again. Every field on an
+  existing row — Date, Description, Amount, Category,
   Card, Type, and cleared — is editable right in place, no separate edit
   screen needed. A payment that matches a recurring card bill (same card
   and type) links to it automatically, the same way the Check Register

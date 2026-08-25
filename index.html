@@ -1884,51 +1884,61 @@
     };
   }
 
-  // Builds the CC Register ledger's rows with each one's running balance
-  // attached -- computed per card, in true chronological order (oldest
-  // first), the same way the Check Register threads its running balance
-  // through buildRegisterRows(). That's independent of how the table ends
-  // up sorted for display (sortCCLedgerRows can reorder by any column).
-  // Future-dated transactions are excluded from the running total, same as
-  // the summary cards up top (computeCreditCardBalance) -- they're shown in
-  // the ledger so you can see what's scheduled, but with no balance number
-  // attached, since they haven't posted yet. Keeping this in lockstep with
-  // the summary cards' "as of today" rule is deliberate: showing a
-  // different running total here than the card's own "Current balance"
-  // above made the two numbers look like they disagreed.
+  // Builds the CC Register ledger's rows, one per card charge/payment, in
+  // true chronological order (oldest first) -- just the base order a fresh
+  // caller wants before its own filtering/sorting. Rows do NOT carry a
+  // .balance here -- see applyCCRunningBalance, which stamps that in
+  // whatever order the rows actually end up displayed in, same reasoning
+  // as the Check Register's applyRunningBalance.
   function buildCCLedgerRows() {
-    var byCard = {};
+    var rows = [];
     state.expenses.forEach(function(e) {
       if (!e.creditCardId) return;
-      (byCard[e.creditCardId] = byCard[e.creditCardId] || []).push(e);
+      rows.push({ expense: e });
     });
-    var rows = [];
+    rows.sort(function(a, b) {
+      var c = a.expense.date.localeCompare(b.expense.date);
+      if (c !== 0) return c;
+      return a.expense.id < b.expense.id ? -1 : (a.expense.id > b.expense.id ? 1 : 0);
+    });
+    return rows;
+  }
+
+  // Stamps .balance (and .upcoming) onto each row by walking it in the
+  // exact order given, keeping a separate running total PER CARD seeded
+  // from that card's own starting balance -- so, just like the Check
+  // Register's applyRunningBalance, the number shown always reflects only
+  // this same card's rows that are actually visible at or above this row's
+  // position right now, not that card's true full-history balance. A
+  // transaction dated before the card's balance anchor (its optional "As
+  // of" date) still shows no balance -- there's nothing meaningful to
+  // compute before the point the anchor represents -- and neither does one
+  // dated after today, since it hasn't posted yet; both match the "as of
+  // today" rule the summary cards up top (computeCreditCardBalance) use,
+  // which is intentionally a completely separate, always-true-full-history
+  // calculation from this table.
+  function applyCCRunningBalance(rows) {
+    var runningByCard = {};
     var todayStr = todayISO();
-    Object.keys(byCard).forEach(function(cardId) {
+    rows.forEach(function(row) {
+      var e = row.expense;
+      var cardId = e.creditCardId;
       var cc = creditCardById(cardId);
-      var startingBalance = cc ? (cc.startingBalance || 0) : 0;
+      if (!(cardId in runningByCard)) {
+        runningByCard[cardId] = cc ? (cc.startingBalance || 0) : 0;
+      }
       var asOf = cc && cc.balanceAsOf ? cc.balanceAsOf : null;
-      var list = byCard[cardId].slice().sort(function(a, b) {
-        var c = a.date.localeCompare(b.date);
-        if (c !== 0) return c;
-        return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
-      });
-      var running = startingBalance;
-      list.forEach(function(e) {
-        // A transaction dated before the card's balance anchor predates
-        // what the starting balance already accounts for, so there's no
-        // meaningful running total to show for it.
-        if (asOf && e.date < asOf) {
-          rows.push({ expense: e, balance: null, upcoming: false });
-          return;
-        }
-        if (e.date > todayStr) {
-          rows.push({ expense: e, balance: null, upcoming: true });
-          return;
-        }
-        running += (e.debtType === "payment") ? -e.amount : e.amount;
-        rows.push({ expense: e, balance: running });
-      });
+      if (asOf && e.date < asOf) {
+        row.balance = null; row.upcoming = false;
+        return;
+      }
+      if (e.date > todayStr) {
+        row.balance = null; row.upcoming = true;
+        return;
+      }
+      runningByCard[cardId] += (e.debtType === "payment") ? -e.amount : e.amount;
+      row.balance = runningByCard[cardId];
+      row.upcoming = false;
     });
     return rows;
   }
@@ -1990,8 +2000,11 @@
   // the blank add-row, so a newly-added transaction lands right where you
   // typed it instead of jumping to the top of the table.
   var ccRegisterSort = { key: "date", dir: 1 };
+  // No "balance" entry -- Balance is no longer an independently-sortable
+  // column (see applyCCRunningBalance): its numbers are computed FROM the
+  // current sort order, so sorting BY it would be circular.
   var CC_REGISTER_SORT_DEFAULT_DIR = {
-    date: 1, card: 1, type: 1, amount: 1, cleared: -1, balance: 1
+    date: 1, card: 1, type: 1, amount: 1, cleared: -1
   };
   function ccRegisterSortValue(row, key) {
     var e = row.expense;
@@ -2001,7 +2014,6 @@
       case "type": return e.debtType === "payment" ? 1 : 0;
       case "amount": return e.amount;
       case "cleared": return e.cleared ? 1 : 0;
-      case "balance": return row.balance === null ? 0 : row.balance;
       default: return "";
     }
   }
@@ -2876,12 +2888,14 @@
   // ---------- CHECK REGISTER ----------
 
   // Merges expenses and income into one chronological ledger (oldest first,
-  // like a paper check register) and threads a running balance through it,
-  // starting from the user's "beginning balance" (settings.openingBalance)
-  // rather than zero, so the running total matches their real bank balance
-  // even though it isn't tied to any category or paycheck. Balance is always
-  // computed from the FULL history before any filtering, so the numbers stay
-  // meaningful even when the table below is narrowed to one month or category.
+  // like a paper check register). Returned rows do NOT carry a .balance --
+  // that's computed separately (see applyRunningBalance) from whatever set
+  // of rows, in whatever order, actually ends up on screen after filtering
+  // and sorting, so the Balance column always adds up to exactly what's
+  // visible rather than silently including rows that are filtered out or
+  // displayed elsewhere. Only the true chronological ORDER lives here,
+  // since that's what a fresh caller (Dashboard's recent-transactions
+  // panel, etc.) needs as a sane default before its own filtering/sorting.
   //
   // The Check Register is pure bank activity -- money that actually moved
   // through the checking account -- so a credit card CHARGE is deliberately
@@ -2919,6 +2933,20 @@
       if (c !== 0) return c;
       return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
     });
+    return rows;
+  }
+
+  // Stamps a .balance onto each row by walking it in the exact order given
+  // -- starting from the "beginning balance" anchor (settings.openingBalance,
+  // same pinned row this always has) -- so the Balance column always sums to
+  // precisely what's currently on screen: filtered rows never contribute,
+  // and if the table is sorted out of date order (e.g. uncleared rows sunk
+  // to the bottom), each row's balance reflects only the rows that actually
+  // appear ABOVE it right now, not their true full-history position. That
+  // trades away "balance = your real account total" whenever a filter or a
+  // non-date sort is active, in exchange for the numbers always adding up
+  // to what you can see and manually re-check by eye.
+  function applyRunningBalance(rows) {
     var running = Number(state.settings.openingBalance) || 0;
     rows.forEach(function(r) { running += r.amount; r.balance = running; });
     return rows;
@@ -3161,8 +3189,11 @@
   // chronological order (the same order buildRegisterRows/the running
   // balance are computed in) on a fresh page load.
   var registerSort = { key: "date", dir: 1 };
+  // No "balance" entry -- Balance is no longer an independently-sortable
+  // column (see applyRunningBalance): its numbers are computed FROM the
+  // current sort order, so sorting BY it would be circular.
   var REGISTER_SORT_DEFAULT_DIR = {
-    date: 1, payee: 1, payment: 1, cleared: -1, paid: -1, deposit: 1, balance: 1
+    date: 1, payee: 1, payment: 1, cleared: -1, paid: -1, deposit: 1
   };
   function registerSortValue(r, key) {
     switch (key) {
@@ -3172,7 +3203,6 @@
       case "cleared": return r.cleared ? 1 : 0;
       case "paid": return r.kind === "expense" ? (r.paid ? 1 : 0) : -1;
       case "deposit": return r.kind === "income" ? r.amount : -1;
-      case "balance": return r.balance;
       default: return "";
     }
   }
@@ -3239,6 +3269,9 @@
       return true;
     });
     sortRegisterRows(rows);
+    // Balance is computed AFTER filtering and sorting, in the exact order
+    // the rows are about to be displayed -- see applyRunningBalance.
+    applyRunningBalance(rows);
 
     var countEl = document.getElementById("registerCount");
     if (countEl) {
@@ -3369,7 +3402,7 @@
       '<th class="reg-col-clr reg-sortable" data-sort-key="cleared" title="Sort by cleared">&#10003;' + sortArrowHtml("cleared") + '</th>' +
       '<th class="reg-col-paid reg-sortable" data-sort-key="paid" title="Sort by paid">P' + sortArrowHtml("paid") + '</th>' +
       '<th class="num reg-col-deposit reg-sortable" data-sort-key="deposit"><span class="full-label">Deposit</span><span class="short-label">Dep</span>' + sortArrowHtml("deposit") + '</th>' +
-      '<th class="num reg-col-balance reg-sortable" data-sort-key="balance"><span class="full-label">Balance</span><span class="short-label">Bal</span>' + sortArrowHtml("balance") + '</th>' +
+      '<th class="num reg-col-balance" title="Balance is always a running total of exactly what\'s currently visible, in the order shown -- not sortable on its own since its numbers depend on that order"><span class="full-label">Balance</span><span class="short-label">Bal</span></th>' +
       '</tr></thead>';
 
     if (allRows.length === 0) {
@@ -4802,10 +4835,6 @@
     if (!wrap) return;
     var allRows = buildCCLedgerRows();
 
-    // Filtering happens on the full, already-balanced row set -- each row's
-    // running balance was computed in buildCCLedgerRows() from the true
-    // chronological order across ALL transactions, so hiding some rows here
-    // never changes the balance shown on the ones that remain visible.
     var fromFilterEl = document.getElementById("ccFilterFrom");
     var toFilterEl = document.getElementById("ccFilterTo");
     var cardFilterEl = document.getElementById("ccFilterCard");
@@ -4824,6 +4853,9 @@
       return true;
     });
     sortCCLedgerRows(rows);
+    // Balance is computed AFTER filtering and sorting, in the exact order
+    // the rows are about to be displayed -- see applyCCRunningBalance.
+    applyCCRunningBalance(rows);
 
     var countEl = document.getElementById("ccRegisterCount");
     if (countEl) {
@@ -4909,7 +4941,7 @@
       '<th class="cc-col-type reg-sortable" data-cc-sort-key="type"><span class="full-label">Type</span><span class="short-label">Typ</span>' + ccSortArrowHtml("type") + '</th>' +
       '<th class="num reg-sortable" data-cc-sort-key="amount"><span class="full-label">Amount</span><span class="short-label">Amt</span>' + ccSortArrowHtml("amount") + '</th>' +
       '<th class="reg-col-clr reg-sortable" data-cc-sort-key="cleared" title="Sort by cleared">&#10003;' + ccSortArrowHtml("cleared") + '</th>' +
-      '<th class="num reg-col-balance reg-sortable" data-cc-sort-key="balance"><span class="full-label">Balance</span><span class="short-label">Bal</span>' + ccSortArrowHtml("balance") + '</th>' +
+      '<th class="num reg-col-balance" title="Balance is always a running total of exactly what\'s currently visible, in the order shown -- not sortable on its own since its numbers depend on that order"><span class="full-label">Balance</span><span class="short-label">Bal</span></th>' +
       '</tr></thead>';
 
     if (allRows.length === 0) {

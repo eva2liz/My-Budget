@@ -3,7 +3,7 @@
 // set of static files (this HTML, manifest, icons) so the app still opens
 // with no signal at all. Bump CACHE_NAME whenever these files change so old
 // caches get cleaned up and the new version takes over.
-const CACHE_NAME = "my-budget-cache-v38";
+const CACHE_NAME = "my-budget-cache-v39";
 const CORE_ASSETS = [
   "./index.html",
   "./manifest.json",
