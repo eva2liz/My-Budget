@@ -1136,10 +1136,11 @@
           <label class="register-filter-daterange">From <input type="date" id="filterFrom" aria-label="From date"></label>
           <label class="register-filter-daterange">To <input type="date" id="filterTo" aria-label="To date"></label>
           <select id="filterCategory" aria-label="Filter by category"><option value="">All categories</option></select>
+          <select id="filterBankAccount" aria-label="Filter by bank account"><option value="">All bank accounts</option></select>
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick an account. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same account (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</p>
+      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Categories &amp; Budgets) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category.</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -1171,6 +1172,19 @@
       <h2>Your categories</h2>
       <p class="hint" style="margin-top:0;">Drag the handle on the left of any row to reorder your categories -- the new order applies everywhere: the Dashboard, Budget vs. actual, this table, and every category dropdown.</p>
       <div id="categoryTableWrap" class="table-scroll"></div>
+    </div>
+
+    <div class="card">
+      <h2>Bank accounts</h2>
+      <p class="hint" style="margin-top:0;">A category (Groceries, Insurance, ...) is what you spent on; a <strong>bank account</strong> is which real account the money moved through -- Chase Checking, a savings account, whatever you actually bank with. Add the accounts you use below, then tag each Check Register row with one from its own dropdown, and filter the register down to a single account any time you need to see just its own activity. This is just a label -- it doesn't track its own starting balance the way a credit card does, and every account's transactions still add up to one combined Balance in the register by default.</p>
+      <form class="inline-form" id="bankAccountForm">
+        <div class="field">
+          <label for="bankAccountName">Name</label>
+          <input type="text" id="bankAccountName" placeholder="e.g. Chase Checking" required>
+        </div>
+        <button type="submit" class="primary" id="bankAccountSubmitBtn">Add account</button>
+      </form>
+      <div id="bankAccountListWrap" class="table-scroll"></div>
     </div>
   </section>
 
@@ -1498,6 +1512,23 @@
     });
   }
 
+  // Bank accounts are deliberately a plain label -- a name and nothing else,
+  // no starting balance or per-account balance tracking like credit cards
+  // get. They exist purely so a Check Register transaction can be tagged
+  // with which real bank account it happened in, and so the register can be
+  // filtered down to just one -- see applyRunningBalance's handling of a
+  // bank-account filter for how Balance behaves once you do.
+  function normalizeBankAccounts(list) {
+    return (list || []).map(function(a) {
+      return Object.assign({ id: uid(), name: "Account" }, a);
+    });
+  }
+
+  function bankAccountById(id) {
+    if (!id) return null;
+    return state.bankAccounts.find(function(a) { return a.id === id; }) || null;
+  }
+
   // One-time, idempotent migration from the old model (a category flagged
   // "debt" doubled as both the spending category AND the balance tracker)
   // to the new one (credit cards are their own thing, in state.creditCards,
@@ -1549,6 +1580,7 @@
       recurringIncome: [],
       savingsGoals: [],
       creditCards: [],
+      bankAccounts: [],
       settings: { currency: "$", theme: "auto", openingBalance: 0, openingBalanceDate: null },
       lastRecurringRun: null,
       lastRecurringIncomeRun: null
@@ -1569,6 +1601,7 @@
         recurringIncome: parsed.recurringIncome || [],
         savingsGoals: parsed.savingsGoals || [],
         creditCards: normalizeCreditCards(parsed.creditCards),
+        bankAccounts: normalizeBankAccounts(parsed.bankAccounts),
         settings: Object.assign({}, d.settings, parsed.settings || {}),
         lastRecurringRun: parsed.lastRecurringRun || null,
         lastRecurringIncomeRun: parsed.lastRecurringIncomeRun || null
@@ -1732,6 +1765,7 @@
               recurringIncome: incoming.recurringIncome || [],
               savingsGoals: incoming.savingsGoals || [],
               creditCards: normalizeCreditCards(incoming.creditCards),
+              bankAccounts: normalizeBankAccounts(incoming.bankAccounts),
               settings: Object.assign({}, d.settings, incoming.settings || {}),
               lastRecurringRun: incoming.lastRecurringRun || null,
               lastRecurringIncomeRun: incoming.lastRecurringIncomeRun || null
@@ -2377,6 +2411,22 @@
       var prevExpRecurring = expRecurringSelect.value;
       expRecurringSelect.innerHTML = recurringBillOptionsFor(prevExpRecurring);
     }
+
+    // Check Register's own bank-account filter -- same
+    // preserve-the-current-selection approach as filterCategory above, kept
+    // in sync here since this function already runs after every place a
+    // bank account can be added, renamed, or deleted.
+    var bankFilterSelect = document.getElementById("filterBankAccount");
+    if (bankFilterSelect) {
+      var prevBankFilter = bankFilterSelect.value;
+      bankFilterSelect.innerHTML = '<option value="">All bank accounts</option>';
+      state.bankAccounts.forEach(function(a) {
+        var opt = document.createElement("option");
+        opt.value = a.id; opt.textContent = a.name;
+        bankFilterSelect.appendChild(opt);
+      });
+      bankFilterSelect.value = prevBankFilter;
+    }
   }
 
   // Options for the expense edit form's "Link to recurring bill" field --
@@ -2854,10 +2904,12 @@
   document.getElementById("filterFrom").addEventListener("change", renderExpenses);
   document.getElementById("filterTo").addEventListener("change", renderExpenses);
   document.getElementById("filterCategory").addEventListener("change", renderExpenses);
+  document.getElementById("filterBankAccount").addEventListener("change", renderExpenses);
   document.getElementById("clearFilters").addEventListener("click", function() {
     document.getElementById("filterFrom").value = "";
     document.getElementById("filterTo").value = todayISO();
     document.getElementById("filterCategory").value = "";
+    document.getElementById("filterBankAccount").value = "";
     renderExpenses();
   });
 
@@ -2924,14 +2976,16 @@
         amount: -Math.abs(e.amount), paid: !!e.paid, cleared: !!e.cleared,
         imported: !!e.imported, categoryGuessed: !!e.categoryGuessed,
         splitGroupId: e.splitGroupId || null, recurringId: e.recurringId || null,
-        creditCardId: e.creditCardId || null, debtType: e.debtType || null
+        creditCardId: e.creditCardId || null, debtType: e.debtType || null,
+        bankAccountId: e.bankAccountId || null
       });
     });
     state.income.forEach(function(inc) {
       rows.push({
         kind: "income", id: inc.id, date: inc.date, desc: inc.source || "",
         amount: Math.abs(inc.amount), cleared: !!inc.cleared, imported: !!inc.imported,
-        linkedGoalId: inc.linkedGoalId || null, reclassCategoryId: inc.reclassCategoryId || null
+        linkedGoalId: inc.linkedGoalId || null, reclassCategoryId: inc.reclassCategoryId || null,
+        bankAccountId: inc.bankAccountId || null
       });
     });
     rows.sort(function(a, b) {
@@ -3037,6 +3091,21 @@
       html += '<optgroup label="Credit card payment">' + ccOptions + '</optgroup>';
     }
     return html;
+  }
+
+  // Which real-world bank account a Check Register row belongs to -- entirely
+  // separate from its Category (what accountOptionsFor above builds). Picking
+  // one is optional, so there's always a blank "No account" option; leaving
+  // it blank behaves exactly like before this feature existed -- the row just
+  // isn't tagged, and it still counts toward the combined Balance same as
+  // always. See applyRunningBalance for how filtering by a specific account
+  // changes what Balance shows.
+  function bankAccountOptionsFor(selectedId) {
+    var opts = '<option value=""' + (selectedId ? '' : ' selected') + '>No account</option>';
+    opts += state.bankAccounts.map(function(a) {
+      return '<option value="' + a.id + '"' + (a.id === selectedId ? ' selected' : '') + '>' + escapeHtml(a.name) + '</option>';
+    }).join("");
+    return opts;
   }
 
   // The income-side counterpart to accountOptionsFor() -- lets a deposit
@@ -3270,27 +3339,33 @@
     var fromFilterEl = document.getElementById("filterFrom");
     var toFilterEl = document.getElementById("filterTo");
     var catFilterEl = document.getElementById("filterCategory");
+    var bankFilterEl = document.getElementById("filterBankAccount");
     var fromFilter = fromFilterEl ? fromFilterEl.value : "";
     var toFilter = toFilterEl ? toFilterEl.value : "";
     var catFilter = catFilterEl ? catFilterEl.value : "";
+    var bankFilter = bankFilterEl ? bankFilterEl.value : "";
 
     var rows = allRows.filter(function(r) {
       if (fromFilter && r.date < fromFilter) return false;
       if (toFilter && r.date > toFilter) return false;
       if (catFilter && r.categoryId !== catFilter) return false;
+      if (bankFilter && r.bankAccountId !== bankFilter) return false;
       return true;
     });
     sortRegisterRows(rows);
     // Balance is computed AFTER filtering and sorting, in the exact order
     // the rows are about to be displayed -- see applyRunningBalance. A
-    // category filter zeroes the seed (see applyRunningBalance's comment);
-    // the pinned Beginning balance row is hidden in that case too, below.
-    var catFilterActive = !!catFilter;
-    applyRunningBalance(rows, catFilterActive ? 0 : (Number(state.settings.openingBalance) || 0));
+    // category filter OR a bank-account filter zeroes the seed (see
+    // applyRunningBalance's comment); the pinned Beginning balance row is
+    // hidden in that case too, below. A bank account is just a label here
+    // (no starting balance of its own like a credit card gets), so there's
+    // nothing meaningful to seed a single account's slice from besides zero.
+    var narrowingFilterActive = !!catFilter || !!bankFilter;
+    applyRunningBalance(rows, narrowingFilterActive ? 0 : (Number(state.settings.openingBalance) || 0));
 
     var countEl = document.getElementById("registerCount");
     if (countEl) {
-      countEl.textContent = (fromFilter || toFilter || catFilter)
+      countEl.textContent = (fromFilter || toFilter || catFilter || bankFilter)
         ? "(" + rows.length + " of " + allRows.length + ")"
         : "(" + allRows.length + ")";
     }
@@ -3355,8 +3430,10 @@
           ? '<span class="muted">Linked to ' + escapeHtml(linkedTemplate ? linkedTemplate.name : "a deleted bill") +
             ' <button type="button" class="row-btn" data-reg-unlink-recurring="' + r.id + '" title="Unlink from this recurring bill">Unlink</button></span>'
           : '';
+        var bankField = '<span>Bank <select class="register-inline-select" data-reg-bank-account="' + r.id + '" data-reg-kind="expense">' + bankAccountOptionsFor(r.bankAccountId) + '</select></span>';
         detailInner =
-          '<span>Account <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + accountOptionsFor(r.categoryId, r.creditCardId, r.debtType) + '</select></span>' +
+          '<span>Category <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + accountOptionsFor(r.categoryId, r.creditCardId, r.debtType) + '</select></span>' +
+          bankField +
           recurringField +
           pcField +
           '<span class="reg-detail-actions">' +
@@ -3364,8 +3441,10 @@
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="expense">Delete</button>' +
           '</span>';
       } else {
+        var incBankField = '<span>Bank <select class="register-inline-select" data-reg-bank-account="' + r.id + '" data-reg-kind="income">' + bankAccountOptionsFor(r.bankAccountId) + '</select></span>';
         detailInner =
           '<span>From <select class="register-inline-select" data-reg-income-source="' + r.id + '">' + incomeSourceOptionsFor(r.linkedGoalId, true, r.reclassCategoryId) + '</select></span>' +
+          incBankField +
           '<span class="reg-detail-actions">' +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="income">Delete</button>' +
           '</span>';
@@ -3385,8 +3464,9 @@
         '<td class="num reg-col-balance muted">—</td>' +
       '</tr>' +
       '<tr class="register-txn-detail register-new-row"><td class="reg-col-flag"></td><td colspan="7"><div class="register-detail-inline">' +
-        '<span id="regNewCategoryField">Account <select id="regNewCategory">' + accountOptionsFor(null, null, null, true) + '</select></span>' +
+        '<span id="regNewCategoryField">Category <select id="regNewCategory">' + accountOptionsFor(null, null, null, true) + '</select></span>' +
         '<span id="regNewIncomeSourceField" style="display:none;">From <select id="regNewIncomeSource">' + incomeSourceOptionsFor(null, true) + '</select></span>' +
+        '<span>Bank <select id="regNewBankAccount">' + bankAccountOptionsFor(null) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
@@ -3394,14 +3474,15 @@
     // part of the sortable/filterable transaction list, and not linked to
     // any category or paycheck. It's just an offset the running balance
     // starts from, so the balance column can match a real bank account
-    // instead of starting from zero. It's hidden while a category filter is
-    // active, though -- it isn't a Utilities transaction (or whatever
-    // category is picked), so it has no business appearing in that sliced
-    // view, and the Balance column is a pure sum of the visible rows there
-    // instead (see applyRunningBalance above).
+    // instead of starting from zero. It's hidden while a category or
+    // bank-account filter is active, though -- it isn't a Utilities
+    // transaction (or tagged to whichever bank account is picked), so it
+    // has no business appearing in that sliced view, and the Balance column
+    // is a pure sum of the visible rows there instead (see
+    // applyRunningBalance above).
     var openingBalanceVal = Number(state.settings.openingBalance) || 0;
     var openingDateVal = state.settings.openingBalanceDate || "";
-    var openingRowHtml = catFilterActive ? "" :
+    var openingRowHtml = narrowingFilterActive ? "" :
       '<tr class="register-txn-main register-opening-row">' +
         '<td class="reg-col-flag"></td>' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '"></td>' +
@@ -3533,7 +3614,7 @@
         saveState();
         refreshAfterRegisterChange();
         showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it")
-          : (ex.creditCardId ? "Marked as a card payment" : "Account updated"));
+          : (ex.creditCardId ? "Marked as a card payment" : "Category updated"));
       });
     });
 
@@ -3545,6 +3626,21 @@
         saveState();
         refreshAfterRegisterChange();
         showToast(incomeSourceToastLabel(inc, "Regular income"));
+      });
+    });
+
+    // Bank account -- a plain label (see bankAccountOptionsFor), shared by
+    // both expense and income rows, so data-reg-kind picks which state
+    // array to look the row up in, same pattern as data-reg-cleared above.
+    wrap.querySelectorAll("[data-reg-bank-account]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var list = sel.dataset.regKind === "income" ? state.income : state.expenses;
+        var row = list.find(function(x) { return x.id === sel.dataset.regBankAccount; });
+        if (!row) return;
+        row.bankAccountId = sel.value || null;
+        saveState();
+        refreshAfterRegisterChange();
+        showToast("Bank account updated");
       });
     });
 
@@ -3606,6 +3702,8 @@
       var cleared = document.getElementById("regNewCleared").checked;
       var paid = document.getElementById("regNewPaid").checked;
       var accountValue = document.getElementById("regNewCategory").value;
+      var bankAccountEl = document.getElementById("regNewBankAccount");
+      var bankAccountValue = bankAccountEl ? (bankAccountEl.value || null) : null;
 
       var hasPayment = !isNaN(payment) && payment > 0;
       var hasDeposit = !isNaN(deposit) && deposit > 0;
@@ -3615,14 +3713,14 @@
       if (!hasPayment && !hasDeposit) { showToast("Enter an amount in Payment or Deposit"); return; }
 
       if (hasPayment) {
-        if (!accountValue) { showToast("Pick an account (category, or a card to pay down)"); return; }
+        if (!accountValue) { showToast("Pick a category (or a card to pay down)"); return; }
         // If this account matches an unresolved recurring bill's own
         // auto-logged placeholder for this month, autoLinkToRecurringBill
         // below quietly ties the two together and absorbs the placeholder --
         // so typing a recurring bill's payment straight into the register,
         // instead of finding and editing the one already logged for it,
         // doesn't leave the Dashboard thinking it's still unpaid.
-        var newExpense = { id: uid(), date: date, amount: payment, categoryId: null, note: desc, paycheckId: null, paid: paid, cleared: cleared, creditCardId: null, debtType: null, recurringId: null };
+        var newExpense = { id: uid(), date: date, amount: payment, categoryId: null, note: desc, paycheckId: null, paid: paid, cleared: cleared, creditCardId: null, debtType: null, recurringId: null, bankAccountId: bankAccountValue };
         applyAccountValue(newExpense, accountValue);
         state.expenses.push(newExpense);
         var autoLinkedNew = autoLinkToRecurringBill(newExpense);
@@ -3631,7 +3729,7 @@
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
         var incomeSourceValue = document.getElementById("regNewIncomeSource").value;
-        var newIncome = { id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared, linkedGoalId: null, reclassCategoryId: null };
+        var newIncome = { id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared, linkedGoalId: null, reclassCategoryId: null, bankAccountId: bankAccountValue };
         applyIncomeSourceValue(newIncome, incomeSourceValue);
         state.income.push(newIncome);
         showToast(newIncome.linkedGoalId ? "Withdrawal logged" : incomeSourceToastLabel(newIncome, "Income added"));
@@ -4718,6 +4816,95 @@
         saveState();
         refreshAfterCategoryChange();
         showToast("Category updated");
+      }
+      inp.addEventListener("blur", commit);
+      inp.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    });
+  }
+
+  // ---------- BANK ACCOUNTS ----------
+  //
+  // Deliberately the simplest thing that could work: a name, nothing else --
+  // no starting balance, no per-account balance tracking like credit cards
+  // get. Their only job is showing up in bankAccountOptionsFor() so a Check
+  // Register row can be tagged with one, and in the register's own filter so
+  // you can pull up a single account's activity at a time.
+
+  var bankAccountForm = document.getElementById("bankAccountForm");
+  if (bankAccountForm) {
+    bankAccountForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      var nameEl = document.getElementById("bankAccountName");
+      var name = nameEl.value.trim();
+      if (!name) return;
+      state.bankAccounts.push({ id: uid(), name: name });
+      saveState();
+      bankAccountForm.reset();
+      refreshAfterBankAccountChange();
+      showToast("Bank account added");
+    });
+  }
+
+  // Everything that needs to re-render after a bank account is added,
+  // renamed, or deleted -- the account list itself, every place its name
+  // shows up in a dropdown (the register's inline selects rebuild from
+  // state directly on their own next render, but the filter and quick-add
+  // selects need their options refreshed the same way populateCategorySelects
+  // already does for categories and cards), and the register, since a
+  // deleted account clears the tag off any row that had it.
+  function refreshAfterBankAccountChange() {
+    renderBankAccounts();
+    populateCategorySelects();
+    renderExpenses();
+  }
+
+  function deleteBankAccount(id) {
+    var inUse = state.expenses.some(function(e) { return e.bankAccountId === id; }) ||
+                state.income.some(function(inc) { return inc.bankAccountId === id; });
+    var msg = inUse
+      ? "This account has transactions tagged with it. Delete anyway? Those rows will just show no bank account."
+      : "Delete this bank account?";
+    confirmDialog(msg).then(function(ok) {
+      if (!ok) return;
+      state.bankAccounts = state.bankAccounts.filter(function(a) { return a.id !== id; });
+      state.expenses.forEach(function(e) { if (e.bankAccountId === id) e.bankAccountId = null; });
+      state.income.forEach(function(inc) { if (inc.bankAccountId === id) inc.bankAccountId = null; });
+      saveState();
+      refreshAfterBankAccountChange();
+      showToast("Bank account deleted");
+    });
+  }
+
+  function renderBankAccounts() {
+    var wrap = document.getElementById("bankAccountListWrap");
+    if (!wrap) return;
+    if (state.bankAccounts.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No bank accounts yet -- add one above, then tag your Check Register rows with it.</div>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Name</th><th></th></tr></thead><tbody>';
+    state.bankAccounts.forEach(function(a) {
+      html += '<tr>' +
+        '<td><input type="text" class="cat-inline-input" data-bank-name="' + a.id + '" value="' + escapeHtml(a.name) + '" aria-label="Bank account name"></td>' +
+        '<td class="actions-cell"><button class="row-btn danger" data-bank-del="' + a.id + '">Delete</button></td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-bank-del]").forEach(function(b) {
+      b.addEventListener("click", function() { deleteBankAccount(b.dataset.bankDel); });
+    });
+    wrap.querySelectorAll("[data-bank-name]").forEach(function(inp) {
+      function commit() {
+        var a = bankAccountById(inp.dataset.bankName);
+        if (!a) return;
+        var val = inp.value.trim();
+        if (!val) { inp.value = a.name; return; }
+        if (val === a.name) return;
+        a.name = val;
+        saveState();
+        refreshAfterBankAccountChange();
+        showToast("Bank account updated");
       }
       inp.addEventListener("blur", commit);
       inp.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
@@ -6132,7 +6319,12 @@
     // owed on the card, so it's positive there -- the exact same
     // +charges/-payments convention computeCreditCardBalance already uses
     // for a card's running balance, just applied per row instead of summed.
-    var rows = [["Date","Type","Register","Category / Source","Note","Amount"]];
+    // Bank Account is blank for a CC Register charge -- that's a credit card
+    // balance, not a bank account -- and only filled in for a Check Register
+    // row (a plain expense, a card payment, or a deposit) when you've
+    // actually tagged it with one; it's an optional label, not every row has
+    // one. See bankAccountOptionsFor/state.bankAccounts.
+    var rows = [["Date","Type","Register","Category / Source","Note","Amount","Bank Account"]];
     state.expenses.forEach(function(e) {
       // A charge only ever lives on the CC Register; a payment is a real
       // bank transaction (Check Register) that also shows up linked on the
@@ -6145,12 +6337,14 @@
       var registerLabel = expenseSourceInfo(e).label;
       var typeLabel = isCharge ? "Charge" : "Payment";
       var signedAmount = isCharge ? e.amount : -e.amount;
-      rows.push([e.date, typeLabel, registerLabel, accountLabelFor(e.categoryId, e.creditCardId, e.debtType), e.note || "", signedAmount.toFixed(2)]);
+      var bankLabel = isCharge ? "" : (bankAccountById(e.bankAccountId) ? bankAccountById(e.bankAccountId).name : "");
+      rows.push([e.date, typeLabel, registerLabel, accountLabelFor(e.categoryId, e.creditCardId, e.debtType), e.note || "", signedAmount.toFixed(2), bankLabel]);
     });
     if (includeCheck) {
       state.income.forEach(function(inc) {
         var typeLabel = inc.reclassCategoryId ? "Deposit (reclass)" : "Deposit";
-        rows.push([inc.date, typeLabel, "Check Register", inc.source, inc.note || "", inc.amount.toFixed(2)]);
+        var bankLabel = bankAccountById(inc.bankAccountId) ? bankAccountById(inc.bankAccountId).name : "";
+        rows.push([inc.date, typeLabel, "Check Register", inc.source, inc.note || "", inc.amount.toFixed(2), bankLabel]);
       });
     }
     if (rows.length === 1) {
@@ -6194,6 +6388,7 @@
             recurringIncome: parsed.recurringIncome || [],
             savingsGoals: parsed.savingsGoals || [],
             creditCards: normalizeCreditCards(parsed.creditCards),
+            bankAccounts: normalizeBankAccounts(parsed.bankAccounts),
             settings: Object.assign({}, d.settings, parsed.settings || {}),
             lastRecurringRun: parsed.lastRecurringRun || null,
             lastRecurringIncomeRun: parsed.lastRecurringIncomeRun || null
@@ -6523,6 +6718,7 @@
     renderRecurring();
     renderRecurringIncome();
     renderCategories();
+    renderBankAccounts();
     renderDashboard();
     renderBudgetVsActualTab();
     renderCalendar();

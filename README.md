@@ -33,7 +33,10 @@ for exactly how that works.
   saves the moment you pick one; name and budget save when you click
   away or press Enter), no need to open the form and scroll up. Tracking
   a credit card's balance now lives on its own **CC Register** tab instead
-  (see below) — categories here are just for what you spend on
+  (see below) — categories here are just for what you spend on. This tab
+  also has a **Bank accounts** list — a separate concept from category,
+  for tagging which real bank account a Check Register transaction moved
+  through; see the Check Register section below for how that's used
 - Recurring expenses (rent, subscriptions, storage units, pest control,
   etc.) can be **monthly** (same day every month), **every 2 weeks**, or
   **every 2 months** — for the every-2 options, just give it any date you
@@ -213,18 +216,21 @@ for exactly how that works.
   the page never scrolls sideways, no matter how many transactions you have
   - **No separate "Add income"/"Add expense" cards** — type a new
     transaction straight into the blank line at the bottom: date, payee,
-    an amount in either **Payment** or **Deposit**, and an **account**
-    (category). Assigning it to a paycheck is entirely optional and happens
-    after adding it, right on its own row — see below
+    an amount in either **Payment** or **Deposit**, a **category**, and
+    optionally a **bank account** (see below). Assigning it to a paycheck
+    is entirely optional and happens after adding it, right on its own
+    row — see below
   - Every existing transaction's top line shows date, payee, payment or
     deposit, a **cleared** checkbox, a **paid** checkbox (expenses only —
     income doesn't have a "paid" state), and balance; the muted line right
-    underneath holds its account, a **Paycheck** field, and Delete —
-    change any of those right there, no extra clicks
+    underneath holds its **category**, its **bank account**, a
+    **Paycheck** field, and Delete — change any of those right there, no
+    extra clicks
   - **Every field is directly editable right on the row** — date, payee/
-    description, amount, cleared, paid, account, and paycheck — nothing
-    opens a separate panel anymore; each change saves the moment you leave
-    the field or press Enter. A transaction linked to a recurring bill
+    description, amount, cleared, paid, category, bank account, and
+    paycheck — nothing opens a separate panel anymore; each change saves
+    the moment you leave the field or press Enter. A transaction linked to
+    a recurring bill
     shows a small **Linked to &lt;bill&gt;** tag instead, with its own
     **Unlink** button — see the note on automatic recurring-bill linking
     under the Dashboard section above. Jumping in from **Search**, the
@@ -234,25 +240,39 @@ for exactly how that works.
     elsewhere, and that panel still has its own **Delete** button, so you
     can remove an entry right from any of those drill-downs instead of
     backing out to find its row first
-  - A From/To date-range filter (plus a category filter), right at the top
-    next to the "Check register" heading, narrows what's shown. **The
-    Balance column recalculates from exactly what's visible.** A date-range
-    filter still seeds Balance from your real Beginning balance, since
-    you're looking at a slice of actual time — the numbers stay a true
-    reflection of your account, just starting partway through. A
-    **category filter is different: it hides the Beginning balance row
-    entirely and starts Balance fresh from zero**, since a category slice
-    (say, every Utilities transaction) isn't a point in time and has
-    nothing to do with your real bank balance — showing it there would be
-    misleading. What you get instead is a pure running total of just the
-    category's own transactions, so filtering to "Utilities" and adding up
-    what you spent tells you exactly that. Clear the filters to see the
-    true, full-history running balance again. **To** defaults to today
-    (not blank) both here and on the CC Register, so future-dated entries
-    -- an already-logged upcoming bill, a post-dated charge -- don't
-    clutter the view by default; clear or push out **To** any time you
-    want to see them, and **Clear filters** resets it back to today
-    rather than wiping it blank
+  - A From/To date-range filter, plus a **category** filter and a **bank
+    account** filter, right at the top next to the "Check register"
+    heading, narrow what's shown. **The Balance column recalculates from
+    exactly what's visible.** A date-range filter still seeds Balance from
+    your real Beginning balance, since you're looking at a slice of actual
+    time — the numbers stay a true reflection of your account, just
+    starting partway through. A **category or bank-account filter is
+    different: it hides the Beginning balance row entirely and starts
+    Balance fresh from zero**, since a category slice (say, every
+    Utilities transaction) or a single bank account isn't a point in time
+    and has nothing to do with your real full bank balance — showing the
+    Beginning balance there would be misleading. What you get instead is a
+    pure running total of just what's visible, so filtering to "Utilities"
+    (or to "Chase Checking") and adding up what you spent tells you
+    exactly that. Clear the filters to see the true, full-history running
+    balance again. **To** defaults to today (not blank) both here and on
+    the CC Register, so future-dated entries -- an already-logged upcoming
+    bill, a post-dated charge -- don't clutter the view by default; clear
+    or push out **To** any time you want to see them, and **Clear
+    filters** resets it back to today rather than wiping it blank
+  - **Bank accounts** are a separate, optional label from category — a
+    category (Groceries, Insurance, ...) is what you spent on; a bank
+    account is which real account the money moved through (Chase
+    Checking, a savings account, whatever you actually bank with). Manage
+    the list under **Categories & Budgets** (just a name, add/rename/
+    delete), then tag any Check Register row with one from its own
+    **Bank** dropdown and use the filter above to see just that account's
+    activity. It's deliberately lightweight — no starting balance or
+    per-account balance tracking of its own like a credit card gets — so
+    by default every account's transactions still add up to one combined
+    Balance in the register, same as before this existed. Skipping it
+    entirely (leaving every row as "No account") behaves exactly like the
+    register always has
   - Bank transactions you import (see CSV import below) land here
     automatically, flagged with a red **✗** and a red-outlined field until
     you assign a real account to them — once you do, the flag clears itself
@@ -263,7 +283,7 @@ for exactly how that works.
     or its balance to edit either one directly; every balance below it
     shifts to match, so the running balance is a true reflection of your
     account instead of starting from zero. It disappears while a category
-    filter is active — see the filter bullet above
+    or bank-account filter is active — see the filter bullet above
   - **Pure bank activity only.** A credit card charge doesn't touch your
     checking account the moment you make it, so it never shows up here or
     counts against this running balance — it only lives on the **CC
@@ -437,7 +457,11 @@ for exactly how that works.
   Deposit or a Charge (mirroring how a charge adds to what a card owes,
   the same +charge/-payment math the card balance itself uses). That means
   the column sums correctly and reads at a glance in Excel — no more
-  opening every row to tell a payment from a deposit
+  opening every row to tell a payment from a deposit. A **Bank Account**
+  column trails everything else with whatever name you tagged that row
+  with (blank if you didn't, and always blank for a CC Register charge,
+  since that's a credit card, not a bank account) — handy for splitting
+  the export by real account in Excel once you're tracking more than one
 - Polished for mobile — tables scroll horizontally instead of squishing,
   and forms, cards, and buttons tighten up and stack on narrow phone screens
 
