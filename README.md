@@ -265,15 +265,54 @@ for exactly how that works.
     category (Groceries, Insurance, ...) is what you spent on; a bank
     account is which real account the money moved through (Chase
     Checking, a savings account, whatever you actually bank with). Manage
-    the list under **Categories & Budgets** (just a name, add/rename/
-    delete), then tag any Check Register row with one from its own
-    **Bank** dropdown and use the filter above to see just that account's
-    activity. It's deliberately lightweight — no starting balance or
-    per-account balance tracking of its own like a credit card gets — so
-    by default every account's transactions still add up to one combined
-    Balance in the register, same as before this existed. Skipping it
-    entirely (leaving every row as "No account") behaves exactly like the
-    register always has
+    the list under **Categories & Budgets** — name, an optional
+    **starting balance**, and an optional **as of** date, the same shape a
+    credit card gets — then tag any Check Register row with one from its
+    own **Bank** dropdown and use the filter above to see just that
+    account's activity. By default every account's transactions still add
+    up to one combined Balance in the register itself, same as before this
+    existed — the Check Register's own Balance column, and its bank-account
+    filter, are unchanged. Skipping it entirely (leaving every row as "No
+    account") behaves exactly like the register always has. Give an account
+    a starting balance, though, and it gets its own **reconciliation
+    window** below the Check Register — see below
+  - **Bank account reconciliation.** Below the Check Register itself, every
+    bank account you've added gets its own window, plus one final
+    **Unassigned** window for any transaction with no bank account tagged
+    at all. Unlike the Check Register's own Balance column — a quick
+    running sum of only whatever rows are currently visible, always
+    starting fresh at zero the moment a filter narrows things down — each
+    reconciliation window shows a **true point-in-time balance**: it walks
+    that account's full transaction history in real chronological order,
+    seeded from the account's own starting balance and (optionally) an "as
+    of" date, exactly like a credit card's ledger. Set an account's
+    starting balance and, if you don't want everything counted all the way
+    back, an as-of date under **Categories & Budgets** — anything dated
+    before that as-of date shows a **—** instead of a balance and doesn't
+    count toward the running total, since the seed already reflects
+    everything up to that point. Each window has its own **From/To**
+    filter (defaulting to the 1st of the current month through today on
+    first load, independent per window and per account after that), shows
+    up to **7 transactions per page** with Prev/Next paging, and lets you
+    check off **cleared** right there while you reconcile — everything
+    else (date, payee, category, amount) is still edited up in the Check
+    Register itself. The From/To filter only changes which already-
+    balanced rows are currently displayed; it never changes the balance
+    math, so the number next to any row is always that account's real
+    running total up to that date, not a sum of only what's on screen
+  - **Applying category defaults to untagged transactions.** If you had
+    expenses or income logged before bank accounts existed (or before you
+    started tagging them), a button under **Categories & Budgets** — "Apply
+    category defaults to untagged transactions" — does a one-time sweep:
+    any expense with no bank account and no credit card, whose category has
+    a **default bank account** set, gets tagged with it; same for income
+    that's been reclassed against a category with a default. It only fills
+    in blanks — a row you've already tagged (by hand or automatically) is
+    never touched — and it's entirely manual, so nothing changes in your
+    data until you click it. Regular income (not reclassed against a
+    category) has no category to pull a default from, so it's left alone —
+    tag it by hand from its own row, or from the Unassigned reconciliation
+    window
   - **Categories can have a default bank account**, so you don't have to
     pick one by hand on every single transaction. Set it in the "Add a
     category" form or right in the **Categories & Budgets** table's own
