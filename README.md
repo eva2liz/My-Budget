@@ -236,19 +236,23 @@ for exactly how that works.
     backing out to find its row first
   - A From/To date-range filter (plus a category filter), right at the top
     next to the "Check register" heading, narrows what's shown. **The
-    Balance column recalculates from exactly what's visible** — filter to
-    one category, for instance, and Balance becomes a running total of
-    only that category's rows, seeded from the Beginning balance row (or
-    from zero if it's filtered out too), not your true full account
-    balance. That's on purpose: the point is a balance you can check
-    line-by-line against whatever's actually on screen, the same way you'd
-    reconcile a paper register. Clear the filters to see the true,
-    full-history running balance again. **To** defaults to today (not
-    blank) both here and on the CC Register, so future-dated entries -- an
-    already-logged upcoming bill, a post-dated charge -- don't clutter the
-    view by default; clear or push out **To** any time you want to see
-    them, and **Clear filters** resets it back to today rather than
-    wiping it blank
+    Balance column recalculates from exactly what's visible.** A date-range
+    filter still seeds Balance from your real Beginning balance, since
+    you're looking at a slice of actual time — the numbers stay a true
+    reflection of your account, just starting partway through. A
+    **category filter is different: it hides the Beginning balance row
+    entirely and starts Balance fresh from zero**, since a category slice
+    (say, every Utilities transaction) isn't a point in time and has
+    nothing to do with your real bank balance — showing it there would be
+    misleading. What you get instead is a pure running total of just the
+    category's own transactions, so filtering to "Utilities" and adding up
+    what you spent tells you exactly that. Clear the filters to see the
+    true, full-history running balance again. **To** defaults to today
+    (not blank) both here and on the CC Register, so future-dated entries
+    -- an already-logged upcoming bill, a post-dated charge -- don't
+    clutter the view by default; clear or push out **To** any time you
+    want to see them, and **Clear filters** resets it back to today
+    rather than wiping it blank
   - Bank transactions you import (see CSV import below) land here
     automatically, flagged with a red **✗** and a red-outlined field until
     you assign a real account to them — once you do, the flag clears itself
@@ -258,7 +262,8 @@ for exactly how that works.
     account actually held before you started tracking here. Click its date
     or its balance to edit either one directly; every balance below it
     shifts to match, so the running balance is a true reflection of your
-    account instead of starting from zero
+    account instead of starting from zero. It disappears while a category
+    filter is active — see the filter bullet above
   - **Pure bank activity only.** A credit card charge doesn't touch your
     checking account the moment you make it, so it never shows up here or
     counts against this running balance — it only lives on the **CC
@@ -373,9 +378,13 @@ for exactly how that works.
   — From/To date range, a specific card, and a specific category — so a
   big ledger is easy to narrow down, and the running **Balance** column
   recalculates per card from exactly what's visible, same as the Check
-  Register — filter down to a handful of charges and Balance becomes a
-  running total of just those, not the card's true full balance. Clear
-  the filters to see the true running balance again. Every field on an
+  Register. A date range or a single-card filter still seeds each card's
+  Balance from its real starting balance, since that's still a true slice
+  of that card's actual history; a **category filter zeroes it instead**
+  (and, on the Check Register, hides the Beginning balance row) — a
+  category slice isn't tied to any point in time, so treating it as a
+  continuation of the card's real balance would be misleading. Clear the
+  filters to see the true running balance again. Every field on an
   existing row — Date, Description, Amount, Category,
   Card, Type, and cleared — is editable right in place, no separate edit
   screen needed. A payment that matches a recurring card bill (same card

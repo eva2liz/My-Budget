@@ -1917,7 +1917,13 @@
   // today" rule the summary cards up top (computeCreditCardBalance) use,
   // which is intentionally a completely separate, always-true-full-history
   // calculation from this table.
-  function applyCCRunningBalance(rows) {
+  //
+  // zeroSeed mirrors applyRunningBalance's `seed` param: when a category
+  // filter is active, each card starts its running total from 0 instead of
+  // its real starting balance -- a category slice has nothing to do with
+  // that card's actual balance, same reasoning as hiding the Check
+  // Register's Beginning balance row.
+  function applyCCRunningBalance(rows, zeroSeed) {
     var runningByCard = {};
     var todayStr = todayISO();
     rows.forEach(function(row) {
@@ -1925,9 +1931,9 @@
       var cardId = e.creditCardId;
       var cc = creditCardById(cardId);
       if (!(cardId in runningByCard)) {
-        runningByCard[cardId] = cc ? (cc.startingBalance || 0) : 0;
+        runningByCard[cardId] = (cc && !zeroSeed) ? (cc.startingBalance || 0) : 0;
       }
-      var asOf = cc && cc.balanceAsOf ? cc.balanceAsOf : null;
+      var asOf = (!zeroSeed && cc && cc.balanceAsOf) ? cc.balanceAsOf : null;
       if (asOf && e.date < asOf) {
         row.balance = null; row.upcoming = false;
         return;
@@ -2937,17 +2943,23 @@
   }
 
   // Stamps a .balance onto each row by walking it in the exact order given
-  // -- starting from the "beginning balance" anchor (settings.openingBalance,
-  // same pinned row this always has) -- so the Balance column always sums to
-  // precisely what's currently on screen: filtered rows never contribute,
-  // and if the table is sorted out of date order (e.g. uncleared rows sunk
-  // to the bottom), each row's balance reflects only the rows that actually
-  // appear ABOVE it right now, not their true full-history position. That
-  // trades away "balance = your real account total" whenever a filter or a
-  // non-date sort is active, in exchange for the numbers always adding up
-  // to what you can see and manually re-check by eye.
-  function applyRunningBalance(rows) {
-    var running = Number(state.settings.openingBalance) || 0;
+  // -- starting from `seed` (normally the "beginning balance" anchor,
+  // settings.openingBalance, same pinned row this always has) -- so the
+  // Balance column always sums to precisely what's currently on screen:
+  // filtered rows never contribute, and if the table is sorted out of date
+  // order (e.g. uncleared rows sunk to the bottom), each row's balance
+  // reflects only the rows that actually appear ABOVE it right now, not
+  // their true full-history position. That trades away "balance = your real
+  // account total" whenever a filter or a non-date sort is active, in
+  // exchange for the numbers always adding up to what you can see and
+  // manually re-check by eye.
+  //
+  // When a category filter is active, the caller passes seed = 0 instead of
+  // the real opening balance -- a category slice isn't a point in time, so
+  // the beginning-balance anchor (and its pinned row) doesn't mean anything
+  // there; Balance becomes a pure running sum of just the visible rows.
+  function applyRunningBalance(rows, seed) {
+    var running = typeof seed === "number" ? seed : (Number(state.settings.openingBalance) || 0);
     rows.forEach(function(r) { running += r.amount; r.balance = running; });
     return rows;
   }
@@ -3270,8 +3282,11 @@
     });
     sortRegisterRows(rows);
     // Balance is computed AFTER filtering and sorting, in the exact order
-    // the rows are about to be displayed -- see applyRunningBalance.
-    applyRunningBalance(rows);
+    // the rows are about to be displayed -- see applyRunningBalance. A
+    // category filter zeroes the seed (see applyRunningBalance's comment);
+    // the pinned Beginning balance row is hidden in that case too, below.
+    var catFilterActive = !!catFilter;
+    applyRunningBalance(rows, catFilterActive ? 0 : (Number(state.settings.openingBalance) || 0));
 
     var countEl = document.getElementById("registerCount");
     if (countEl) {
@@ -3375,14 +3390,18 @@
         '<span class="reg-detail-actions"><button type="button" class="primary" id="regNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
-    // A pinned "beginning balance" row -- always the very first row, not part
-    // of the sortable/filterable transaction list, and not linked to any
-    // category or paycheck. It's just an offset the running balance starts
-    // from, so the balance column can match a real bank account instead of
-    // starting from zero.
+    // A pinned "beginning balance" row -- normally the very first row, not
+    // part of the sortable/filterable transaction list, and not linked to
+    // any category or paycheck. It's just an offset the running balance
+    // starts from, so the balance column can match a real bank account
+    // instead of starting from zero. It's hidden while a category filter is
+    // active, though -- it isn't a Utilities transaction (or whatever
+    // category is picked), so it has no business appearing in that sliced
+    // view, and the Balance column is a pure sum of the visible rows there
+    // instead (see applyRunningBalance above).
     var openingBalanceVal = Number(state.settings.openingBalance) || 0;
     var openingDateVal = state.settings.openingBalanceDate || "";
-    var openingRowHtml =
+    var openingRowHtml = catFilterActive ? "" :
       '<tr class="register-txn-main register-opening-row">' +
         '<td class="reg-col-flag"></td>' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '"></td>' +
@@ -4854,8 +4873,11 @@
     });
     sortCCLedgerRows(rows);
     // Balance is computed AFTER filtering and sorting, in the exact order
-    // the rows are about to be displayed -- see applyCCRunningBalance.
-    applyCCRunningBalance(rows);
+    // the rows are about to be displayed -- see applyCCRunningBalance. A
+    // category filter zeroes each card's seed, same reasoning as the Check
+    // Register's Beginning balance row being hidden in that case.
+    var ccCatFilterActive = !!catFilter;
+    applyCCRunningBalance(rows, ccCatFilterActive);
 
     var countEl = document.getElementById("ccRegisterCount");
     if (countEl) {
