@@ -29,14 +29,15 @@ for exactly how that works.
   of any row, and the new order applies everywhere (the Dashboard, Budget
   vs. actual, and every category dropdown)
 - **Categories & Budgets table is directly editable** — change a
-  category's color, name, or monthly budget right in the table (color
-  saves the moment you pick one; name and budget save when you click
-  away or press Enter), no need to open the form and scroll up. Tracking
-  a credit card's balance now lives on its own **CC Register** tab instead
-  (see below) — categories here are just for what you spend on. This tab
-  also has a **Bank accounts** list — a separate concept from category,
-  for tagging which real bank account a Check Register transaction moved
-  through; see the Check Register section below for how that's used
+  category's color, name, monthly budget, or default bank account right
+  in the table (color saves the moment you pick one; the rest save when
+  you click away or press Enter), no need to open the form and scroll up.
+  Tracking a credit card's balance now lives on its own **CC Register**
+  tab instead (see below) — categories here are just for what you spend
+  on. This tab also has a **Bank accounts** list — a separate concept
+  from category, for tagging which real bank account a Check Register
+  transaction moved through, with an optional default per category; see
+  the Check Register section below for how that's used
 - Recurring expenses (rent, subscriptions, storage units, pest control,
   etc.) can be **monthly** (same day every month), **every 2 weeks**, or
   **every 2 months** — for the every-2 options, just give it any date you
@@ -273,6 +274,18 @@ for exactly how that works.
     Balance in the register, same as before this existed. Skipping it
     entirely (leaving every row as "No account") behaves exactly like the
     register always has
+  - **Categories can have a default bank account**, so you don't have to
+    pick one by hand on every single transaction. Set it in the "Add a
+    category" form or right in the **Categories & Budgets** table's own
+    Bank account column — then the moment you pick that category on the
+    Check Register's blank new-transaction row, its Bank field pre-fills
+    to match (still changeable before you add it). Recategorizing an
+    *existing* row does the same, but only when that row's Bank field is
+    still blank — it never overwrites an account you already picked by
+    hand. A recurring bill's auto-logged placeholder inherits its
+    category's default the same way. It's genuinely just a default, not a
+    lock: pick a different account any time, for any one transaction,
+    without changing the category's setting
   - Bank transactions you import (see CSV import below) land here
     automatically, flagged with a red **✗** and a red-outlined field until
     you assign a real account to them — once you do, the flag clears itself

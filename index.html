@@ -1162,11 +1162,15 @@
           <label for="catColor">Color</label>
           <input type="color" id="catColor" value="#a6a49c">
         </div>
+        <div class="field">
+          <label for="catBankAccount">Default bank account <span class="muted">(optional)</span></label>
+          <select id="catBankAccount"><option value="">No default</option></select>
+        </div>
         <input type="hidden" id="catEditId">
         <button type="submit" class="primary" id="categorySubmitBtn">Add category</button>
         <button type="button" class="secondary" id="categoryCancelEdit" style="display:none;">Cancel</button>
       </form>
-      <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. Color, name, and monthly budget can also all be changed right in the table below. Tracking a credit card's balance? Head to the CC Register tab instead -- categories here are just for what you spend on.</p>
+      <p class="hint">The first 8 categories get their own chart color automatically, in a fixed accessible order (extra categories share a neutral gray by default) -- but you can always pick a different color for any category with the color swatch above, whether it's one of the first 8 or not. Color, name, monthly budget, and default bank account can also all be changed right in the table below. Tracking a credit card's balance? Head to the CC Register tab instead -- categories here are just for what you spend on. A <strong>default bank account</strong> just pre-fills the Check Register's Bank field the moment you pick that category on a new or blank-account row -- pick a different account for that one transaction any time, it's only a starting point, not a lock.</p>
     </div>
     <div class="card">
       <h2>Your categories</h2>
@@ -1502,7 +1506,7 @@
   // saved data has something to migrate from.)
   function normalizeCategories(cats) {
     return cats.map(function(c) {
-      return Object.assign({ debt: false, startingBalance: 0, balanceAsOf: null, color: null }, c);
+      return Object.assign({ debt: false, startingBalance: 0, balanceAsOf: null, color: null, defaultBankAccountId: null }, c);
     });
   }
 
@@ -2197,12 +2201,18 @@
           var defaultPcIncome = state.income.find(function(inc) { return inc.id === r.paycheckId; });
           if (defaultPcIncome && monthKeyOf(defaultPcIncome.date) === mk) inheritedPaycheckId = r.paycheckId;
         }
+        // A freshly auto-logged placeholder never has a bank account set
+        // yet, so it's always safe to inherit its category's default here
+        // (see category.defaultBankAccountId) -- same "pre-fill, don't
+        // lock" idea as the Check Register's own quick-add row.
+        var recCat = r.categoryId ? categoryById(r.categoryId) : null;
         state.expenses.push({
           id: uid(), date: dateStr, amount: r.amount, categoryId: r.categoryId,
           note: r.name + " (recurring)", recurringId: r.id, occurrenceMonth: mk,
           paid: false, cleared: false, paycheckId: inheritedPaycheckId,
           creditCardId: r.creditCardId || null, debtType: r.debtType || null,
-          viaAccountPicker: !!r.viaAccountPicker
+          viaAccountPicker: !!r.viaAccountPicker,
+          bankAccountId: (recCat && recCat.defaultBankAccountId) || null
         });
         added++;
       });
@@ -2426,6 +2436,20 @@
         bankFilterSelect.appendChild(opt);
       });
       bankFilterSelect.value = prevBankFilter;
+    }
+
+    // The "Add a category" form's own Default bank account field -- same
+    // preserve-the-current-selection approach as the selects above.
+    var catBankSelect = document.getElementById("catBankAccount");
+    if (catBankSelect) {
+      var prevCatBank = catBankSelect.value;
+      catBankSelect.innerHTML = '<option value="">No default</option>';
+      state.bankAccounts.forEach(function(a) {
+        var opt = document.createElement("option");
+        opt.value = a.id; opt.textContent = a.name;
+        catBankSelect.appendChild(opt);
+      });
+      catBankSelect.value = prevCatBank;
     }
   }
 
@@ -3108,6 +3132,17 @@
     return opts;
   }
 
+  // Same option list as bankAccountOptionsFor, just worded for a CATEGORY's
+  // own default (see category.defaultBankAccountId) rather than a single
+  // transaction's actual account -- "No default" instead of "No account".
+  function bankAccountDefaultOptionsFor(selectedId) {
+    var opts = '<option value=""' + (selectedId ? '' : ' selected') + '>No default</option>';
+    opts += state.bankAccounts.map(function(a) {
+      return '<option value="' + a.id + '"' + (a.id === selectedId ? ' selected' : '') + '>' + escapeHtml(a.name) + '</option>';
+    }).join("");
+    return opts;
+  }
+
   // The income-side counterpart to accountOptionsFor() -- lets a deposit
   // say where the money actually came FROM. "Regular income" (the default)
   // is just money arriving from outside the app, same as before this
@@ -3610,6 +3645,14 @@
         if (!ex) return;
         applyAccountValue(ex, sel.value);
         ex.categoryGuessed = false;
+        // Only fills in a blank Bank field -- never overwrites one you've
+        // already set on this row, since recategorizing an existing
+        // transaction isn't necessarily meant to also move which account
+        // it's tracked under.
+        if (!ex.bankAccountId && ex.categoryId) {
+          var recatCat = categoryById(ex.categoryId);
+          if (recatCat && recatCat.defaultBankAccountId) ex.bankAccountId = recatCat.defaultBankAccountId;
+        }
         var autoLinked = autoLinkToRecurringBill(ex);
         saveState();
         refreshAfterRegisterChange();
@@ -3760,6 +3803,20 @@
       if (el) el.addEventListener("input", updateRegNewAccountFieldVisibility);
     });
     updateRegNewAccountFieldVisibility();
+
+    // Picking a category on the blank new-transaction row pre-fills its
+    // Bank field from that category's own default (see
+    // category.defaultBankAccountId) -- just a starting point, so you can
+    // still change it before adding the transaction. "Pay down: <card>"
+    // isn't a real category (no default to inherit), so that's left alone.
+    var regNewCategoryEl = document.getElementById("regNewCategory");
+    if (regNewCategoryEl) {
+      regNewCategoryEl.addEventListener("change", function() {
+        var cat = categoryById(regNewCategoryEl.value);
+        var bankEl = document.getElementById("regNewBankAccount");
+        if (cat && cat.defaultBankAccountId && bankEl) bankEl.value = cat.defaultBankAccountId;
+      });
+    }
 
     var addBtn = document.getElementById("regNewAdd");
     if (addBtn) addBtn.addEventListener("click", commitNewRegisterRow);
@@ -4665,14 +4722,16 @@
     var budgetRaw = document.getElementById("catBudget").value;
     var budget = budgetRaw === "" ? 0 : parseFloat(budgetRaw);
     var color = document.getElementById("catColor").value || "#a6a49c";
+    var bankAccountEl = document.getElementById("catBankAccount");
+    var defaultBankAccountId = bankAccountEl ? (bankAccountEl.value || null) : null;
     if (!name || isNaN(budget) || budget < 0) return;
 
     if (editId) {
       var c = categoryById(editId);
-      if (c) { c.name = name; c.budget = budget; c.color = color; }
+      if (c) { c.name = name; c.budget = budget; c.color = color; c.defaultBankAccountId = defaultBankAccountId; }
       showToast("Category updated");
     } else {
-      state.categories.push({ id: uid(), name: name, budget: budget, color: color, debt: false, startingBalance: 0, balanceAsOf: null });
+      state.categories.push({ id: uid(), name: name, budget: budget, color: color, debt: false, startingBalance: 0, balanceAsOf: null, defaultBankAccountId: defaultBankAccountId });
       showToast("Category added");
     }
     saveState();
@@ -4713,6 +4772,8 @@
     document.getElementById("catName").value = c.name;
     document.getElementById("catBudget").value = c.budget || "";
     document.getElementById("catColor").value = categoryColorHex(c.id);
+    var catBankEl = document.getElementById("catBankAccount");
+    if (catBankEl) catBankEl.value = c.defaultBankAccountId || "";
     document.getElementById("categoryFormTitle").textContent = "Edit category";
     document.getElementById("categorySubmitBtn").textContent = "Save changes";
     document.getElementById("categoryCancelEdit").style.display = "inline-block";
@@ -4749,7 +4810,7 @@
       return;
     }
     var canDrag = state.categories.length > 1;
-    var html = '<table><thead><tr><th></th><th>Color</th><th>Category</th><th class="num">Monthly budget</th><th></th></tr></thead><tbody>';
+    var html = '<table><thead><tr><th></th><th>Color</th><th>Category</th><th class="num">Monthly budget</th><th>Bank account</th><th></th></tr></thead><tbody>';
     state.categories.forEach(function(c) {
       var color = categoryColorHex(c.id);
       var handle = canDrag
@@ -4762,6 +4823,7 @@
         '<td><input type="color" class="cat-inline-color" data-cat-color="' + c.id + '" value="' + escapeHtml(color) + '" title="Change ' + escapeHtml(c.name) + '\'s color"></td>' +
         '<td><input type="text" class="cat-inline-input" data-cat-name="' + c.id + '" value="' + escapeHtml(c.name) + '" aria-label="Category name"></td>' +
         '<td class="num"><input type="number" class="cat-inline-input cat-inline-budget" data-cat-budget="' + c.id + '" value="' + (c.budget || "") + '" step="0.01" min="0" placeholder="0.00" aria-label="Monthly budget"></td>' +
+        '<td><select class="cat-inline-input" data-cat-bank-account="' + c.id + '" aria-label="Default bank account" title="Pre-fills the Check Register\'s Bank field when you pick this category on a new or blank-account row -- not a lock, just a starting point">' + bankAccountDefaultOptionsFor(c.defaultBankAccountId) + '</select></td>' +
         '<td class="actions-cell">' +
           '<button class="row-btn" data-edit="' + c.id + '">Edit</button>' +
           '<button class="row-btn danger" data-del="' + c.id + '">Delete</button>' +
@@ -4820,6 +4882,16 @@
       inp.addEventListener("blur", commit);
       inp.addEventListener("keydown", function(e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
     });
+    wrap.querySelectorAll("[data-cat-bank-account]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var c = categoryById(sel.dataset.catBankAccount);
+        if (!c) return;
+        c.defaultBankAccountId = sel.value || null;
+        saveState();
+        refreshAfterCategoryChange();
+        showToast("Default bank account updated");
+      });
+    });
   }
 
   // ---------- BANK ACCOUNTS ----------
@@ -4850,25 +4922,30 @@
   // shows up in a dropdown (the register's inline selects rebuild from
   // state directly on their own next render, but the filter and quick-add
   // selects need their options refreshed the same way populateCategorySelects
-  // already does for categories and cards), and the register, since a
-  // deleted account clears the tag off any row that had it.
+  // already does for categories and cards), the category table (its own
+  // Bank account column, and a deleted account clearing any category's
+  // default), and the register, since a deleted account clears the tag off
+  // any row that had it.
   function refreshAfterBankAccountChange() {
     renderBankAccounts();
     populateCategorySelects();
+    renderCategories();
     renderExpenses();
   }
 
   function deleteBankAccount(id) {
     var inUse = state.expenses.some(function(e) { return e.bankAccountId === id; }) ||
-                state.income.some(function(inc) { return inc.bankAccountId === id; });
+                state.income.some(function(inc) { return inc.bankAccountId === id; }) ||
+                state.categories.some(function(c) { return c.defaultBankAccountId === id; });
     var msg = inUse
-      ? "This account has transactions tagged with it. Delete anyway? Those rows will just show no bank account."
+      ? "This account has transactions (or a category default) tagged with it. Delete anyway? Those will just show no bank account."
       : "Delete this bank account?";
     confirmDialog(msg).then(function(ok) {
       if (!ok) return;
       state.bankAccounts = state.bankAccounts.filter(function(a) { return a.id !== id; });
       state.expenses.forEach(function(e) { if (e.bankAccountId === id) e.bankAccountId = null; });
       state.income.forEach(function(inc) { if (inc.bankAccountId === id) inc.bankAccountId = null; });
+      state.categories.forEach(function(c) { if (c.defaultBankAccountId === id) c.defaultBankAccountId = null; });
       saveState();
       refreshAfterBankAccountChange();
       showToast("Bank account deleted");
