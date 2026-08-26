@@ -1218,6 +1218,35 @@
       <p class="hint">Have existing transactions that predate this feature and don't have a bank account tagged yet? Categories with a default bank account (below) can backfill those automatically.</p>
       <button type="button" class="secondary" id="backfillBankAccountsBtn">Apply category defaults to untagged transactions</button>
     </div>
+
+    <div class="card" id="transferCard">
+      <h2>Transfer between accounts</h2>
+      <p class="hint" style="margin-top:0;">Moving money between two of your own bank accounts -- checking to savings, say -- isn't spending, so it's never filed under a category. Pick where it's coming from and going to and this logs both sides at once: a withdrawal in the From account's own Check Register / reconciliation window, and a deposit in the To account's, so both balances stay accurate without entering it twice. Editing the amount or date on either side afterward updates the other side to match; deleting either one deletes both.</p>
+      <form class="inline-form" id="transferForm">
+        <div class="field">
+          <label for="transferDate">Date</label>
+          <input type="date" id="transferDate" required>
+        </div>
+        <div class="field">
+          <label for="transferFrom">From</label>
+          <select id="transferFrom" required></select>
+        </div>
+        <div class="field">
+          <label for="transferTo">To</label>
+          <select id="transferTo" required></select>
+        </div>
+        <div class="field">
+          <label for="transferAmount">Amount</label>
+          <input type="number" id="transferAmount" step="0.01" min="0.01" placeholder="0.00" required>
+        </div>
+        <div class="field" style="flex:1; min-width:160px;">
+          <label for="transferNote">Note <span class="muted">(optional)</span></label>
+          <input type="text" id="transferNote" placeholder="Optional">
+        </div>
+        <button type="submit" class="primary" id="transferSubmitBtn">Add transfer</button>
+      </form>
+      <div id="transferHintWrap"></div>
+    </div>
   </section>
 
   <!-- BUDGET VS ACTUAL -->
@@ -2480,6 +2509,39 @@
       });
       catBankSelect.value = prevCatBank;
     }
+
+    // The Transfer form's own From/To selects -- same preserve-the-current-
+    // selection approach as the selects above, kept in sync here since this
+    // function already runs after every place a bank account can be added,
+    // renamed, or deleted. Unlike bankAccountOptionsFor, there's no blank
+    // "No account" option here -- a transfer only ever makes sense between
+    // two real, named accounts -- and the form itself is hidden (see
+    // renderTransferForm) whenever fewer than two exist to pick from.
+    var transferFromSelect = document.getElementById("transferFrom");
+    var transferToSelect = document.getElementById("transferTo");
+    if (transferFromSelect && transferToSelect) {
+      var prevFrom = transferFromSelect.value, prevTo = transferToSelect.value;
+      var transferOptionsHtml = state.bankAccounts.map(function(a) {
+        return '<option value="' + a.id + '">' + escapeHtml(a.name) + '</option>';
+      }).join("");
+      transferFromSelect.innerHTML = transferOptionsHtml;
+      transferToSelect.innerHTML = transferOptionsHtml;
+      if (prevFrom) transferFromSelect.value = prevFrom;
+      if (prevTo) transferToSelect.value = prevTo;
+      renderTransferForm();
+    }
+  }
+
+  // Fewer than two bank accounts means there's nothing to transfer between
+  // yet -- hides the form and shows a plain hint instead of a submit button
+  // that can never succeed (From and To would just be the same one account).
+  function renderTransferForm() {
+    var form = document.getElementById("transferForm");
+    var hintWrap = document.getElementById("transferHintWrap");
+    if (!form || !hintWrap) return;
+    var enough = state.bankAccounts.length >= 2;
+    form.style.display = enough ? "" : "none";
+    hintWrap.innerHTML = enough ? "" : '<div class="empty-state">Add at least two bank accounts above before you can transfer between them.</div>';
   }
 
   // Options for the expense edit form's "Link to recurring bill" field --
@@ -2771,6 +2833,13 @@
   function editExpense(id) {
     var ex = state.expenses.find(function(x){ return x.id === id; });
     if (!ex) return;
+    // A transfer's expense leg has no real category to edit here -- see
+    // createTransfer and the detail-row special-casing in
+    // renderCheckRegister -- so this old full-panel flow (only ever
+    // reached from Search, the Dashboard, or a drill-down, never the
+    // register's own row) just jumps to its row instead, same as clicking
+    // it directly in a reconciliation window.
+    if (ex.transferId) { jumpToRegisterRow(ex.id, "expense"); return; }
     document.getElementById("registerEditPanel").style.display = "block";
     document.getElementById("expenseFormCard").style.display = "block";
     document.getElementById("incomeFormCard").style.display = "none";
@@ -2808,9 +2877,20 @@
   // same as clicking Cancel. Existing callers (the Check Register's inline
   // Delete button) don't pass it and behave exactly as before.
   function deleteExpense(id, onDeleted) {
-    confirmDialog("Delete this expense?").then(function(ok) {
+    var ex = state.expenses.find(function(x) { return x.id === id; });
+    // A transfer only ever means anything as a pair -- a lone withdrawal
+    // with no matching deposit (or vice versa) is exactly the kind of
+    // silent, hard-to-spot discrepancy the reconciliation windows exist to
+    // catch. So deleting either leg takes the other one down with it,
+    // confirmed once, up front, for both.
+    var peerIncome = ex && ex.transferId ? state.income.find(function(i) { return i.transferId === ex.transferId; }) : null;
+    var msg = peerIncome
+      ? "Delete this transfer? This removes both the withdrawal and its matching deposit."
+      : "Delete this expense?";
+    confirmDialog(msg).then(function(ok) {
       if (!ok) return;
       state.expenses = state.expenses.filter(function(x){ return x.id !== id; });
+      if (peerIncome) state.income = state.income.filter(function(x) { return x.id !== peerIncome.id; });
       saveState();
       renderExpenses();
       renderIncome();
@@ -2819,7 +2899,7 @@
       renderBalances();
       renderCategories();
       renderCalendar();
-      showToast("Expense deleted");
+      showToast(peerIncome ? "Transfer deleted" : "Expense deleted");
       if (onDeleted) onDeleted();
     });
   }
@@ -3030,7 +3110,7 @@
         imported: !!e.imported, categoryGuessed: !!e.categoryGuessed,
         splitGroupId: e.splitGroupId || null, recurringId: e.recurringId || null,
         creditCardId: e.creditCardId || null, debtType: e.debtType || null,
-        bankAccountId: e.bankAccountId || null
+        bankAccountId: e.bankAccountId || null, transferId: e.transferId || null
       });
     });
     state.income.forEach(function(inc) {
@@ -3038,7 +3118,7 @@
         kind: "income", id: inc.id, date: inc.date, desc: inc.source || "",
         amount: Math.abs(inc.amount), cleared: !!inc.cleared, imported: !!inc.imported,
         linkedGoalId: inc.linkedGoalId || null, reclassCategoryId: inc.reclassCategoryId || null,
-        bankAccountId: inc.bankAccountId || null
+        bankAccountId: inc.bankAccountId || null, transferId: inc.transferId || null
       });
     });
     rows.sort(function(a, b) {
@@ -3246,15 +3326,53 @@
   // "(deleted category)" -- a payment was never miscategorized, it just
   // never had a category to begin with, so it gets its own label instead of
   // being lumped in with genuine orphaned data.
-  function accountLabelFor(categoryId, creditCardId, debtType) {
+  // transferId is optional -- only expenses ever carry one (see
+  // createTransfer) -- and, when present, resolves the OTHER side of the
+  // transfer live via its shared transferId rather than a stored account
+  // name, so renaming an account afterward never leaves this label stale.
+  function accountLabelFor(categoryId, creditCardId, debtType, transferId) {
     var cat = categoryById(categoryId);
     if (cat) return cat.name;
     if (creditCardId && debtType === "payment") {
       var payCard = creditCardById(creditCardId);
       return "Pay down: " + (payCard ? payCard.name : "(deleted card)");
     }
+    if (transferId) return "Transfer to: " + transferPeerAccountName(transferId, "expense");
     if (categoryId) return "(deleted category)";
     return "(needs a category)";
+  }
+
+  // The other half of a transfer pair, found by its shared transferId --
+  // ownKind is the kind of the record you already have in hand ("expense"
+  // or "income"), so this looks up and names the OTHER kind's account.
+  // Used by accountLabelFor (for an expense leg's "Transfer to: <account>")
+  // and directly in the Check Register's own detail row (for an income
+  // leg's "Transfer from: <account>"), always read live off the peer
+  // record rather than a snapshot, so renaming or re-tagging either leg's
+  // Bank field keeps both labels honest with nothing further to sync.
+  function transferPeerAccountName(transferId, ownKind) {
+    var peer = ownKind === "expense"
+      ? state.income.find(function(i) { return i.transferId === transferId; })
+      : state.expenses.find(function(e) { return e.transferId === transferId; });
+    if (!peer) return "(deleted)";
+    var acct = bankAccountById(peer.bankAccountId);
+    return acct ? acct.name : "(no account)";
+  }
+
+  // Keeps a transfer's two legs honest with each other -- editing the
+  // amount or date on either row (see the data-reg-amount / data-reg-date
+  // change handlers below) applies that same new value to its paired row
+  // too, so the withdrawal and its matching deposit can never silently
+  // drift apart. Cleared and paid stay independent per leg on purpose --
+  // each side's own real bank can genuinely clear on a different day.
+  function syncTransferPeer(record, ownKind) {
+    if (!record.transferId) return;
+    var peer = ownKind === "expense"
+      ? state.income.find(function(i) { return i.transferId === record.transferId; })
+      : state.expenses.find(function(e) { return e.transferId === record.transferId; });
+    if (!peer) return;
+    peer.amount = Math.abs(record.amount);
+    peer.date = record.date;
   }
 
   // Which register a transaction actually lives in, for the little badge
@@ -3706,19 +3824,38 @@
             ' <button type="button" class="row-btn" data-reg-unlink-recurring="' + r.id + '" title="Unlink from this recurring bill">Unlink</button></span>'
           : '';
         var bankField = '<span>Bank <select class="register-inline-select" data-reg-bank-account="' + r.id + '" data-reg-kind="expense">' + bankAccountOptionsFor(r.bankAccountId) + '</select></span>';
+        // A transfer's expense leg isn't spending under any category -- its
+        // "category" IS the other account the money landed in (see
+        // createTransfer) -- so instead of a normal editable Category
+        // select, this shows a plain live-looked-up label and skips the
+        // Paycheck/Split/recurring-link fields entirely, none of which
+        // apply to moving your own money between your own accounts. Delete
+        // still works normally, but see deleteExpense -- it takes the
+        // paired deposit down with it rather than leaving an orphaned half
+        // of the transfer behind.
+        var categoryField = r.transferId
+          ? '<span class="muted" title="Both sides of a transfer are logged automatically -- delete this row to undo the whole transfer, not just this half">Transfer to: ' + escapeHtml(transferPeerAccountName(r.transferId, "expense")) + '</span>'
+          : '<span>Category <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + accountOptionsFor(r.categoryId, r.creditCardId, r.debtType) + '</select></span>';
         detailInner =
-          '<span>Category <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + accountOptionsFor(r.categoryId, r.creditCardId, r.debtType) + '</select></span>' +
+          categoryField +
           bankField +
-          recurringField +
-          pcField +
+          (r.transferId ? '' : recurringField) +
+          (r.transferId ? '' : pcField) +
           '<span class="reg-detail-actions">' +
-            splitBtn +
+            (r.transferId ? '' : splitBtn) +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="expense">Delete</button>' +
           '</span>';
       } else {
         var incBankField = '<span>Bank <select class="register-inline-select" data-reg-bank-account="' + r.id + '" data-reg-kind="income">' + bankAccountOptionsFor(r.bankAccountId) + '</select></span>';
+        // Same reasoning as the expense side above -- a transfer's deposit
+        // leg didn't come from a savings goal or a category reclass, it
+        // came from the OTHER account, so the normal From select is
+        // replaced with a plain live-looked-up label instead.
+        var incSourceField = r.transferId
+          ? '<span class="muted" title="Both sides of a transfer are logged automatically -- delete this row to undo the whole transfer, not just this half">From: Transfer from ' + escapeHtml(transferPeerAccountName(r.transferId, "income")) + '</span>'
+          : '<span>From <select class="register-inline-select" data-reg-income-source="' + r.id + '">' + incomeSourceOptionsFor(r.linkedGoalId, true, r.reclassCategoryId) + '</select></span>';
         detailInner =
-          '<span>From <select class="register-inline-select" data-reg-income-source="' + r.id + '">' + incomeSourceOptionsFor(r.linkedGoalId, true, r.reclassCategoryId) + '</select></span>' +
+          incSourceField +
           incBankField +
           '<span class="reg-detail-actions">' +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="income">Delete</button>' +
@@ -3855,11 +3992,13 @@
           if (!inc2) return;
           if (isNaN(val) || val < 0) { showToast("Enter a valid amount"); inp.value = inc2.amount; return; }
           inc2.amount = val;
+          syncTransferPeer(inc2, "income");
         } else {
           var ex4 = state.expenses.find(function(x) { return x.id === inp.dataset.regAmount; });
           if (!ex4) return;
           if (isNaN(val) || val < 0) { showToast("Enter a valid amount"); inp.value = ex4.amount; return; }
           ex4.amount = val;
+          syncTransferPeer(ex4, "expense");
         }
         saveState();
         refreshAfterRegisterChange();
@@ -3945,10 +4084,12 @@
           var inc = state.income.find(function(x) { return x.id === inp.dataset.regDate; });
           if (!inc) return;
           inc.date = inp.value;
+          syncTransferPeer(inc, "income");
         } else {
           var ex2 = state.expenses.find(function(x) { return x.id === inp.dataset.regDate; });
           if (!ex2) return;
           ex2.date = inp.value;
+          syncTransferPeer(ex2, "expense");
         }
         saveState();
         refreshAfterRegisterChange();
@@ -4144,6 +4285,9 @@
   function editIncome(id) {
     var inc = state.income.find(function(x){ return x.id === id; });
     if (!inc) return;
+    // See the matching guard in editExpense -- a transfer's deposit leg has
+    // no real "From" to edit here either, so this jumps to its row instead.
+    if (inc.transferId) { jumpToRegisterRow(inc.id, "income"); return; }
     document.getElementById("registerEditPanel").style.display = "block";
     document.getElementById("incomeFormCard").style.display = "block";
     document.getElementById("expenseFormCard").style.display = "none";
@@ -4179,9 +4323,16 @@
   }
 
   function deleteIncome(id, onDeleted) {
-    confirmDialog("Delete this income entry? Any expenses assigned to it will become unassigned.").then(function(ok) {
+    var inc = state.income.find(function(x) { return x.id === id; });
+    // Same pairing rule as deleteExpense above -- see its comment.
+    var peerExpense = inc && inc.transferId ? state.expenses.find(function(e) { return e.transferId === inc.transferId; }) : null;
+    var msg = peerExpense
+      ? "Delete this transfer? This removes both the deposit and its matching withdrawal."
+      : "Delete this income entry? Any expenses assigned to it will become unassigned.";
+    confirmDialog(msg).then(function(ok) {
       if (!ok) return;
       state.income = state.income.filter(function(x){ return x.id !== id; });
+      if (peerExpense) state.expenses = state.expenses.filter(function(x) { return x.id !== peerExpense.id; });
       state.expenses.forEach(function(e) { if (e.paycheckId === id) e.paycheckId = null; });
       saveState();
       renderIncome();
@@ -4190,7 +4341,7 @@
       renderCalendar();
       populatePaycheckSelect();
       renderPaycheckPlanner();
-      showToast("Income entry deleted");
+      showToast(peerExpense ? "Transfer deleted" : "Income entry deleted");
       if (onDeleted) onDeleted();
     });
   }
@@ -4754,7 +4905,7 @@
           '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-pc-paid="' + e.id + '"' + (e.paid ? ' checked' : '') + '></td>' +
           '<td class="check-cell"><input type="checkbox" class="row-checkbox" data-pc-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
           '<td>' + escapeHtml(e.date) + '</td>' +
-          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(accountLabelFor(e.categoryId, e.creditCardId, e.debtType)) + '</span></td>' +
+          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(accountLabelFor(e.categoryId, e.creditCardId, e.debtType, e.transferId)) + '</span></td>' +
           '<td class="' + noteClass + '">' + escapeHtml(e.note || "") + splitTag + '</td>' +
           '<td class="num">' + fmtMoney(e.amount) + '</td>' +
           '<td class="actions-cell"><button class="row-btn" data-pc-edit="' + e.id + '">Edit</button> <button class="row-btn" data-split="' + e.id + '">Split</button> <button class="row-btn" data-unassign="' + e.id + '">Unassign</button> <button class="row-btn danger" data-pc-del="' + e.id + '">Delete</button></td>' +
@@ -4782,7 +4933,7 @@
           '</tbody></table></div>';
 
       var assignOptions = unassigned.map(function(e) {
-        var label = e.date + " · " + accountLabelFor(e.categoryId, e.creditCardId, e.debtType) + (e.note ? " · " + e.note : "") + " · " + fmtMoney(e.amount);
+        var label = e.date + " · " + accountLabelFor(e.categoryId, e.creditCardId, e.debtType, e.transferId) + (e.note ? " · " + e.note : "") + " · " + fmtMoney(e.amount);
         return '<option value="expense:' + e.id + '">' + escapeHtml(label) + '</option>';
       }).join("");
 
@@ -5174,6 +5325,56 @@
   var backfillBankAccountsBtn = document.getElementById("backfillBankAccountsBtn");
   if (backfillBankAccountsBtn) {
     backfillBankAccountsBtn.addEventListener("click", backfillBankAccountsFromCategoryDefaults);
+  }
+
+  // Logs both sides of a transfer at once: a withdrawal expense tagged to
+  // fromId, and a matching deposit income tagged to toId, linked by a
+  // shared transferId (see accountLabelFor, transferPeerAccountName,
+  // syncTransferPeer, and deleteExpense/deleteIncome's pairing above).
+  // Neither leg gets a categoryId -- moving your own money between your
+  // own accounts isn't spending or income, see totalsForMonth/
+  // incomeForMonth -- so the "category" a normal transaction would carry
+  // is really just "which account is the other side," shown live instead
+  // of stored as a snapshot.
+  function createTransfer(date, fromId, toId, amount, note) {
+    var fromAcct = bankAccountById(fromId), toAcct = bankAccountById(toId);
+    var transferId = uid();
+    var suffix = note ? " (" + note + ")" : "";
+    state.expenses.push({
+      id: uid(), date: date, amount: amount, categoryId: null,
+      note: "Transfer to " + (toAcct ? toAcct.name : "account") + suffix,
+      paycheckId: null, paid: false, cleared: false, imported: false, categoryGuessed: false,
+      splitGroupId: null, recurringId: null, creditCardId: null, debtType: null,
+      bankAccountId: fromId, transferId: transferId
+    });
+    state.income.push({
+      id: uid(), date: date, amount: amount,
+      source: "Transfer from " + (fromAcct ? fromAcct.name : "account") + suffix,
+      color: "#7a7a7a", note: "", cleared: false, imported: false,
+      linkedGoalId: null, reclassCategoryId: null, bankAccountId: toId, transferId: transferId
+    });
+    saveState();
+    refreshAfterRegisterChange();
+  }
+
+  var transferForm = document.getElementById("transferForm");
+  if (transferForm) {
+    document.getElementById("transferDate").value = todayISO();
+    transferForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      var date = document.getElementById("transferDate").value;
+      var fromId = document.getElementById("transferFrom").value;
+      var toId = document.getElementById("transferTo").value;
+      var amount = parseFloat(document.getElementById("transferAmount").value);
+      var note = document.getElementById("transferNote").value.trim();
+      if (!date || !fromId || !toId) { showToast("Pick a date and both accounts"); return; }
+      if (fromId === toId) { showToast("Pick two different accounts to transfer between"); return; }
+      if (isNaN(amount) || amount <= 0) { showToast("Enter an amount greater than zero"); return; }
+      createTransfer(date, fromId, toId, amount, note);
+      transferForm.reset();
+      document.getElementById("transferDate").value = todayISO();
+      showToast("Transfer added");
+    });
   }
 
   // Everything that needs to re-render after a bank account is added,
@@ -5977,7 +6178,7 @@
     }
 
     var expenseRows = state.expenses.map(function(e) {
-      var catName = accountLabelFor(e.categoryId, e.creditCardId, e.debtType);
+      var catName = accountLabelFor(e.categoryId, e.creditCardId, e.debtType, e.transferId);
       var src = expenseSourceInfo(e);
       return {
         type: "expense",
@@ -6060,6 +6261,14 @@
       // balance that was already counted as spending when the charge
       // happened -- so it's excluded here to avoid double-counting.
       if (e.creditCardId && e.debtType === "payment") return;
+      // A transfer's withdrawal leg isn't spending either -- it's your own
+      // money moving to your own other account (see createTransfer), with
+      // categoryId already null so it would only ever land in a stray
+      // totals[null] bucket no real category reads from -- except
+      // renderStatTiles' "Spent this month" sums every key in this object,
+      // stray bucket included, so it's excluded here explicitly rather
+      // than relying on that to stay true.
+      if (e.transferId) return;
       if (monthKeyOf(e.date) === monthKey) {
         totals[e.categoryId] = (totals[e.categoryId] || 0) + e.amount;
       }
@@ -6079,7 +6288,11 @@
   }
 
   function incomeForMonth(monthKey) {
-    return state.income.filter(function(inc) { return monthKeyOf(inc.date) === monthKey; })
+    // A transfer's deposit leg isn't new income either -- same reasoning
+    // as the transferId exclusion in totalsForMonth above -- it's money
+    // that already existed in one of your own accounts, just moved into
+    // this one.
+    return state.income.filter(function(inc) { return monthKeyOf(inc.date) === monthKey && !inc.transferId; })
                         .reduce(function(s, inc) { return s + inc.amount; }, 0);
   }
 
@@ -6429,7 +6642,7 @@
     }
     var html = rows.map(function(r) {
       var isExpense = r.kind === "expense";
-      var title = isExpense ? accountLabelFor(r.categoryId, r.creditCardId, r.debtType) : (r.desc || "Income");
+      var title = isExpense ? accountLabelFor(r.categoryId, r.creditCardId, r.debtType, r.transferId) : (r.desc || "Income");
       var sub = isExpense ? (r.desc || "") : "Income";
       var color = isExpense ? categoryColorHex(r.categoryId) : "var(--success)";
       var amtCls = isExpense ? "variance-over" : "variance-under";
@@ -6599,7 +6812,7 @@
         var splitTag = e.splitGroupId ? ' <span class="muted">(split)</span>' : "";
         return '<tr>' +
           '<td>' + escapeHtml(e.date) + '</td>' +
-          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(accountLabelFor(e.categoryId, e.creditCardId, e.debtType)) + '</span></td>' +
+          '<td><span class="cat-label"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(accountLabelFor(e.categoryId, e.creditCardId, e.debtType, e.transferId)) + '</span></td>' +
           '<td class="drill-note-cell" data-drill-edit="' + e.id + '" tabindex="0" role="button" title="Click to edit this transaction">' + escapeHtml(e.note || "(no note)") + splitTag + '</td>' +
           '<td class="num">' + fmtMoney(e.amount) + '</td>' +
         '</tr>';
@@ -6703,7 +6916,7 @@
       var typeLabel = isCharge ? "Charge" : "Payment";
       var signedAmount = isCharge ? e.amount : -e.amount;
       var bankLabel = isCharge ? "" : (bankAccountById(e.bankAccountId) ? bankAccountById(e.bankAccountId).name : "");
-      rows.push([e.date, typeLabel, registerLabel, accountLabelFor(e.categoryId, e.creditCardId, e.debtType), e.note || "", signedAmount.toFixed(2), bankLabel]);
+      rows.push([e.date, typeLabel, registerLabel, accountLabelFor(e.categoryId, e.creditCardId, e.debtType, e.transferId), e.note || "", signedAmount.toFixed(2), bankLabel]);
     });
     if (includeCheck) {
       state.income.forEach(function(inc) {
