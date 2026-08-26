@@ -466,6 +466,8 @@
   .reconciliation-window { margin-top: 14px; }
   .reconciliation-window h3 { margin: 0 0 4px 0; font-size: 14px; font-weight: 600; }
   .reconciliation-window .register-table { table-layout: auto; }
+  .reconciliation-row { cursor: pointer; }
+  .reconciliation-row:hover td { background: rgba(120, 120, 120, 0.09); }
   .reconciliation-pager {
     display: flex; align-items: center; justify-content: center; gap: 12px;
     margin-top: 10px; font-size: 13px;
@@ -3480,7 +3482,7 @@
           var balanceCell = r.balance === null
             ? '<span class="muted" title="Dated before this account\'s balance anchor">—</span>'
             : fmtMoney(r.balance);
-          rowsHtml += '<tr class="' + stripeClass + '">' +
+          rowsHtml += '<tr class="reconciliation-row ' + stripeClass + '" data-recon-jump="' + r.id + '" data-recon-jump-kind="' + r.kind + '" title="Click to edit this transaction in the Check Register above">' +
             '<td class="reg-col-date">' + r.date + '</td>' +
             '<td>' + escapeHtml(r.desc || "") + '</td>' +
             '<td class="num reg-col-payment">' + paymentCell + '</td>' +
@@ -3557,6 +3559,19 @@
         rec.cleared = cb.checked;
         saveState();
         refreshAfterRegisterChange();
+      });
+    });
+    // Clicking anywhere on a row jumps up to its real row in the Check
+    // Register above -- highlighted and scrolled into view, same as
+    // clicking a Search result -- since every field (category, bank
+    // account, amount, date...) is only ever editable up there, not in
+    // this compact reconciliation view. The cleared checkbox is the one
+    // exception: clicking it should just toggle cleared right here, not
+    // also yank you up to the register.
+    wrap.querySelectorAll("[data-recon-jump]").forEach(function(tr) {
+      tr.addEventListener("click", function(e) {
+        if (e.target.closest("[data-recon-cleared]")) return;
+        jumpToRegisterRow(tr.dataset.reconJump, tr.dataset.reconJumpKind);
       });
     });
   }
