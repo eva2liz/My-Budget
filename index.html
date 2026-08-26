@@ -3631,6 +3631,19 @@
         return true;
       });
 
+      // Cleared rows float to the top of the window, uncleared sink to the
+      // bottom -- no matter what date order they're actually in -- same
+      // "already reconciled" grouping the main Check Register does when
+      // sorted by anything other than its own ✓ column. This is a pure
+      // DISPLAY reorder done via a stable sort (so each group keeps its own
+      // chronological order internally); it happens AFTER applyRunningBalance
+      // stamped every row's true point-in-time balance above, so the number
+      // shown next to each row is still its real running balance as of that
+      // row's own date -- exactly what you check against a paper statement --
+      // even though the rows themselves are no longer walking straight down
+      // in date order on screen.
+      visibleRows.sort(function(a, b) { return (a.cleared ? 0 : 1) - (b.cleared ? 0 : 1); });
+
       var totalPages = Math.max(1, Math.ceil(visibleRows.length / RECONCILIATION_PAGE_SIZE));
       if (st.page > totalPages - 1) st.page = totalPages - 1;
       if (st.page < 0) st.page = 0;

@@ -303,7 +303,16 @@ for exactly how that works.
     which already-balanced rows are currently displayed; it never changes
     the balance math, so the number next to any row is always that
     account's real running total up to that date, not a sum of only what's
-    on screen
+    on screen. **Cleared rows float to the top of each window**, uncleared
+    ones sink to the bottom — no matter what date they're actually on —
+    since reconciling means working down an already-cleared list from your
+    bank statement, and an uncleared row buried in the middle of that (in
+    date order or otherwise) just gets in the way. Check a row off as
+    cleared and it jumps up to join the rest; uncheck it and it drops back
+    down among the uncleared ones. This is purely how the rows are
+    *arranged* — each row's Balance is still its own true point-in-time
+    number from the date it actually happened, unaffected by where it's
+    currently sitting on screen
   - **Applying category defaults to untagged transactions.** If you had
     expenses or income logged before bank accounts existed (or before you
     started tagging them), a button under **Categories & Budgets** — "Apply
