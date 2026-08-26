@@ -1357,6 +1357,12 @@
         <button type="button" class="secondary" id="importJsonBtn">Import backup (JSON)</button>
         <input type="file" id="importJsonFile" accept="application/json" style="display:none;">
       </div>
+      <p class="hint" style="margin-top:14px;">Erased a register to bulk-reload it (see <strong>Reset</strong> below) and want everything -- including <strong>recurring bill/income links, paycheck assignments, transfers, splits, and savings-goal withdrawals/reclasses</strong> -- to come back exactly as it was, not just plain unlinked rows? Use the <strong>full CSV</strong> below instead of the plain export above. It uses the same Check Register / CC Register checkboxes, but every column round-trips: <strong>Category</strong>, <strong>Bank Account</strong>, <strong>Credit Card</strong>, and <strong>Recurring</strong> are matched back up by name (so make sure whatever you're linking to already exists — Reset never deletes those, only the transactions), and <strong>Row ID</strong> is how one row points at another (a <strong>Paycheck</strong> value is the Row ID of the deposit it's earmarked against; two rows sharing the same <strong>Split Group</strong> or <strong>Transfer</strong> value are linked the same way they were originally). Leave Row ID blank on any row you're adding by hand — it'll still import fine, it just can't be pointed at by anything else in the file.</p>
+      <div class="section-actions">
+        <button type="button" class="secondary" id="exportFullCsv">Export full CSV (all links, for re-import)</button>
+        <button type="button" class="secondary" id="importFullCsvBtn">Import full CSV</button>
+        <input type="file" id="importFullCsvFile" accept=".csv,text/csv" style="display:none;">
+      </div>
     </div>
 
     <div class="card">
@@ -3623,7 +3629,13 @@
   function reconciliationStateFor(key) {
     if (!reconciliationState[key]) {
       var range = currentMonthRange();
-      reconciliationState[key] = { from: range.from, to: range.to, page: 0 };
+      // autoLatest: true means this window should always open on its LAST
+      // page (its most recent transactions) rather than the first -- see the
+      // autoLatest handling in renderBankReconciliation and the Prev/Next
+      // handlers below. It stays true until the user pages backward away
+      // from the latest page, and flips back on automatically the moment
+      // they page (or a new transaction pushes them) back to the last page.
+      reconciliationState[key] = { from: range.from, to: range.to, page: 0, autoLatest: true };
     }
     return reconciliationState[key];
   }
@@ -3682,8 +3694,20 @@
       applyRunningBalance(visibleRows, windowSeed, asOfCutoff);
 
       var totalPages = Math.max(1, Math.ceil(visibleRows.length / RECONCILIATION_PAGE_SIZE));
-      if (st.page > totalPages - 1) st.page = totalPages - 1;
-      if (st.page < 0) st.page = 0;
+      // While autoLatest is on, always land on the last page -- that's
+      // where the most recent transactions are, since rows are chronological
+      // (cleared-first within that). This re-derives every render, so a
+      // freshly-added transaction (which can push totalPages up) is shown
+      // immediately without the user having to click Next. The moment the
+      // user pages backward this turns off (see the Prev/Next handlers), and
+      // flips back on the instant they land on the true last page again.
+      if (st.autoLatest) {
+        st.page = totalPages - 1;
+      } else {
+        if (st.page > totalPages - 1) st.page = totalPages - 1;
+        if (st.page < 0) st.page = 0;
+      }
+      st.autoLatest = (st.page >= totalPages - 1);
       var pageStart = st.page * RECONCILIATION_PAGE_SIZE;
       var pageRows = visibleRows.slice(pageStart, pageStart + RECONCILIATION_PAGE_SIZE);
 
@@ -3745,7 +3769,7 @@
       inp.addEventListener("change", function() {
         var st = reconciliationStateFor(inp.dataset.reconFrom);
         st.from = inp.value || "";
-        st.page = 0;
+        st.autoLatest = true; // a new range should open on ITS most recent page too
         renderBankReconciliation();
       });
     });
@@ -3753,13 +3777,17 @@
       inp.addEventListener("change", function() {
         var st = reconciliationStateFor(inp.dataset.reconTo);
         st.to = inp.value || "";
-        st.page = 0;
+        st.autoLatest = true;
         renderBankReconciliation();
       });
     });
     wrap.querySelectorAll("[data-recon-prev]").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var st = reconciliationStateFor(btn.dataset.reconPrev);
+        // Paging backward is an explicit "show me older ones" -- turn off
+        // autoLatest so the render above doesn't just snap back to the last
+        // page. It flips back on by itself once they're back on the last page.
+        st.autoLatest = false;
         st.page = Math.max(0, st.page - 1);
         renderBankReconciliation();
       });
@@ -3767,6 +3795,7 @@
     wrap.querySelectorAll("[data-recon-next]").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var st = reconciliationStateFor(btn.dataset.reconNext);
+        st.autoLatest = false;
         st.page = st.page + 1;
         renderBankReconciliation();
       });
@@ -7231,6 +7260,215 @@
         } catch (err) {
           alert("Could not read that file. Make sure it's a JSON backup exported from this app.");
         }
+        e.target.value = "";
+      });
+    };
+    reader.readAsText(file);
+  });
+
+  // ---------- FULL CSV (round-trip export/import) ----------
+  //
+  // The plain CSV export above is built for reading in Excel -- it's not
+  // meant to be re-imported, and doesn't carry the internal links (which
+  // recurring bill/income a row is tied to, which paycheck an expense is
+  // earmarked against, which two rows make up a split or a transfer, which
+  // savings goal a deposit was withdrawn from or reclassed to). This is the
+  // export/import PAIR meant for that: erase a register (see Reset below),
+  // then bring it all back exactly as it was, not as a pile of unlinked
+  // rows.
+  //
+  // The trick that makes this simple: every row's own "Row ID" column is
+  // just its real internal id at export time, and the Paycheck / Split
+  // Group / Transfer columns already just contain ANOTHER row's real id
+  // (that's literally what paycheckId/splitGroupId/transferId already are)
+  // -- so importing can reuse whatever's in Row ID as the new record's own
+  // id, verbatim, and every cross-reference resolves itself automatically
+  // with no separate remapping pass needed. A hand-added row can leave Row
+  // ID blank (gets a fresh one) or invent its own short token to be linked
+  // FROM another row -- ids in this app are just opaque unique strings,
+  // nothing requires the uid() shape.
+  var FULL_CSV_HEADERS = ["Row ID","Register","Type","Date","Payee / Description","Category","Bank Account","Credit Card","Amount","Cleared","Paid","Recurring","Paycheck","Split Group","Transfer","Goal / Reclass"];
+
+  function findByNameCI(list, name) {
+    var norm = String(name || "").trim().toLowerCase();
+    if (!norm) return null;
+    return (list || []).find(function(x) { return String(x.name || "").trim().toLowerCase() === norm; }) || null;
+  }
+
+  function csvTruthy(v) {
+    var s = String(v || "").trim().toLowerCase();
+    return s === "yes" || s === "y" || s === "true" || s === "1" || s === "x";
+  }
+
+  function csvCell(s) {
+    var str = String(s == null ? "" : s);
+    return /[",\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+  }
+
+  document.getElementById("exportFullCsv").addEventListener("click", function() {
+    var includeCheck = document.getElementById("exportIncludeCheck").checked;
+    var includeCC = document.getElementById("exportIncludeCC").checked;
+    if (!includeCheck && !includeCC) {
+      showToast("Pick at least one register to export");
+      return;
+    }
+    var rows = [FULL_CSV_HEADERS];
+    state.expenses.forEach(function(e) {
+      var isCharge = !!(e.creditCardId && e.debtType !== "payment");
+      var isPayment = !!(e.creditCardId && e.debtType === "payment");
+      var included = isCharge ? includeCC : (isPayment ? (includeCheck || includeCC) : includeCheck);
+      if (!included) return;
+      var type = isCharge ? "Card Charge" : (isPayment ? "Card Payment" : "Expense");
+      var cat = !isPayment ? categoryById(e.categoryId) : null;
+      var card = e.creditCardId ? creditCardById(e.creditCardId) : null;
+      var bank = !isCharge ? bankAccountById(e.bankAccountId) : null;
+      var recTemplate = e.recurringId ? recurringById(e.recurringId) : null;
+      rows.push([
+        e.id, isCharge ? "CC Register" : "Check Register", type, e.date, e.note || "",
+        cat ? cat.name : "", bank ? bank.name : "", card ? card.name : "",
+        Math.abs(e.amount).toFixed(2), e.cleared ? "Yes" : "", (!isCharge && e.paid) ? "Yes" : "",
+        recTemplate ? recTemplate.name : "", e.paycheckId || "", e.splitGroupId || "", e.transferId || "", ""
+      ]);
+    });
+    if (includeCheck) {
+      state.income.forEach(function(inc) {
+        var bank = bankAccountById(inc.bankAccountId);
+        var recTemplate = inc.recurringId ? state.recurringIncome.find(function(r) { return r.id === inc.recurringId; }) : null;
+        var goalReclass = "";
+        if (inc.linkedGoalId) {
+          var g = state.savingsGoals.find(function(x) { return x.id === inc.linkedGoalId; });
+          goalReclass = "Withdraw: " + (g ? g.name : "(deleted goal)");
+        } else if (inc.reclassCategoryId) {
+          var rc = categoryById(inc.reclassCategoryId);
+          goalReclass = "Reclass: " + (rc ? rc.name : "(deleted category)");
+        }
+        rows.push([
+          inc.id, "Check Register", "Deposit", inc.date, inc.source || "",
+          "", bank ? bank.name : "", "",
+          Math.abs(inc.amount).toFixed(2), inc.cleared ? "Yes" : "", "",
+          recTemplate ? recTemplate.name : "", "", "", inc.transferId || "", goalReclass
+        ]);
+      });
+    }
+    if (rows.length === 1) { showToast("No transactions match that selection"); return; }
+    rows = [rows[0]].concat(rows.slice(1).sort(function(a, b) { return a[3].localeCompare(b[3]); }));
+    var csv = rows.map(function(r) { return r.map(csvCell).join(","); }).join("\n");
+    downloadFile("full-transactions.csv", csv, "text/csv");
+    showToast("Full CSV exported");
+  });
+
+  document.getElementById("importFullCsvBtn").addEventListener("click", function() {
+    document.getElementById("importFullCsvFile").click();
+  });
+  document.getElementById("importFullCsvFile").addEventListener("change", function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function() {
+      var allRows = parseCSV(String(reader.result));
+      var headers = (allRows[0] || []).map(function(h) { return String(h).trim(); });
+      var dataRows = allRows.slice(1).filter(function(r) { return r.some(function(c) { return String(c).trim() !== ""; }); });
+      var idx = {};
+      headers.forEach(function(h, i) { idx[h] = i; });
+      var missing = FULL_CSV_HEADERS.filter(function(h) { return !(h in idx); });
+      if (missing.length) {
+        alert("This doesn't look like a full CSV export from this app -- missing column(s): " + missing.join(", ") + ". Use Settings → \"Export full CSV\" to get the right template, or use \"Import backup (JSON)\" instead.");
+        e.target.value = "";
+        return;
+      }
+      if (dataRows.length === 0) {
+        alert("Couldn't find any transaction rows in that file.");
+        e.target.value = "";
+        return;
+      }
+      confirmDialog("Import up to " + dataRows.length + " row" + (dataRows.length === 1 ? "" : "s") + " from this CSV? Rows whose Row ID already matches an existing transaction are skipped as duplicates -- this adds to what's already here, it doesn't replace it.", "Import").then(function(ok) {
+        if (!ok) { e.target.value = ""; return; }
+        var added = 0, skippedDup = 0, skippedBad = 0, unresolvedLinks = 0;
+        dataRows.forEach(function(cols) {
+          function col(name) { return String(cols[idx[name]] || "").trim(); }
+          var rowId = col("Row ID") || uid();
+          var type = col("Type").toLowerCase();
+          var date = col("Date");
+          var desc = col("Payee / Description");
+          var amountRaw = parseFloat(col("Amount"));
+          var amount = isNaN(amountRaw) ? NaN : Math.abs(amountRaw);
+          if (!date || isNaN(amount) || !amount) { skippedBad++; return; }
+
+          var isIncomeRow = type === "deposit";
+          var isCharge = type === "card charge";
+          var isPayment = type === "card payment";
+          var isExpense = type === "expense";
+          if (!isIncomeRow && !isCharge && !isPayment && !isExpense) { skippedBad++; return; }
+
+          var existing = isIncomeRow
+            ? state.income.some(function(x) { return x.id === rowId; })
+            : state.expenses.some(function(x) { return x.id === rowId; });
+          if (existing) { skippedDup++; return; }
+
+          var cat = findByNameCI(state.categories, col("Category"));
+          var bank = findByNameCI(state.bankAccounts, col("Bank Account"));
+          var card = findByNameCI(state.creditCards, col("Credit Card"));
+          var cleared = csvTruthy(col("Cleared"));
+          var paycheckRef = col("Paycheck") || null;
+          var splitRef = col("Split Group") || null;
+          var transferRef = col("Transfer") || null;
+
+          if (isIncomeRow) {
+            var recIncTemplate = findByNameCI(state.recurringIncome, col("Recurring"));
+            var linkedGoalId = null, reclassCategoryId = null;
+            var goalReclass = col("Goal / Reclass");
+            var wMatch = /^withdraw:\s*(.+)$/i.exec(goalReclass);
+            var rMatch = /^reclass:\s*(.+)$/i.exec(goalReclass);
+            if (wMatch) {
+              var g = findByNameCI(state.savingsGoals, wMatch[1]);
+              if (g) linkedGoalId = g.id; else unresolvedLinks++;
+            } else if (rMatch) {
+              var rc = findByNameCI(state.categories, rMatch[1]);
+              if (rc) reclassCategoryId = rc.id; else unresolvedLinks++;
+            }
+            state.income.push({
+              id: rowId, date: date, amount: amount, source: desc || "Deposit",
+              note: "", color: "#1baf7a", cleared: cleared, imported: false,
+              linkedGoalId: linkedGoalId, reclassCategoryId: reclassCategoryId,
+              bankAccountId: bank ? bank.id : null, recurringId: recIncTemplate ? recIncTemplate.id : null,
+              transferId: transferRef
+            });
+          } else {
+            var recTemplate = findByNameCI(state.recurring, col("Recurring"));
+            state.expenses.push({
+              id: rowId, date: date, amount: amount,
+              categoryId: (!isPayment && cat) ? cat.id : null,
+              note: desc || "", paycheckId: paycheckRef,
+              paid: !isCharge && csvTruthy(col("Paid")),
+              cleared: cleared, imported: false, categoryGuessed: false,
+              splitGroupId: splitRef, recurringId: recTemplate ? recTemplate.id : null,
+              creditCardId: (isCharge || isPayment) ? (card ? card.id : null) : null,
+              debtType: isPayment ? "payment" : null,
+              viaAccountPicker: isPayment,
+              bankAccountId: !isCharge ? (bank ? bank.id : null) : null,
+              transferId: transferRef
+            });
+          }
+          added++;
+        });
+        // A paycheckId that doesn't resolve to a real income row (typo'd
+        // Row ID, or that deposit's row was excluded from this import) is
+        // worse than useless left dangling -- null it out rather than
+        // leaving an expense silently pointed at nothing.
+        state.expenses.forEach(function(e) {
+          if (e.paycheckId && !state.income.some(function(inc) { return inc.id === e.paycheckId; })) {
+            e.paycheckId = null;
+            unresolvedLinks++;
+          }
+        });
+        saveState();
+        populateCategorySelects();
+        renderAll();
+        var msg = added + " row" + (added === 1 ? "" : "s") + " imported";
+        if (skippedDup) msg += ", " + skippedDup + " duplicate" + (skippedDup === 1 ? "" : "s") + " skipped";
+        if (skippedBad) msg += ", " + skippedBad + " row" + (skippedBad === 1 ? "" : "s") + " couldn't be read";
+        if (unresolvedLinks) msg += ", " + unresolvedLinks + " link" + (unresolvedLinks === 1 ? "" : "s") + " couldn't be resolved";
+        showToast(msg);
         e.target.value = "";
       });
     };
