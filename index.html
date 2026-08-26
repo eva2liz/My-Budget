@@ -451,6 +451,7 @@
     flex-wrap: wrap; gap: 10px; margin-bottom: 6px;
   }
   .register-toolbar h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .register-sum-line { margin: -2px 0 8px; font-size: 12.5px; }
   .register-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .register-filters input, .register-filters select {
     font-family: inherit; font-size: 13px; padding: 6px 10px;
@@ -1151,6 +1152,7 @@
           <button type="button" class="secondary" id="clearFilters">Clear filters</button>
         </div>
       </div>
+      <p class="muted register-sum-line" id="registerSums"></p>
       <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Categories &amp; Budgets) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category.</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
@@ -2435,7 +2437,14 @@
 
     var filterSelect = document.getElementById("filterCategory");
     var prevF = filterSelect.value;
-    filterSelect.innerHTML = '<option value="">All</option>';
+    // The two sentinel options up top ("__income__" / "__expense__") aren't
+    // real categories -- they let this same dropdown double as a quick
+    // Deposit-vs-Payment filter, since income rows never have a real
+    // categoryId to filter by otherwise. See renderCheckRegister's filter
+    // logic for how these two values are handled.
+    filterSelect.innerHTML = '<option value="">All categories</option>' +
+      '<option value="__income__">Deposits / income only</option>' +
+      '<option value="__expense__">Payments only (any category)</option>';
     state.categories.forEach(function(c) {
       var opt = document.createElement("option");
       opt.value = c.id; opt.textContent = c.name;
@@ -3623,7 +3632,19 @@
       var fullRows = allRows.filter(function(r) { return (r.bankAccountId || null) === (account ? account.id : null); });
       var seed = account ? (Number(account.startingBalance) || 0) : 0;
       var asOfCutoff = account ? (account.balanceAsOf || null) : null;
+      // First pass, in real chronological order: not what's displayed, just
+      // used to work out windowSeed below -- the true running balance as of
+      // the moment right before the From filter starts, so the visible
+      // window doesn't have to be re-derived from account.startingBalance
+      // (which would ignore everything that happened between the as-of date
+      // and the From date).
       applyRunningBalance(fullRows, seed, asOfCutoff);
+
+      var priorRows = st.from ? fullRows.filter(function(r) { return r.date < st.from; }) : [];
+      var windowSeed = seed;
+      for (var pi = priorRows.length - 1; pi >= 0; pi--) {
+        if (priorRows[pi].balance !== null) { windowSeed = priorRows[pi].balance; break; }
+      }
 
       var visibleRows = fullRows.filter(function(r) {
         if (st.from && r.date < st.from) return false;
@@ -3634,15 +3655,19 @@
       // Cleared rows float to the top of the window, uncleared sink to the
       // bottom -- no matter what date order they're actually in -- same
       // "already reconciled" grouping the main Check Register does when
-      // sorted by anything other than its own ✓ column. This is a pure
-      // DISPLAY reorder done via a stable sort (so each group keeps its own
-      // chronological order internally); it happens AFTER applyRunningBalance
-      // stamped every row's true point-in-time balance above, so the number
-      // shown next to each row is still its real running balance as of that
-      // row's own date -- exactly what you check against a paper statement --
-      // even though the rows themselves are no longer walking straight down
-      // in date order on screen.
+      // sorted by anything other than its own ✓ column. Stable sort, so each
+      // group still keeps its own chronological order internally.
       visibleRows.sort(function(a, b) { return (a.cleared ? 0 : 1) - (b.cleared ? 0 : 1); });
+
+      // Balance is recomputed in THIS (cleared-first) order, seeded from
+      // windowSeed above -- so the number next to any row is always a true
+      // running total of exactly what's visible, top to bottom, in the exact
+      // order it's shown -- never a jump that only makes sense in a
+      // different order you can't see. Same principle the main Check
+      // Register's own Balance column already follows (see
+      // applyRunningBalance) whenever anything reorders its rows away from
+      // plain chronological order.
+      applyRunningBalance(visibleRows, windowSeed, asOfCutoff);
 
       var totalPages = Math.max(1, Math.ceil(visibleRows.length / RECONCILIATION_PAGE_SIZE));
       if (st.page > totalPages - 1) st.page = totalPages - 1;
@@ -3804,10 +3829,17 @@
     var catFilter = catFilterEl ? catFilterEl.value : "";
     var bankFilter = bankFilterEl ? bankFilterEl.value : "";
 
+    // "__income__" / "__expense__" are the two sentinel values the Category
+    // filter's dropdown offers up top (see populateCategorySelects) -- a
+    // quick way to filter down to just deposits or just payments, since
+    // income rows never carry a real categoryId to match against a normal
+    // category filter.
     var rows = allRows.filter(function(r) {
       if (fromFilter && r.date < fromFilter) return false;
       if (toFilter && r.date > toFilter) return false;
-      if (catFilter && r.categoryId !== catFilter) return false;
+      if (catFilter === "__income__") { if (r.kind !== "income") return false; }
+      else if (catFilter === "__expense__") { if (r.kind !== "expense") return false; }
+      else if (catFilter && r.categoryId !== catFilter) return false;
       if (bankFilter && r.bankAccountId !== bankFilter) return false;
       return true;
     });
@@ -3827,6 +3859,22 @@
       countEl.textContent = (fromFilter || toFilter || catFilter || bankFilter)
         ? "(" + rows.length + " of " + allRows.length + ")"
         : "(" + allRows.length + ")";
+    }
+
+    // A running Balance is great for reconciling, but it doesn't answer "how
+    // much did I spend / deposit in this slice?" on its own -- so whatever's
+    // currently visible (after every active filter above) also gets totaled
+    // up here, split into Payments and Deposits, regardless of which one (if
+    // either) the Category filter is narrowed down to.
+    var sumsEl = document.getElementById("registerSums");
+    if (sumsEl) {
+      var paymentsTotal = 0, depositsTotal = 0;
+      rows.forEach(function(r) {
+        if (r.kind === "expense") paymentsTotal += Math.abs(r.amount);
+        else depositsTotal += r.amount;
+      });
+      sumsEl.textContent = "Payments " + fmtMoney(paymentsTotal) + "  ·  Deposits " + fmtMoney(depositsTotal) +
+        (rows.length ? "  ·  Net " + fmtMoney(depositsTotal - paymentsTotal) : "");
     }
 
     var bodyHtml = "";
