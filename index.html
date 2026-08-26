@@ -580,6 +580,7 @@
     padding: 4px 4px;
   }
   .register-opening-amount:hover, .register-opening-amount:focus { border-color: var(--series-1); background: var(--surface-1); outline: none; }
+  .register-opening-auto { display: block; cursor: help; }
 
   .register-new-row td { border-bottom: none !important; }
   .register-new-row.register-txn-main td { background: rgba(27, 175, 122, 0.06); padding-top: 8px; }
@@ -3172,13 +3173,28 @@
   // everything up to that date) and get .balance = null so the table can
   // render them as "--" instead of a misleading number.
   function applyRunningBalance(rows, seed, asOfCutoff) {
-    var running = typeof seed === "number" ? seed : (Number(state.settings.openingBalance) || 0);
+    var running = typeof seed === "number" ? seed : combinedOpeningBalance();
     rows.forEach(function(r) {
       if (asOfCutoff && r.date < asOfCutoff) { r.balance = null; return; }
       running += r.amount;
       r.balance = running;
     });
     return rows;
+  }
+
+  // The main Check Register's "Beginning balance" used to be a single number
+  // you typed by hand, entirely separate from each bank account's own
+  // starting balance (Categories & Budgets) -- which meant the two could
+  // silently drift apart (the classic "why doesn't my total match" bug).
+  // Once you have any bank accounts set up, this instead ALWAYS equals the
+  // sum of their individual starting balances, so there's only ever one
+  // number to keep accurate. Falls back to the old manually-typed
+  // settings.openingBalance only when there are no bank accounts yet --
+  // nothing to sum in that case, so a brand-new user (or one who isn't using
+  // the bank-account feature at all) keeps the old behavior untouched.
+  function combinedOpeningBalance() {
+    if (!state.bankAccounts.length) return Number(state.settings.openingBalance) || 0;
+    return state.bankAccounts.reduce(function(sum, a) { return sum + (Number(a.startingBalance) || 0); }, 0);
   }
 
   // Imported bank transactions only need a real category assigned before
@@ -3791,7 +3807,7 @@
     // (no starting balance of its own like a credit card gets), so there's
     // nothing meaningful to seed a single account's slice from besides zero.
     var narrowingFilterActive = !!catFilter || !!bankFilter;
-    applyRunningBalance(rows, narrowingFilterActive ? 0 : (Number(state.settings.openingBalance) || 0));
+    applyRunningBalance(rows, narrowingFilterActive ? 0 : combinedOpeningBalance());
 
     var countEl = document.getElementById("registerCount");
     if (countEl) {
@@ -3942,18 +3958,29 @@
     // has no business appearing in that sliced view, and the Balance column
     // is a pure sum of the visible rows there instead (see
     // applyRunningBalance above).
-    var openingBalanceVal = Number(state.settings.openingBalance) || 0;
+    var openingBalanceVal = combinedOpeningBalance();
     var openingDateVal = state.settings.openingBalanceDate || "";
+    // Once bank accounts exist, this amount is auto-summed (see
+    // combinedOpeningBalance) and shown read-only, with a note pointing at
+    // where it actually comes from -- otherwise this field and the accounts'
+    // own starting balances are two numbers a person has to keep matching by
+    // hand, and they will eventually drift. No bank accounts yet -- keep the
+    // old plain editable input, since there's nothing to sum.
+    var autoSummedOpening = state.bankAccounts.length > 0;
+    var openingAmountCell = autoSummedOpening
+      ? '<span class="register-opening-amount register-opening-auto" title="Automatically the sum of your bank accounts\' own starting balances (Categories & Budgets) -- edit them there so this can never drift out of sync">' + fmtMoney(openingBalanceVal) + '</span>'
+      : '<input type="number" class="register-opening-amount" id="regOpeningAmount" step="0.01" value="' + openingBalanceVal + '">';
     var openingRowHtml = narrowingFilterActive ? "" :
       '<tr class="register-txn-main register-opening-row">' +
         '<td class="reg-col-flag"></td>' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '"></td>' +
-        '<td class="register-opening-label" title="Not tied to any category or paycheck — just offsets the running balance to match your real starting balance">Beginning balance</td>' +
+        '<td class="register-opening-label" title="Not tied to any category or paycheck — just offsets the running balance to match your real starting balance">Beginning balance' +
+          (autoSummedOpening ? ' <span class="muted">(= sum of your bank accounts)</span>' : '') + '</td>' +
         '<td class="num reg-col-payment"></td>' +
         '<td class="reg-col-clr"></td>' +
         '<td class="reg-col-paid"></td>' +
         '<td class="num reg-col-deposit"></td>' +
-        '<td class="num reg-col-balance"><input type="number" class="register-opening-amount" id="regOpeningAmount" step="0.01" value="' + openingBalanceVal + '"></td>' +
+        '<td class="num reg-col-balance">' + openingAmountCell + '</td>' +
       '</tr>';
 
     var headHtml = '<thead><tr>' +

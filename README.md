@@ -375,11 +375,19 @@ for exactly how that works.
   - A **Beginning balance** row is always pinned at the very top, in
     italics, not linked to any category or paycheck — it's just an amount
     (and, if you want, a date) you set once to match whatever your bank
-    account actually held before you started tracking here. Click its date
-    or its balance to edit either one directly; every balance below it
-    shifts to match, so the running balance is a true reflection of your
-    account instead of starting from zero. It disappears while a category
-    or bank-account filter is active — see the filter bullet above
+    account actually held before you started tracking here. Every balance
+    below it shifts to match, so the running balance is a true reflection
+    of your money instead of starting from zero. It disappears while a
+    category or bank-account filter is active — see the filter bullet above.
+    **Once you've added any bank accounts** (below), this stops being its
+    own separately-typed number and instead automatically equals the SUM of
+    every one of those accounts' own starting balances — so there's only
+    ever one true number to keep accurate instead of two that can quietly
+    drift apart. It's shown read-only in that case (a tooltip explains
+    where it comes from); to change it, edit the individual accounts'
+    starting balances in the **Bank accounts** table instead. Only falls
+    back to a plain, manually-typed number if you haven't added any bank
+    accounts yet
   - **Pure bank activity only.** A credit card charge doesn't touch your
     checking account the moment you make it, so it never shows up here or
     counts against this running balance — it only lives on the **CC
