@@ -247,20 +247,39 @@ for exactly how that works.
     exactly what's visible.** A date-range filter still seeds Balance from
     your real Beginning balance, since you're looking at a slice of actual
     time — the numbers stay a true reflection of your account, just
-    starting partway through. A **category or bank-account filter is
-    different: it hides the Beginning balance row entirely and starts
-    Balance fresh from zero**, since a category slice (say, every
-    Utilities transaction) or a single bank account isn't a point in time
-    and has nothing to do with your real full bank balance — showing the
-    Beginning balance there would be misleading. What you get instead is a
-    pure running total of just what's visible, so filtering to "Utilities"
-    (or to "Chase Checking") and adding up what you spent tells you
-    exactly that. Clear the filters to see the true, full-history running
+    starting partway through. A **category filter is different: it hides
+    the Beginning balance row entirely and starts Balance fresh from
+    zero**, since a category slice (say, every Utilities transaction) isn't
+    a point in time and has nothing to do with your real bank balance —
+    showing the Beginning balance there would be misleading. What you get
+    instead is a pure running total of just what's visible, so filtering to
+    "Utilities" and adding up what you spent tells you exactly that. A
+    **bank-account filter (with no category filter) is its own third
+    case**: since it's still every transaction for one real account, in
+    true date order, the Beginning balance row switches to show THAT
+    account's own starting balance and as-of date — the exact same numbers
+    its own reconciliation window below already uses — instead of hiding or
+    zeroing out, so the two views can never disagree about what that
+    account's balance actually is. Anything dated before that account's own
+    as-of date shows **—** here too, same as its reconciliation window.
+    Clear the filters to see the true, full-history combined running
     balance again. **To** defaults to today (not blank) both here and on
     the CC Register, so future-dated entries -- an already-logged upcoming
     bill, a post-dated charge -- don't clutter the view by default; clear
     or push out **To** any time you want to see them, and **Clear
     filters** resets it back to today rather than wiping it blank
+  - The **category filter's dropdown also offers two extra options up top**
+    — **"Deposits / income only"** and **"Payments only (any category)"** —
+    since income rows never have a real category to filter by any other
+    way. Pick either one to narrow the whole register down to just what
+    came in or just what went out, on top of whatever From/To or bank
+    account filter is already active. A line right under the filter row —
+    **Payments $X · Deposits $Y · Net $Z** — always totals up exactly
+    what's currently visible, so you get a real dollar sum for "everything
+    I deposited this month" or "everything I paid Chase Checking in
+    August," not just a row count. It updates live with every filter, the
+    same rows the Balance column and the count next to "Check register" are
+    built from
   - **Bank accounts** are a separate, optional label from category — a
     category (Groceries, Insurance, ...) is what you spent on; a bank
     account is which real account the money moved through (Chase
@@ -299,20 +318,28 @@ for exactly how that works.
     Register itself, so **clicking anywhere on a row** (other than its
     cleared checkbox) jumps straight up to that same transaction's row in
     the Check Register, highlighted and scrolled into view, ready to edit
-    — same as clicking a Search result. The From/To filter only changes
-    which already-balanced rows are currently displayed; it never changes
-    the balance math, so the number next to any row is always that
-    account's real running total up to that date, not a sum of only what's
-    on screen. **Cleared rows float to the top of each window**, uncleared
-    ones sink to the bottom — no matter what date they're actually on —
-    since reconciling means working down an already-cleared list from your
-    bank statement, and an uncleared row buried in the middle of that (in
-    date order or otherwise) just gets in the way. Check a row off as
-    cleared and it jumps up to join the rest; uncheck it and it drops back
-    down among the uncleared ones. This is purely how the rows are
-    *arranged* — each row's Balance is still its own true point-in-time
-    number from the date it actually happened, unaffected by where it's
-    currently sitting on screen
+    — same as clicking a Search result. **Cleared rows float to the top of
+    each window**, uncleared ones sink to the bottom — no matter what date
+    they're actually on — since reconciling means working down an
+    already-cleared list from your bank statement, and an uncleared row
+    buried in the middle of that (in date order or otherwise) just gets in
+    the way. Check a row off as cleared and it jumps up to join the rest;
+    uncheck it and it drops back down among the uncleared ones. The
+    **Balance** column always adds up to exactly what's on screen, top to
+    bottom, in the order shown — so once cleared rows are grouped above
+    uncleared ones, the running total follows that same grouped order
+    (cleared rows first, then uncleared), seeded from the true balance as of
+    right before your From date. It's never a sum of only what's on the
+    current page, though — Prev/Next just pages through that same running
+    total, 7 rows at a time. **Each window opens on its last page by
+    default** — your most recent transactions — instead of starting back at
+    page 1 every time the app loads or re-renders, so you're not stuck
+    clicking Next repeatedly just to see what you logged today. It keeps
+    tracking "latest" automatically (a freshly-added transaction shows up
+    right away, even pushing the page count up) until you click Prev to look
+    at older ones, at which point it stays put where you left it; click
+    Next back to the true last page and it resumes auto-tracking. Changing a
+    window's From/To range also re-opens it on that range's last page
   - **Applying category defaults to untagged transactions.** If you had
     expenses or income logged before bank accounts existed (or before you
     started tagging them), a button under **Categories & Budgets** — "Apply
@@ -343,9 +370,15 @@ for exactly how that works.
     drift apart, while **cleared** stays independent per leg since each
     side's real bank can clear on a different day. **Deleting either leg
     deletes both** (confirmed once, up front) rather than leaving one side
-    orphaned. Transfers are never counted as spending or income anywhere
-    totals are shown (Dashboard, Budget vs. actual, category totals) —
-    they're excluded the same way a credit card payment already is
+    orphaned. A plain transfer between two ordinary accounts is never
+    counted as spending or income anywhere totals are shown (Dashboard,
+    Budget vs. actual, category totals) — it's excluded the same way a
+    credit card payment already is, since it carries no category of its
+    own. The one exception is a transfer into a **goal-linked** bank
+    account (see the next bullet) — that withdrawal leg deliberately DOES
+    carry a real category (the goal's own linked category), so it counts as
+    actual spending/contribution under that category everywhere totals are
+    shown, same as the goal's own progress bar already counted it
   - **A bank account can be linked to a savings goal**, for when an account
     IS a real savings goal's actual money — an actual "Ally Savings" account
     you're using as your Emergency Fund, say, not just a virtual bucket.
@@ -575,6 +608,49 @@ for exactly how that works.
   with (blank if you didn't, and always blank for a CC Register charge,
   since that's a credit card, not a bank account) — handy for splitting
   the export by real account in Excel once you're tracking more than one
+- **Reset (Settings), with the same Check Register / CC Register split as
+  export** — instead of only an all-or-nothing "Erase all data," a
+  **Check Register** / **CC Register** checkbox pair lets you wipe just one
+  side's transaction history, mirroring the export checkboxes right above
+  it exactly. Check **Check Register** and it erases every expense,
+  deposit, and card payment; check **CC Register** and it erases every card
+  charge; check both for a full transaction wipe. A card payment is a real
+  bank transaction, so — unlike export, where it's included by either box —
+  it's only ever erased by **Check Register**, since deleting can't include
+  the same row from two different buttons. Either way, your **categories,
+  credit cards, bank accounts, recurring bills, and savings goals are never
+  touched** — only the logged transactions themselves go away, so a card
+  you erased all the charges from is still right there, just at a clean
+  $0.00, ready to log fresh activity against; delete the card itself from
+  its own tab if that's what you actually want. **Erase all data** below it
+  still does the full, original reset — categories, cards, accounts,
+  recurring items, everything
+- **Full CSV export/import, for a real round trip** — the plain CSV export
+  above is built for reading in Excel, not for coming back in; this second
+  export/import pair (right below it, in the same **Backup & export** card)
+  is. It shares the same Check Register / CC Register checkboxes, but every
+  column is meant to be reloaded exactly as it was: **Category**, **Bank
+  Account**, **Credit Card**, and **Recurring** are matched back up by name
+  on import (so whatever you're linking to needs to already exist — Reset
+  above never deletes those, only the transactions themselves), and a **Row
+  ID** column is how one row points at another — a **Paycheck** value is
+  the Row ID of the deposit it's earmarked against, and two rows sharing
+  the same **Split Group** or **Transfer** value come back linked the same
+  way they were before. A **Goal / Reclass** column captures a deposit
+  that's a savings withdrawal (`Withdraw: <goal>`) or reclassed against a
+  category (`Reclass: <category>`); a contribution on the expense side
+  doesn't need its own column — it's already whatever Category that row
+  has, same as it always was. The intended flow: **Export full CSV** first
+  as a safety net, **Reset** the register you want to bulk-reload (see
+  above), then **Import full CSV** — either that same file, or one you've
+  edited (added/removed rows, adjusted amounts) to match what your bank
+  actually shows. Re-importing is safe to repeat: any row whose Row ID
+  already matches an existing transaction is skipped as a duplicate rather
+  than doubled up, and it adds to what's there rather than replacing it —
+  unlike **Import backup (JSON)**, which wipes everything first. A row you
+  add by hand can leave Row ID blank (it still imports fine, it just can't
+  be pointed at by anything else in the file) or invent its own short token
+  to link it from another new row you're adding at the same time
 - Polished for mobile — tables scroll horizontally instead of squishing,
   and forms, cards, and buttons tighten up and stack on narrow phone screens
 

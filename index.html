@@ -6541,14 +6541,23 @@
       // balance that was already counted as spending when the charge
       // happened -- so it's excluded here to avoid double-counting.
       if (e.creditCardId && e.debtType === "payment") return;
-      // A transfer's withdrawal leg isn't spending either -- it's your own
+      // A plain transfer's withdrawal leg isn't spending -- it's your own
       // money moving to your own other account (see createTransfer), with
-      // categoryId already null so it would only ever land in a stray
+      // categoryId left null so it would only ever land in a stray
       // totals[null] bucket no real category reads from -- except
       // renderStatTiles' "Spent this month" sums every key in this object,
-      // stray bucket included, so it's excluded here explicitly rather
-      // than relying on that to stay true.
-      if (e.transferId) return;
+      // stray bucket included, so a categoryId-less transfer leg is excluded
+      // here explicitly rather than relying on that to stay true.
+      //
+      // BUT a transfer INTO a goal-linked bank account is different:
+      // createTransfer deliberately gives that withdrawal leg the goal's own
+      // linked category (contributionCategoryId), specifically so it counts
+      // as a real contribution here on Budget vs. Actual -- same as
+      // goalLinkedExpenses already counts it toward the goal's own progress
+      // bar. Excluding every transferId unconditionally silently zeroed
+      // that back out, so only skip it when there's no real category to
+      // attribute it to.
+      if (e.transferId && !e.categoryId) return;
       if (monthKeyOf(e.date) === monthKey) {
         totals[e.categoryId] = (totals[e.categoryId] || 0) + e.amount;
       }
