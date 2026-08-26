@@ -296,10 +296,14 @@ for exactly how that works.
     up to **7 transactions per page** with Prev/Next paging, and lets you
     check off **cleared** right there while you reconcile — everything
     else (date, payee, category, amount) is still edited up in the Check
-    Register itself. The From/To filter only changes which already-
-    balanced rows are currently displayed; it never changes the balance
-    math, so the number next to any row is always that account's real
-    running total up to that date, not a sum of only what's on screen
+    Register itself, so **clicking anywhere on a row** (other than its
+    cleared checkbox) jumps straight up to that same transaction's row in
+    the Check Register, highlighted and scrolled into view, ready to edit
+    — same as clicking a Search result. The From/To filter only changes
+    which already-balanced rows are currently displayed; it never changes
+    the balance math, so the number next to any row is always that
+    account's real running total up to that date, not a sum of only what's
+    on screen
   - **Applying category defaults to untagged transactions.** If you had
     expenses or income logged before bank accounts existed (or before you
     started tagging them), a button under **Categories & Budgets** — "Apply
@@ -313,6 +317,46 @@ for exactly how that works.
     category) has no category to pull a default from, so it's left alone —
     tag it by hand from its own row, or from the Unassigned reconciliation
     window
+  - **Transferring money between your own bank accounts** — checking to
+    savings, say — isn't spending, so there's a dedicated **Transfer between
+    accounts** card under **Categories & Budgets** (shown once you have at
+    least two bank accounts) instead of forcing it through a category. Pick
+    a date, a **From** account, a **To** account, an amount, and an optional
+    note, and it logs both sides at once: a withdrawal in the From
+    account's own Check Register / reconciliation window, and a matching
+    deposit in the To account's — so both balances stay accurate without
+    entering it twice, and the combined Balance up top nets to zero, same as
+    real life (it's still your money, it just moved). Each leg's detail row
+    shows a plain "Transfer to: `<account>`" / "Transfer from: `<account>`"
+    label instead of an editable Category or From field, live-linked to its
+    other half rather than a category — editing the **amount** or **date**
+    on either leg updates the other to match, so the two can never quietly
+    drift apart, while **cleared** stays independent per leg since each
+    side's real bank can clear on a different day. **Deleting either leg
+    deletes both** (confirmed once, up front) rather than leaving one side
+    orphaned. Transfers are never counted as spending or income anywhere
+    totals are shown (Dashboard, Budget vs. actual, category totals) —
+    they're excluded the same way a credit card payment already is
+  - **A bank account can be linked to a savings goal**, for when an account
+    IS a real savings goal's actual money — an actual "Ally Savings" account
+    you're using as your Emergency Fund, say, not just a virtual bucket.
+    Pick it from the **Linked savings goal** field on the "Add account" form
+    or the Bank accounts table's own column (Categories & Budgets). Once
+    linked, any **Transfer** touching that account automatically counts
+    toward the goal too, using the exact same mechanics a manual goal
+    contribution/withdrawal already uses: transferring money *into* a
+    goal-linked account tags that leg with the goal's own linked category,
+    so it counts as a **contribution** (the goal still needs its own
+    category link set up on the Dashboard for this to actually register —
+    the transfer form warns you with a toast if it doesn't yet); transferring
+    money *out of* one tags the deposit leg with the goal's id, so it counts
+    as a **withdrawal**. A transfer between two different goal-linked
+    accounts applies both at once — a withdrawal from one goal and a
+    contribution to the other, exactly as you'd expect. Each affected leg's
+    detail row in the Check Register spells out the goal it touched (e.g.
+    "counts under Savings" or "withdrawn from Emergency Fund"), and deleting
+    a goal just clears the link off any account pointing to it rather than
+    breaking anything
   - **Categories can have a default bank account**, so you don't have to
     pick one by hand on every single transaction. Set it in the "Add a
     category" form or right in the **Categories & Budgets** table's own

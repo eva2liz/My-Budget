@@ -1212,6 +1212,10 @@
           <label for="bankAccountBalanceAsOf">As of <span class="muted">(optional)</span></label>
           <input type="date" id="bankAccountBalanceAsOf" title="Leave blank to count every transaction on this account, all the way back. Only set a date if you want the running balance to start fresh from a specific point instead.">
         </div>
+        <div class="field">
+          <label for="bankAccountGoal">Linked savings goal <span class="muted">(optional)</span></label>
+          <select id="bankAccountGoal" title="If this account IS a real savings goal's money -- an actual Emergency Fund savings account, say -- link it here so any transfer into or out of it automatically counts toward that goal too."></select>
+        </div>
         <button type="submit" class="primary" id="bankAccountSubmitBtn">Add account</button>
       </form>
       <div id="bankAccountListWrap" class="table-scroll"></div>
@@ -1580,9 +1584,13 @@
   // gets its own true reconciliation ledger below the main register --
   // see applyRunningBalance's asOfCutoff handling and the per-account
   // reconciliation windows in renderCheckRegister for how Balance behaves.
+  // linkedGoalId is optional -- set it when this account effectively IS a
+  // savings goal's real money (an actual "Emergency Fund" savings account,
+  // say) so that transferring into or out of it automatically counts
+  // toward the goal too -- see createTransfer.
   function normalizeBankAccounts(list) {
     return (list || []).map(function(a) {
-      return Object.assign({ id: uid(), name: "Account", startingBalance: 0, balanceAsOf: null }, a);
+      return Object.assign({ id: uid(), name: "Account", startingBalance: 0, balanceAsOf: null, linkedGoalId: null }, a);
     });
   }
 
@@ -2530,6 +2538,18 @@
       if (prevTo) transferToSelect.value = prevTo;
       renderTransferForm();
     }
+
+    // The "Add account" form's own Linked savings goal field -- same
+    // preserve-the-current-selection approach as the selects above, kept in
+    // sync here since this function already runs after every place a
+    // savings goal can be added, renamed, or deleted (see goalForm's submit
+    // handler and deleteGoal).
+    var bankGoalSelect = document.getElementById("bankAccountGoal");
+    if (bankGoalSelect) {
+      var prevBankGoal = bankGoalSelect.value;
+      bankGoalSelect.innerHTML = goalOptionsForBankAccount(null);
+      if (prevBankGoal) bankGoalSelect.value = prevBankGoal;
+    }
   }
 
   // Fewer than two bank accounts means there's nothing to transfer between
@@ -3262,6 +3282,18 @@
     return opts;
   }
 
+  // Options for a bank account's own linkedGoalId -- which savings goal
+  // this account effectively IS the real money for, if any. Used both on
+  // the "Add account" form and inline in the Bank accounts table; empty
+  // (just the "No linked goal" placeholder) when no goals exist yet.
+  function goalOptionsForBankAccount(selectedId) {
+    var opts = '<option value=""' + (selectedId ? '' : ' selected') + '>No linked goal</option>';
+    opts += state.savingsGoals.map(function(g) {
+      return '<option value="' + g.id + '"' + (g.id === selectedId ? ' selected' : '') + '>' + escapeHtml(g.name) + '</option>';
+    }).join("");
+    return opts;
+  }
+
   // The income-side counterpart to accountOptionsFor() -- lets a deposit
   // say where the money actually came FROM. "Regular income" (the default)
   // is just money arriving from outside the app, same as before this
@@ -3331,13 +3363,18 @@
   // transfer live via its shared transferId rather than a stored account
   // name, so renaming an account afterward never leaves this label stale.
   function accountLabelFor(categoryId, creditCardId, debtType, transferId) {
+    // Checked BEFORE categoryById: a transfer into a goal-linked savings
+    // account (see createTransfer) tags its withdrawal leg with that
+    // goal's own category so it counts as a contribution, but it should
+    // still always read as a transfer everywhere a label shows up, not as
+    // a plain "Savings" expense that's lost its transfer context.
+    if (transferId) return "Transfer to: " + transferPeerAccountName(transferId, "expense");
     var cat = categoryById(categoryId);
     if (cat) return cat.name;
     if (creditCardId && debtType === "payment") {
       var payCard = creditCardById(creditCardId);
       return "Pay down: " + (payCard ? payCard.name : "(deleted card)");
     }
-    if (transferId) return "Transfer to: " + transferPeerAccountName(transferId, "expense");
     if (categoryId) return "(deleted category)";
     return "(needs a category)";
   }
@@ -3833,8 +3870,15 @@
         // still works normally, but see deleteExpense -- it takes the
         // paired deposit down with it rather than leaving an orphaned half
         // of the transfer behind.
+        // If the To account is linked to a savings goal (see createTransfer
+        // / bank account's own linkedGoalId), this leg was also given that
+        // goal's own category so it counts as a contribution -- surfaced
+        // here so it's clear at a glance this transfer is doing double
+        // duty, not just moving money between two plain accounts.
+        var transferContribCat = r.transferId && r.categoryId ? categoryById(r.categoryId) : null;
         var categoryField = r.transferId
-          ? '<span class="muted" title="Both sides of a transfer are logged automatically -- delete this row to undo the whole transfer, not just this half">Transfer to: ' + escapeHtml(transferPeerAccountName(r.transferId, "expense")) + '</span>'
+          ? '<span class="muted" title="Both sides of a transfer are logged automatically -- delete this row to undo the whole transfer, not just this half">Transfer to: ' + escapeHtml(transferPeerAccountName(r.transferId, "expense")) +
+            (transferContribCat ? ' <span class="muted">(counts under ' + escapeHtml(transferContribCat.name) + ')</span>' : '') + '</span>'
           : '<span>Category <select class="register-inline-select' + (catFlagged ? ' register-flagged' : '') + '" data-reg-category="' + r.id + '">' + accountOptionsFor(r.categoryId, r.creditCardId, r.debtType) + '</select></span>';
         detailInner =
           categoryField +
@@ -3851,8 +3895,14 @@
         // leg didn't come from a savings goal or a category reclass, it
         // came from the OTHER account, so the normal From select is
         // replaced with a plain live-looked-up label instead.
+        // If the From account is linked to a savings goal, this leg was
+        // also given that goal's id as linkedGoalId (see createTransfer),
+        // so it's a real withdrawal from that goal's tracked total, not
+        // just a deposit -- surfaced the same way as the expense side.
+        var transferWithdrawalGoal = r.transferId && r.linkedGoalId ? state.savingsGoals.find(function(g) { return g.id === r.linkedGoalId; }) : null;
         var incSourceField = r.transferId
-          ? '<span class="muted" title="Both sides of a transfer are logged automatically -- delete this row to undo the whole transfer, not just this half">From: Transfer from ' + escapeHtml(transferPeerAccountName(r.transferId, "income")) + '</span>'
+          ? '<span class="muted" title="Both sides of a transfer are logged automatically -- delete this row to undo the whole transfer, not just this half">From: Transfer from ' + escapeHtml(transferPeerAccountName(r.transferId, "income")) +
+            (transferWithdrawalGoal ? ' <span class="muted">(withdrawn from ' + escapeHtml(transferWithdrawalGoal.name) + ')</span>' : '') + '</span>'
           : '<span>From <select class="register-inline-select" data-reg-income-source="' + r.id + '">' + incomeSourceOptionsFor(r.linkedGoalId, true, r.reclassCategoryId) + '</select></span>';
         detailInner =
           incSourceField +
@@ -5312,9 +5362,10 @@
       if (!name) return;
       var startingBalanceEl = document.getElementById("bankAccountStartingBalance");
       var asOfEl = document.getElementById("bankAccountBalanceAsOf");
+      var goalEl = document.getElementById("bankAccountGoal");
       var startingBalance = parseFloat(startingBalanceEl.value);
       if (isNaN(startingBalance)) startingBalance = 0;
-      state.bankAccounts.push({ id: uid(), name: name, startingBalance: startingBalance, balanceAsOf: asOfEl.value || null });
+      state.bankAccounts.push({ id: uid(), name: name, startingBalance: startingBalance, balanceAsOf: asOfEl.value || null, linkedGoalId: (goalEl && goalEl.value) || null });
       saveState();
       bankAccountForm.reset();
       refreshAfterBankAccountChange();
@@ -5331,17 +5382,40 @@
   // fromId, and a matching deposit income tagged to toId, linked by a
   // shared transferId (see accountLabelFor, transferPeerAccountName,
   // syncTransferPeer, and deleteExpense/deleteIncome's pairing above).
-  // Neither leg gets a categoryId -- moving your own money between your
-  // own accounts isn't spending or income, see totalsForMonth/
-  // incomeForMonth -- so the "category" a normal transaction would carry
-  // is really just "which account is the other side," shown live instead
-  // of stored as a snapshot.
+  // Neither leg gets a categoryId by default -- moving your own money
+  // between your own accounts isn't spending or income, see
+  // totalsForMonth/incomeForMonth -- so the "category" a normal
+  // transaction would carry is really just "which account is the other
+  // side," shown live instead of stored as a snapshot.
+  //
+  // The one exception: if either account has its own linkedGoalId set
+  // (see the Bank accounts table -- this account effectively IS a real
+  // savings goal's money), the transfer automatically counts toward that
+  // goal too, using the exact same mechanics a manual goal contribution or
+  // withdrawal already uses:
+  //   - toAcct linked to a goal -> the withdrawal leg gets that goal's own
+  //     linked category (goalEffectiveCategoryId), so goalLinkedExpenses
+  //     picks it up as a CONTRIBUTION, same as spending under "Savings"
+  //     always has.
+  //   - fromAcct linked to a goal -> the deposit leg gets that goal's id
+  //     as linkedGoalId, so goalWithdrawals picks it up as a WITHDRAWAL,
+  //     same as picking "From savings: <goal>" on a manual deposit does.
+  // A transfer between two DIFFERENT goal-linked accounts applies both at
+  // once, which is exactly right -- money leaving one goal's real account
+  // and landing in another goal's real account is a withdrawal from one
+  // and a contribution to the other. Returns which goal(s), if any, the
+  // transfer touched, so the caller can toast about it.
   function createTransfer(date, fromId, toId, amount, note) {
     var fromAcct = bankAccountById(fromId), toAcct = bankAccountById(toId);
     var transferId = uid();
     var suffix = note ? " (" + note + ")" : "";
+
+    var contributionGoal = toAcct && toAcct.linkedGoalId ? state.savingsGoals.find(function(g) { return g.id === toAcct.linkedGoalId; }) : null;
+    var contributionCategoryId = contributionGoal ? goalEffectiveCategoryId(contributionGoal) : null;
+    var withdrawalGoal = fromAcct && fromAcct.linkedGoalId ? state.savingsGoals.find(function(g) { return g.id === fromAcct.linkedGoalId; }) : null;
+
     state.expenses.push({
-      id: uid(), date: date, amount: amount, categoryId: null,
+      id: uid(), date: date, amount: amount, categoryId: contributionCategoryId,
       note: "Transfer to " + (toAcct ? toAcct.name : "account") + suffix,
       paycheckId: null, paid: false, cleared: false, imported: false, categoryGuessed: false,
       splitGroupId: null, recurringId: null, creditCardId: null, debtType: null,
@@ -5351,10 +5425,17 @@
       id: uid(), date: date, amount: amount,
       source: "Transfer from " + (fromAcct ? fromAcct.name : "account") + suffix,
       color: "#7a7a7a", note: "", cleared: false, imported: false,
-      linkedGoalId: null, reclassCategoryId: null, bankAccountId: toId, transferId: transferId
+      linkedGoalId: withdrawalGoal ? withdrawalGoal.id : null, reclassCategoryId: null,
+      bankAccountId: toId, transferId: transferId
     });
     saveState();
     refreshAfterRegisterChange();
+    renderSavingsGoals();
+    return {
+      contributedTo: contributionGoal ? contributionGoal.name : null,
+      contributionUncategorized: !!(contributionGoal && !contributionCategoryId),
+      withdrawnFrom: withdrawalGoal ? withdrawalGoal.name : null
+    };
   }
 
   var transferForm = document.getElementById("transferForm");
@@ -5370,10 +5451,20 @@
       if (!date || !fromId || !toId) { showToast("Pick a date and both accounts"); return; }
       if (fromId === toId) { showToast("Pick two different accounts to transfer between"); return; }
       if (isNaN(amount) || amount <= 0) { showToast("Enter an amount greater than zero"); return; }
-      createTransfer(date, fromId, toId, amount, note);
+      var result = createTransfer(date, fromId, toId, amount, note);
       transferForm.reset();
       document.getElementById("transferDate").value = todayISO();
-      showToast("Transfer added");
+      var msg = "Transfer added";
+      if (result.contributedTo && result.contributionUncategorized) {
+        msg += " -- give \"" + result.contributedTo + "\" a linked category (Dashboard) so this counts toward it";
+      } else if (result.contributedTo && result.withdrawnFrom) {
+        msg += " -- counted as a withdrawal from \"" + result.withdrawnFrom + "\" and a contribution to \"" + result.contributedTo + "\"";
+      } else if (result.contributedTo) {
+        msg += " -- counted as a contribution to \"" + result.contributedTo + "\"";
+      } else if (result.withdrawnFrom) {
+        msg += " -- counted as a withdrawal from \"" + result.withdrawnFrom + "\"";
+      }
+      showToast(msg);
     });
   }
 
@@ -5419,12 +5510,13 @@
       wrap.innerHTML = '<div class="empty-state">No bank accounts yet -- add one above, then tag your Check Register rows with it.</div>';
       return;
     }
-    var html = '<table><thead><tr><th>Name</th><th>Starting balance</th><th>As of</th><th></th></tr></thead><tbody>';
+    var html = '<table><thead><tr><th>Name</th><th>Starting balance</th><th>As of</th><th>Linked goal</th><th></th></tr></thead><tbody>';
     state.bankAccounts.forEach(function(a) {
       html += '<tr>' +
         '<td><input type="text" class="cat-inline-input" data-bank-name="' + a.id + '" value="' + escapeHtml(a.name) + '" aria-label="Bank account name"></td>' +
         '<td><input type="number" step="0.01" class="cat-inline-input" data-bank-starting-balance="' + a.id + '" value="' + (Number(a.startingBalance) || 0) + '" aria-label="Bank account starting balance"></td>' +
         '<td><input type="date" class="cat-inline-input" data-bank-as-of="' + a.id + '" value="' + (a.balanceAsOf || "") + '" aria-label="Bank account balance as of"></td>' +
+        '<td><select class="cat-inline-input" data-bank-goal="' + a.id + '" aria-label="Bank account linked savings goal">' + goalOptionsForBankAccount(a.linkedGoalId) + '</select></td>' +
         '<td class="actions-cell"><button class="row-btn danger" data-bank-del="' + a.id + '">Delete</button></td>' +
       '</tr>';
     });
@@ -5470,6 +5562,18 @@
         var val = inp.value || null;
         if (val === a.balanceAsOf) return;
         a.balanceAsOf = val;
+        saveState();
+        refreshAfterBankAccountChange();
+        showToast("Bank account updated");
+      });
+    });
+    wrap.querySelectorAll("[data-bank-goal]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var a = bankAccountById(sel.dataset.bankGoal);
+        if (!a) return;
+        var val = sel.value || null;
+        if (val === a.linkedGoalId) return;
+        a.linkedGoalId = val;
         saveState();
         refreshAfterBankAccountChange();
         showToast("Bank account updated");
@@ -5953,6 +6057,13 @@
     renderSavingsGoals();
     populateIncomeGoalSelect();
     renderCheckRegister();
+    // Keeps the "Add account" form's and Bank accounts table's own Linked
+    // savings goal selects showing this goal's current name (see
+    // goalOptionsForBankAccount) -- this function already runs after every
+    // place a goal can be added, renamed, or deleted, same reasoning as the
+    // other selects it keeps in sync.
+    populateCategorySelects();
+    renderBankAccounts();
     showToast(editId ? "Goal updated" : "Goal added");
   });
 
@@ -5987,13 +6098,19 @@
   }
 
   function deleteGoal(id) {
-    confirmDialog("Delete this savings goal? This won't affect any expenses or income.").then(function(ok) {
+    var linkedAccount = state.bankAccounts.some(function(a) { return a.linkedGoalId === id; });
+    var msg = "Delete this savings goal? This won't affect any expenses or income." +
+      (linkedAccount ? " Any bank account linked to it will just stop counting transfers toward it." : "");
+    confirmDialog(msg).then(function(ok) {
       if (!ok) return;
       state.savingsGoals = state.savingsGoals.filter(function(x){ return x.id !== id; });
+      state.bankAccounts.forEach(function(a) { if (a.linkedGoalId === id) a.linkedGoalId = null; });
       saveState();
       renderSavingsGoals();
       populateIncomeGoalSelect();
       renderCheckRegister();
+      populateCategorySelects();
+      renderBankAccounts();
       showToast("Goal deleted");
     });
   }
