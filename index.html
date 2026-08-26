@@ -3846,13 +3846,32 @@
     sortRegisterRows(rows);
     // Balance is computed AFTER filtering and sorting, in the exact order
     // the rows are about to be displayed -- see applyRunningBalance. A
-    // category filter OR a bank-account filter zeroes the seed (see
-    // applyRunningBalance's comment); the pinned Beginning balance row is
-    // hidden in that case too, below. A bank account is just a label here
-    // (no starting balance of its own like a credit card gets), so there's
-    // nothing meaningful to seed a single account's slice from besides zero.
-    var narrowingFilterActive = !!catFilter || !!bankFilter;
-    applyRunningBalance(rows, narrowingFilterActive ? 0 : combinedOpeningBalance());
+    // category filter (real category, or the Deposits/Payments sentinel)
+    // means the visible rows are a SLICE, not a point in time -- there's
+    // nothing a Beginning balance means there, so it's hidden below and
+    // Balance starts fresh from zero, same as always. A bank-account filter
+    // with NO category filter is different: it's still every transaction
+    // for one real account, in true date order -- so instead of zeroing
+    // out, it's seeded from THAT account's own starting balance and as-of
+    // date, exactly the same seed its own reconciliation window below
+    // already uses, so the two always reconcile with each other instead of
+    // one starting from a real balance and the other from zero.
+    var filteredBankAccount = (bankFilter && !catFilter) ? bankAccountById(bankFilter) : null;
+    var hideOpeningRow = !!catFilter;
+    var seedForBalance, asOfCutoffForBalance = null;
+    if (catFilter) {
+      seedForBalance = 0;
+    } else if (filteredBankAccount) {
+      seedForBalance = Number(filteredBankAccount.startingBalance) || 0;
+      asOfCutoffForBalance = filteredBankAccount.balanceAsOf || null;
+    } else if (bankFilter) {
+      // Filtered to a bank account that's since been deleted -- fall back
+      // to the old zeroed-out behavior rather than crashing on a lookup.
+      seedForBalance = 0;
+    } else {
+      seedForBalance = combinedOpeningBalance();
+    }
+    applyRunningBalance(rows, seedForBalance, asOfCutoffForBalance);
 
     var countEl = document.getElementById("registerCount");
     if (countEl) {
@@ -3908,7 +3927,9 @@
         '<td class="reg-col-clr"><input type="checkbox" class="row-checkbox" data-reg-cleared="' + r.id + '" data-reg-kind="' + r.kind + '"' + (r.cleared ? ' checked' : '') + '></td>' +
         '<td class="reg-col-paid">' + paidCell + '</td>' +
         '<td class="num reg-col-deposit">' + depositCell + '</td>' +
-        '<td class="num reg-col-balance">' + fmtMoney(r.balance) + '</td>' +
+        '<td class="num reg-col-balance">' + (r.balance === null
+          ? '<span class="muted" title="Dated before this account\'s balance anchor">—</span>'
+          : fmtMoney(r.balance)) + '</td>' +
       '</tr>';
 
       var detailInner;
@@ -4019,24 +4040,37 @@
     // has no business appearing in that sliced view, and the Balance column
     // is a pure sum of the visible rows there instead (see
     // applyRunningBalance above).
-    var openingBalanceVal = combinedOpeningBalance();
-    var openingDateVal = state.settings.openingBalanceDate || "";
-    // Once bank accounts exist, this amount is auto-summed (see
-    // combinedOpeningBalance) and shown read-only, with a note pointing at
-    // where it actually comes from -- otherwise this field and the accounts'
-    // own starting balances are two numbers a person has to keep matching by
-    // hand, and they will eventually drift. No bank accounts yet -- keep the
-    // old plain editable input, since there's nothing to sum.
-    var autoSummedOpening = state.bankAccounts.length > 0;
+    var openingBalanceVal = filteredBankAccount ? (Number(filteredBankAccount.startingBalance) || 0) : combinedOpeningBalance();
+    var openingDateVal = filteredBankAccount ? (filteredBankAccount.balanceAsOf || "") : (state.settings.openingBalanceDate || "");
+    // This amount is shown read-only, auto-derived rather than typed by
+    // hand, whenever there's a single real source of truth to pull it from
+    // instead: the combined view sums every bank account's own starting
+    // balance (see combinedOpeningBalance) once any exist, and filtering
+    // down to ONE bank account instead shows THAT account's own starting
+    // balance directly -- same value its own reconciliation window below
+    // seeds from, so the two can never drift apart or fail to reconcile.
+    // Only when there are no bank accounts at all, and no bank filter, is
+    // there nothing to derive it from -- that's the one case this stays a
+    // plain editable input.
+    var autoSummedOpening = !!filteredBankAccount || state.bankAccounts.length > 0;
+    var openingLabelSuffix = filteredBankAccount
+      ? (' <span class="muted">(' + escapeHtml(filteredBankAccount.name) + '\'s own starting balance)</span>')
+      : (autoSummedOpening ? ' <span class="muted">(= sum of your bank accounts)</span>' : '');
+    var openingAmountTitle = filteredBankAccount
+      ? "This account's own starting balance (Categories & Budgets) -- so this filtered view always reconciles with its own reconciliation window below. Edit it there."
+      : 'Automatically the sum of your bank accounts\' own starting balances (Categories & Budgets) -- edit them there so this can never drift out of sync';
     var openingAmountCell = autoSummedOpening
-      ? '<span class="register-opening-amount register-opening-auto" title="Automatically the sum of your bank accounts\' own starting balances (Categories & Budgets) -- edit them there so this can never drift out of sync">' + fmtMoney(openingBalanceVal) + '</span>'
+      ? '<span class="register-opening-amount register-opening-auto" title="' + openingAmountTitle + '">' + fmtMoney(openingBalanceVal) + '</span>'
       : '<input type="number" class="register-opening-amount" id="regOpeningAmount" step="0.01" value="' + openingBalanceVal + '">';
-    var openingRowHtml = narrowingFilterActive ? "" :
+    var openingDateCell = filteredBankAccount
+      ? '<span class="muted" title="This account\'s own as-of date -- edit it in Categories & Budgets">' + (openingDateVal || "all history") + '</span>'
+      : '<input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '">';
+    var openingRowHtml = hideOpeningRow ? "" :
       '<tr class="register-txn-main register-opening-row">' +
         '<td class="reg-col-flag"></td>' +
-        '<td class="reg-col-date"><input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '"></td>' +
+        '<td class="reg-col-date">' + openingDateCell + '</td>' +
         '<td class="register-opening-label" title="Not tied to any category or paycheck — just offsets the running balance to match your real starting balance">Beginning balance' +
-          (autoSummedOpening ? ' <span class="muted">(= sum of your bank accounts)</span>' : '') + '</td>' +
+          openingLabelSuffix + '</td>' +
         '<td class="num reg-col-payment"></td>' +
         '<td class="reg-col-clr"></td>' +
         '<td class="reg-col-paid"></td>' +
