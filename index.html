@@ -3199,14 +3199,38 @@
   // don't count toward the running total at all (the seed already reflects
   // everything up to that date) and get .balance = null so the table can
   // render them as "--" instead of a misleading number.
+  //
+  // asOfCutoff can also be a FUNCTION (row -> cutoff date or null/falsy)
+  // instead of a single date -- used by the combined "ALL" Check Register
+  // below, where the seed is the SUM of every bank account's own starting
+  // balance, each snapshotted as of that account's OWN as-of date (they
+  // don't have to match each other). A single shared cutoff can't express
+  // that, so each row is checked against its OWN bank account's own as-of
+  // date instead -- exactly what that account's own reconciliation window
+  // already does -- so a transaction dated before its account's snapshot
+  // (already baked into the summed starting balance) isn't added a second
+  // time, and the combined total actually reconciles with the sum of every
+  // individual account window instead of silently drifting off it.
   function applyRunningBalance(rows, seed, asOfCutoff) {
     var running = typeof seed === "number" ? seed : combinedOpeningBalance();
+    var cutoffIsFn = typeof asOfCutoff === "function";
     rows.forEach(function(r) {
-      if (asOfCutoff && r.date < asOfCutoff) { r.balance = null; return; }
+      var cutoff = cutoffIsFn ? asOfCutoff(r) : asOfCutoff;
+      if (cutoff && r.date < cutoff) { r.balance = null; return; }
       running += r.amount;
       r.balance = running;
     });
     return rows;
+  }
+
+  // Per-row as-of resolver for the combined register (see applyRunningBalance
+  // above): a row tagged to a real bank account defers to THAT account's own
+  // as-of date; a row with no bank account tagged (or whose account has no
+  // as-of date set) has nothing to defer to, so it always counts -- same as
+  // the "Unassigned" reconciliation window, which never hides anything.
+  function combinedAsOfCutoffFor(row) {
+    var acct = row.bankAccountId ? bankAccountById(row.bankAccountId) : null;
+    return acct ? (acct.balanceAsOf || null) : null;
   }
 
   // The main Check Register's "Beginning balance" used to be a single number
@@ -3911,6 +3935,12 @@
       seedForBalance = 0;
     } else {
       seedForBalance = combinedOpeningBalance();
+      // Each row defers to its OWN bank account's own as-of date (see
+      // combinedAsOfCutoffFor) rather than one shared cutoff -- accounts
+      // rarely all share the same as-of date, and a single cutoff here
+      // would double-count (or wrongly exclude) whichever accounts' real
+      // as-of date didn't match it.
+      asOfCutoffForBalance = combinedAsOfCutoffFor;
     }
     applyRunningBalance(rows, seedForBalance, asOfCutoffForBalance);
 
