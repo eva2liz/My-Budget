@@ -1361,8 +1361,20 @@
 
     <div class="card">
       <h2>Reset</h2>
-      <p class="hint" style="margin-top:0;">Permanently deletes all expenses, categories, and recurring items in this browser.</p>
-      <button type="button" class="danger-text" id="resetAll">Erase all data</button>
+      <p class="hint" style="margin-top:0;">Permanently deletes data in this browser. There's no undo — export a backup above first if you're not sure.</p>
+      <p class="hint" style="margin-top:0;">Same split as the export above: <strong>Check Register</strong> means every expense, deposit, and card payment; <strong>CC Register</strong> means just your cards' charge history. A card payment is a real bank transaction, so it only gets erased with Check Register — check both to wipe everything transaction-related. Either way, your <strong>categories, credit cards, bank accounts, recurring bills, and savings goals stay put</strong> — only the logged transactions themselves are erased; delete one of those from its own tab if you actually want it gone.</p>
+      <div class="inline-form" style="margin-bottom:10px;">
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="resetIncludeCheck"> Check Register</label>
+        </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="resetIncludeCC"> CC Register</label>
+        </div>
+      </div>
+      <div class="section-actions">
+        <button type="button" class="danger-text" id="resetSelected">Erase selected register(s)</button>
+        <button type="button" class="danger-text" id="resetAll">Erase all data</button>
+      </div>
     </div>
   </section>
 
@@ -7223,6 +7235,38 @@
       });
     };
     reader.readAsText(file);
+  });
+
+  // Same isCharge test the CSV export already uses to split "Check
+  // Register" from "CC Register" (see exportCsv above): a charge only ever
+  // lives on the CC Register, but a card PAYMENT is a real bank transaction
+  // -- it belongs to the Check Register even though it's also linked on the
+  // CC Register -- so it's only erased when Check Register is checked, same
+  // as export's "included whenever either box is checked" rule but mirrored
+  // for deletion (a payment is erased by ONE checkbox here, Check Register,
+  // where export includes it if EITHER is checked -- deletion has to pick a
+  // single owner, since a row can't be half-erased).
+  document.getElementById("resetSelected").addEventListener("click", function() {
+    var includeCheck = document.getElementById("resetIncludeCheck").checked;
+    var includeCC = document.getElementById("resetIncludeCC").checked;
+    if (!includeCheck && !includeCC) { showToast("Pick at least one register to erase"); return; }
+    var label = includeCheck && includeCC ? "the Check Register AND the CC Register (every expense, deposit, payment, and charge)"
+      : includeCheck ? "the Check Register (every expense, deposit, and card payment -- card charge history stays)"
+      : "the CC Register (every card charge -- your cards, and any payments already logged, stay)";
+    confirmDialog("Erase " + label + "? This cannot be undone. Export a backup first if you're not sure.", "Erase").then(function(ok) {
+      if (!ok) return;
+      var isCharge = function(e) { return !!(e.creditCardId && e.debtType !== "payment"); };
+      if (includeCheck) {
+        state.expenses = state.expenses.filter(isCharge);
+        state.income = [];
+      }
+      if (includeCC) {
+        state.expenses = state.expenses.filter(function(e) { return !isCharge(e); });
+      }
+      saveState();
+      renderAll();
+      showToast("Erased");
+    });
   });
 
   document.getElementById("resetAll").addEventListener("click", function() {
