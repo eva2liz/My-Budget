@@ -147,12 +147,42 @@
     top: 0;
     z-index: 10;
   }
-  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
-  header .header-left { display: flex; align-items: center; gap: 10px; }
-  header .actions { display: flex; gap: 8px; align-items: center; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; white-space: nowrap; }
+  header .header-left { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+  header .actions { display: flex; gap: 8px; align-items: center; flex: 0 0 auto; }
   .logo-icon {
     height: 1.35em; width: 1.35em; vertical-align: -0.38em; margin-right: 5px;
     border-radius: 7px; object-fit: cover;
+  }
+
+  /* Centered search box in the header, replacing the old icon-triggered
+     search -- see #headerSearchInput below, which opens/drives the same
+     search dialog (#searchDialog) the icon used to. */
+  .header-search { flex: 1 1 auto; display: flex; justify-content: center; min-width: 0; padding: 0 12px; }
+  .header-search-inner { position: relative; width: 100%; max-width: 420px; }
+  .header-search-inner svg {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); pointer-events: none;
+  }
+  .header-search-inner input {
+    width: 100%; box-sizing: border-box;
+    font-family: inherit; font-size: 13.5px;
+    padding: 8px 12px 8px 34px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--track);
+    color: var(--text-primary);
+  }
+  .header-search-inner input::placeholder { color: var(--text-muted); }
+  .header-search-inner input:focus { outline: none; background: var(--surface-1); border-color: #2a78d6; }
+  @media (max-width: 640px) {
+    /* Too narrow for logo + a full-width search box + actions all in one
+       row -- shrink the box down small (still tappable, still opens the
+       full search dialog) rather than hiding it, since that's the only way
+       to reach search now that the old icon-button trigger is gone. */
+    .header-search { padding: 0 6px; }
+    .header-search-inner { max-width: none; }
+    .header-search-inner input { padding: 7px 8px 7px 30px; font-size: 13px; }
   }
 
   .icon-btn {
@@ -171,17 +201,43 @@
 
   /* Layout: a persistent left sidebar nav beside the main content on wide
      screens; below 901px it becomes an off-canvas drawer toggled from the
-     hamburger button in the header (see .sidebar-toggle / #sidebarBackdrop). */
-  .app-body { display: flex; align-items: flex-start; }
+     hamburger button in the header (see .sidebar-toggle / #sidebarBackdrop).
+     align-items: stretch makes .sidebar-col (the colored column) match
+     main's full height, even when main is much taller than the nav's own
+     button list -- otherwise the sidebar color stops at its own content and
+     leaves plain page background below it on any page longer than 9 tabs'
+     worth of height. */
+  .app-body { display: flex; align-items: stretch; }
+
+  /* The color lives on this wrapper, not on nav.tabs itself -- nav.tabs
+     stays position:sticky with its own max-height (see below) so the
+     actual clickable tab list still stays pinned within the viewport
+     while you scroll a long register, instead of sailing off along with a
+     now much-taller sidebar box. Splitting "how tall the color runs" from
+     "how tall the sticky nav box is" is what lets both work at once. */
+  .sidebar-col {
+    flex: 0 0 216px;
+    width: 216px;
+    background: var(--sidebar-bg);
+  }
+  @media (max-width: 900px) {
+    /* Below 901px nav.tabs switches to its own position:fixed off-canvas
+       drawer (see the max-width:900px block further down) and no longer
+       occupies space in this flex row at all -- so this wrapper needs to
+       collapse to zero width itself, or it'd sit here as a stray 216px-wide
+       colored rectangle with nothing visible inside it. display:none isn't
+       an option since that would hide the fixed-position drawer too (a
+       display:none ancestor hides its whole subtree regardless of any
+       child's own position value). */
+    .sidebar-col { flex: 0 0 0; width: 0; background: transparent; }
+  }
 
   nav.tabs {
     display: flex;
     flex-direction: column;
     gap: 2px;
     padding: 16px 12px;
-    background: var(--sidebar-bg);
     border-bottom: none;
-    flex: 0 0 216px;
     width: 216px;
     box-sizing: border-box;
   }
@@ -209,6 +265,9 @@
     background: var(--sidebar-active-bg);
     font-weight: 600;
   }
+  .nav-divider { border-top: 1px solid rgba(255,255,255,0.14); margin: 8px 4px 6px; }
+  nav.tabs button.nav-logout-btn { color: rgba(255,255,255,0.65); }
+  nav.tabs button.nav-logout-btn:hover { background: rgba(255,255,255,0.08); color: var(--sidebar-text-active); }
   @media (min-width: 901px) {
     nav.tabs { position: sticky; top: 66px; max-height: calc(100vh - 66px); overflow-y: auto; }
   }
@@ -218,6 +277,10 @@
       position: fixed;
       top: 0; left: 0; bottom: 0;
       width: 240px;
+      /* .sidebar-col collapses to zero width at this breakpoint (see
+         above), so this floating drawer needs its own background --
+         it's no longer painted by an ancestor's box at this size. */
+      background: var(--sidebar-bg);
       transform: translateX(-100%);
       transition: transform .22s ease;
       z-index: 60;
@@ -345,6 +408,31 @@
   .stat-tile .value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .stat-tile .value.over { color: var(--critical); }
   .stat-tile .value.good { color: var(--success); }
+
+  /* Dashboard: Spending by category donut, between the stat row and the
+     Recent transactions / Due today / Upcoming payments row below it. */
+  .expense-pie-body { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .expense-pie-svg-wrap { position: relative; flex: 0 0 auto; width: 200px; height: 200px; }
+  .expense-pie-svg-wrap svg { width: 100%; height: 100%; }
+  .expense-pie-svg-wrap path { cursor: pointer; transition: opacity .12s ease; }
+  .expense-pie-svg-wrap path:hover { opacity: 0.78; }
+  .expense-pie-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+  .expense-pie-center .epc-amount { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .expense-pie-center .epc-label { font-size: 11px; color: var(--text-secondary); }
+  .expense-pie-legend { flex: 1 1 240px; min-width: 220px; display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; }
+  .expense-pie-legend-row {
+    display: flex; align-items: center; gap: 8px; padding: 5px 6px;
+    border-radius: 6px; cursor: pointer; font-size: 13px; background: none; border: none;
+    font-family: inherit; color: var(--text-primary); text-align: left; width: 100%;
+  }
+  .expense-pie-legend-row:hover { background: var(--track); }
+  .expense-pie-legend-row .epl-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .expense-pie-legend-row .epl-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .expense-pie-legend-row .epl-amount { font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .expense-pie-legend-row .epl-pct { color: var(--text-muted); font-size: 12px; flex-shrink: 0; width: 34px; text-align: right; }
+  @media (max-width: 560px) {
+    .expense-pie-body { justify-content: center; }
+  }
 
   /* Dashboard: Recent transactions / Due today / Upcoming payments row */
   .dash-panels-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
@@ -839,26 +927,23 @@
     </button>
     <h1><img src="logo-piggy.png" alt="" class="logo-icon"> My Budget</h1>
   </div>
-  <div class="actions">
-    <span class="hint" id="authUserEmail" style="margin-right:2px;"></span>
-    <button class="icon-btn" id="searchBtn" title="Search transactions">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <div class="header-search">
+    <div class="header-search-inner">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
-    </button>
+      <input type="text" id="headerSearchInput" placeholder="Search transactions…" autocomplete="off" aria-label="Search transactions">
+    </div>
+  </div>
+  <div class="actions">
+    <span class="hint" id="authUserEmail" style="margin-right:2px;"></span>
     <button class="icon-btn" id="themeToggle" title="Toggle dark mode">🌓</button>
-    <button class="icon-btn" id="logoutBtn" title="Log out">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-        <polyline points="16 17 21 12 16 7"></polyline>
-        <line x1="21" y1="12" x2="9" y2="12"></line>
-      </svg>
-    </button>
   </div>
 </header>
 
 <div class="app-body">
+<div class="sidebar-col">
 <nav class="tabs">
   <button data-panel="dashboard" class="active"><span class="nav-icon">🏠</span><span>Dashboard</span></button>
   <button data-panel="calendar"><span class="nav-icon">📅</span><span>Calendar</span></button>
@@ -869,7 +954,19 @@
   <button data-panel="budgetVsActual"><span class="nav-icon">📊</span><span>Budget vs. Actual</span></button>
   <button data-panel="categories"><span class="nav-icon">🏷️</span><span>Categories &amp; Budgets</span></button>
   <button data-panel="settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
+  <div class="nav-divider"></div>
+  <button type="button" class="nav-logout-btn" id="logoutBtn" title="Log out">
+    <span class="nav-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
+    </span>
+    <span>Log out</span>
+  </button>
 </nav>
+</div>
 <div id="sidebarBackdrop"></div>
 
 <main>
@@ -877,6 +974,11 @@
   <!-- DASHBOARD -->
   <section id="dashboard" class="panel active">
     <div class="stat-row" id="statRow"></div>
+
+    <div class="card" id="expensePieCard">
+      <h2>Spending by category <span class="muted" id="expensePieMonthLabel"></span></h2>
+      <div id="expensePieWrap"></div>
+    </div>
 
     <div class="dash-panels-row">
       <div class="card dash-panel-card">
@@ -2403,7 +2505,11 @@
   });
   sidebarBackdrop.addEventListener("click", closeSidebar);
 
-  var tabButtons = document.querySelectorAll("nav.tabs button");
+  // [data-panel] excludes the Log out button that now lives at the bottom
+  // of this same nav.tabs list -- it has no panel to switch to (see its own
+  // click handler further down), so without this filter this loop would
+  // try document.getElementById(undefined) for it and throw.
+  var tabButtons = document.querySelectorAll("nav.tabs button[data-panel]");
   tabButtons.forEach(function(btn) {
     btn.addEventListener("click", function() {
       tabButtons.forEach(function(b){ b.classList.remove("active"); });
@@ -6526,17 +6632,42 @@
 
   var searchDialog = document.getElementById("searchDialog");
   var searchInput = document.getElementById("searchInput");
+  var headerSearchInput = document.getElementById("headerSearchInput");
 
-  document.getElementById("searchBtn").addEventListener("click", function() {
-    searchInput.value = "";
-    renderSearchResults("");
-    searchDialog.showModal();
-    setTimeout(function() { searchInput.focus(); }, 50);
-  });
+  // The header's own search box (replacing the old magnifying-glass icon)
+  // is just a trigger + proxy for this same dialog and its real #searchInput
+  // -- focusing it opens the dialog fresh (same "always starts blank" feel
+  // the icon click used to have) and hands focus straight to the dialog's
+  // own field, and typing in either one is kept in sync with the other so
+  // it behaves like one continuous search box regardless of which you're
+  // looking at.
+  if (headerSearchInput) {
+    headerSearchInput.addEventListener("focus", function() {
+      if (!searchDialog.open) {
+        headerSearchInput.value = "";
+        searchInput.value = "";
+        renderSearchResults("");
+        searchDialog.showModal();
+      }
+      setTimeout(function() { searchInput.focus(); }, 50);
+    });
+    headerSearchInput.addEventListener("input", function() {
+      searchInput.value = headerSearchInput.value;
+      renderSearchResults(headerSearchInput.value);
+      if (!searchDialog.open) searchDialog.showModal();
+    });
+    // Closing the dialog (Cancel, Escape, clicking a result) resets the
+    // header box back to empty/placeholder, same as the old icon always
+    // starting a fresh search on the next click.
+    searchDialog.addEventListener("close", function() {
+      headerSearchInput.value = "";
+    });
+  }
   document.getElementById("searchClose").addEventListener("click", function() {
     searchDialog.close();
   });
   searchInput.addEventListener("input", function() {
+    if (headerSearchInput) headerSearchInput.value = searchInput.value;
     renderSearchResults(searchInput.value);
   });
 
@@ -7245,9 +7376,89 @@
   var bvaMonthPicker = document.getElementById("bvaMonthPicker");
   bvaMonthPicker.addEventListener("change", renderBudgetVsActualTab);
 
+  // Donut breakdown of this month's actual spending by category, sitting
+  // between the stat row and the Recent/Due/Upcoming panels below it. Reuses
+  // the exact same totals every other dashboard number comes from
+  // (totalsForMonth) and the exact same per-category color every swatch
+  // elsewhere in the app already uses (categoryColorHex), so a category's
+  // color and dollar amount here always match what you'd see on Budget vs.
+  // Actual or the category table -- and clicking a slice or legend row opens
+  // the same drill-down dialog that explains any other total on this page.
+  function renderExpensePieChart(monthKey, totals) {
+    var wrap = document.getElementById("expensePieWrap");
+    var monthLabelEl = document.getElementById("expensePieMonthLabel");
+    if (!wrap) return;
+    if (monthLabelEl) monthLabelEl.textContent = monthLabel(monthKey);
+
+    // Only real positive spending becomes a slice -- a category sitting at
+    // zero (nothing logged) or negative (net credited back this month, see
+    // the reclass/return-credit passes in totalsForMonth) isn't "spending"
+    // to show a wedge for.
+    var slices = state.categories
+      .map(function(c) { return { id: c.id, name: c.name, amount: totals[c.id] || 0, color: categoryColorHex(c.id) }; })
+      .filter(function(s) { return s.amount > 0.004; })
+      .sort(function(a, b) { return b.amount - a.amount; });
+
+    var total = slices.reduce(function(s, x) { return s + x.amount; }, 0);
+
+    if (!slices.length) {
+      wrap.innerHTML = '<div class="empty-state">Nothing logged under a category yet this month.</div>';
+      return;
+    }
+
+    var r = 80, cx = 100, cy = 100, strokeWidth = 32;
+    var circumference = 2 * Math.PI * r;
+    var gapPx = 2; // matches the 2px surface-gap spacer used elsewhere between adjacent marks
+    var offset = 0;
+    var pathsHtml = slices.map(function(s) {
+      var rawLength = (s.amount / total) * circumference;
+      var visibleLength = Math.max(0, rawLength - gapPx);
+      var dashArray = visibleLength + " " + (circumference - visibleLength);
+      var dashOffset = -offset;
+      offset += rawLength;
+      var pct = Math.round((s.amount / total) * 100);
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + s.color + '" stroke-width="' + strokeWidth +
+        '" stroke-dasharray="' + dashArray + '" stroke-dashoffset="' + dashOffset + '" data-pie-slice="' + s.id + '">' +
+        '<title>' + escapeHtml(s.name) + ": " + fmtMoney(s.amount) + " (" + pct + "%)</title>" +
+        '</circle>';
+    }).join("");
+
+    var svgHtml =
+      '<div class="expense-pie-svg-wrap">' +
+        '<svg viewBox="0 0 200 200">' +
+          '<g transform="rotate(-90 ' + cx + ' ' + cy + ')">' + pathsHtml + '</g>' +
+        '</svg>' +
+        '<div class="expense-pie-center">' +
+          '<div class="epc-amount">' + fmtMoney(total) + '</div>' +
+          '<div class="epc-label">spent this month</div>' +
+        '</div>' +
+      '</div>';
+
+    var legendHtml = '<div class="expense-pie-legend">' + slices.map(function(s) {
+      var pct = Math.round((s.amount / total) * 100);
+      return '<button type="button" class="expense-pie-legend-row" data-pie-legend="' + s.id + '" title="Click to see which transactions make up this total">' +
+        '<span class="epl-swatch" style="background:' + s.color + '"></span>' +
+        '<span class="epl-name">' + escapeHtml(s.name) + '</span>' +
+        '<span class="epl-amount">' + fmtMoney(s.amount) + '</span>' +
+        '<span class="epl-pct">' + pct + '%</span>' +
+      '</button>';
+    }).join("") + '</div>';
+
+    wrap.innerHTML = '<div class="expense-pie-body">' + svgHtml + legendHtml + '</div>';
+
+    wrap.querySelectorAll("[data-pie-slice]").forEach(function(el) {
+      el.addEventListener("click", function() { openCategoryDrillDialog(el.dataset.pieSlice, monthKey); });
+    });
+    wrap.querySelectorAll("[data-pie-legend]").forEach(function(el) {
+      el.addEventListener("click", function() { openCategoryDrillDialog(el.dataset.pieLegend, monthKey); });
+    });
+  }
+
   function renderDashboard() {
     var todayMonthKey = currentMonthKey();
-    renderStatTiles(todayMonthKey, totalsForMonth(todayMonthKey));
+    var todayTotals = totalsForMonth(todayMonthKey);
+    renderStatTiles(todayMonthKey, todayTotals);
+    renderExpensePieChart(todayMonthKey, todayTotals);
 
     renderRecentTransactionsPanel();
     renderDueTodayPanel();
