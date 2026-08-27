@@ -554,6 +554,38 @@
   }
   .register-hint { margin: 4px 0 12px 0; }
 
+  /* The long explanatory paragraph that used to sit permanently under each
+     register's/card's heading (register-hint, above) now lives inside a
+     click-to-open popover instead, so it doesn't eat vertical space until
+     you actually want it -- click "Important instructions" to read it,
+     click again (or click outside, or Escape) to put it away. */
+  .register-toolbar-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .info-popover { position: relative; display: inline-block; }
+  .info-popover-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-secondary); border-radius: 20px;
+    padding: 4px 10px 4px 8px; font-size: 12px; font-family: inherit;
+    cursor: pointer; white-space: nowrap;
+  }
+  .info-popover-btn:hover { background: var(--track); color: var(--text-primary); }
+  .info-popover-btn svg { flex-shrink: 0; color: #2a78d6; }
+  .info-popover-btn[aria-expanded="true"] { background: var(--track); color: var(--text-primary); border-color: #2a78d6; }
+  .info-popover-panel {
+    display: none;
+    position: absolute; top: calc(100% + 8px); left: 0; z-index: 30;
+    width: min(420px, 88vw);
+    max-height: min(50vh, 420px); overflow-y: auto;
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+    padding: 12px 14px; margin: 0;
+    font-size: 12.5px; line-height: 1.5; color: var(--text-secondary);
+  }
+  .info-popover-panel.open { display: block; }
+  @media (max-width: 640px) {
+    .info-popover-panel { left: auto; right: 0; }
+  }
+
   .reconciliation-window { margin-top: 14px; }
   .reconciliation-window h3 { margin: 0 0 4px 0; font-size: 14px; font-weight: 600; }
   .reconciliation-window .register-table { table-layout: auto; }
@@ -952,7 +984,7 @@
   <button data-panel="register"><span class="nav-icon">📒</span><span>Check Register</span></button>
   <button data-panel="balances"><span class="nav-icon">💳</span><span>CC Register</span></button>
   <button data-panel="budgetVsActual"><span class="nav-icon">📊</span><span>Budget vs. Actual</span></button>
-  <button data-panel="categories"><span class="nav-icon">🏷️</span><span>Categories &amp; Budgets</span></button>
+  <button data-panel="categories"><span class="nav-icon">🏷️</span><span>Manage Budget</span></button>
   <button data-panel="settings"><span class="nav-icon">⚙️</span><span>Settings</span></button>
   <div class="nav-divider"></div>
   <button type="button" class="nav-logout-btn" id="logoutBtn" title="Log out">
@@ -999,37 +1031,6 @@
       <h2>This month's paychecks</h2>
       <p class="hint" style="margin-top:0;">Click a paycheck to see exactly which bills are assigned to it.</p>
       <div id="paycheckCardsWrap"></div>
-    </div>
-
-    <div class="card">
-      <h2>Savings goals <span class="muted">e.g. emergency fund, a car, a trip</span></h2>
-      <form class="inline-form" id="goalForm">
-        <div class="field">
-          <label for="goalName">Name</label>
-          <input type="text" id="goalName" placeholder="e.g. Emergency fund" required>
-        </div>
-        <div class="field">
-          <label for="goalTarget">Target amount</label>
-          <input type="number" id="goalTarget" step="0.01" min="0.01" placeholder="0.00" required>
-        </div>
-        <div class="field">
-          <label for="goalCurrent">Already saved <span class="muted">(optional)</span></label>
-          <input type="number" id="goalCurrent" step="0.01" min="0" placeholder="0.00">
-        </div>
-        <div class="field">
-          <label for="goalColor">Color</label>
-          <input type="color" id="goalColor" value="#1baf7a">
-        </div>
-        <div class="field">
-          <label for="goalCategory">Link to category <span class="muted">(optional)</span></label>
-          <select id="goalCategory"><option value="">No linked category</option></select>
-        </div>
-        <input type="hidden" id="goalEditId">
-        <button type="submit" class="primary" id="goalSubmitBtn">Add goal</button>
-        <button type="button" class="secondary" id="goalCancelEdit" style="display:none;">Cancel</button>
-      </form>
-      <p class="hint" style="margin-top:8px;">Track money you're setting aside for something specific, separate from bills and debt. Use <strong>Add money</strong> to log a contribution directly on a goal, or link a goal to a category (e.g. "Savings") so every Check Register or CC Register transaction filed under that category counts toward it automatically -- its running total folds into "already saved" above, and every matching transaction is listed under that goal so you can see exactly what added up to it.</p>
-      <div id="savingsGoalsWrap" style="margin-top:14px;"></div>
     </div>
   </section>
 
@@ -1245,9 +1246,55 @@
       </div>
     </div>
 
+    <div class="card" id="transferCard">
+      <div class="card-header-row">
+        <h2>Transfer between accounts</h2>
+        <div class="info-popover">
+          <button type="button" class="info-popover-btn" id="transferHintBtn" aria-expanded="false" aria-controls="transferHintPanel">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            Important instructions
+          </button>
+          <div class="info-popover-panel hint" id="transferHintPanel" role="note">Moving money between two of your own bank accounts -- checking to savings, say -- isn't spending, so it's never filed under a category. Pick where it's coming from and going to and this logs both sides at once: a withdrawal in the From account's own Check Register / reconciliation window, and a deposit in the To account's, so both balances stay accurate without entering it twice. Editing the amount or date on either side afterward updates the other side to match; deleting either one deletes both.</div>
+        </div>
+      </div>
+      <form class="inline-form" id="transferForm">
+        <div class="field">
+          <label for="transferDate">Date</label>
+          <input type="date" id="transferDate" required>
+        </div>
+        <div class="field">
+          <label for="transferFrom">From</label>
+          <select id="transferFrom" required></select>
+        </div>
+        <div class="field">
+          <label for="transferTo">To</label>
+          <select id="transferTo" required></select>
+        </div>
+        <div class="field">
+          <label for="transferAmount">Amount</label>
+          <input type="number" id="transferAmount" step="0.01" min="0.01" placeholder="0.00" required>
+        </div>
+        <div class="field" style="flex:1; min-width:160px;">
+          <label for="transferNote">Note <span class="muted">(optional)</span></label>
+          <input type="text" id="transferNote" placeholder="Optional">
+        </div>
+        <button type="submit" class="primary" id="transferSubmitBtn">Add transfer</button>
+      </form>
+      <div id="transferHintWrap"></div>
+    </div>
+
     <div class="register-shell">
       <div class="register-toolbar">
-        <h2>Check register <span class="muted" id="registerCount"></span></h2>
+        <div class="register-toolbar-title">
+          <h2>Check register <span class="muted" id="registerCount"></span></h2>
+          <div class="info-popover">
+            <button type="button" class="info-popover-btn" id="registerHintBtn" aria-expanded="false" aria-controls="registerHintPanel">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              Important instructions
+            </button>
+            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category.</div>
+          </div>
+        </div>
         <div class="register-filters">
           <label class="register-filter-daterange">From <input type="date" id="filterFrom" aria-label="From date"></label>
           <label class="register-filter-daterange">To <input type="date" id="filterTo" aria-label="To date"></label>
@@ -1257,15 +1304,20 @@
         </div>
       </div>
       <p class="muted register-sum-line" id="registerSums"></p>
-      <p class="hint register-hint">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Categories &amp; Budgets) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category.</p>
       <div id="checkRegisterWrap" class="register-scroll"></div>
     </div>
 
     <div class="register-shell" id="reconciliationShell">
       <div class="register-toolbar">
         <h2>Bank account reconciliation</h2>
+        <div class="info-popover">
+          <button type="button" class="info-popover-btn" id="reconciliationHintBtn" aria-expanded="false" aria-controls="reconciliationHintPanel">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            Important instructions
+          </button>
+          <div class="info-popover-panel hint" id="reconciliationHintPanel" role="note">Each bank account below gets its own window with a true running balance -- seeded from that account's own starting balance, walking its full transaction history in order, exactly what you'd check line-by-line against a real bank statement. That's different from the Balance column up in the Check Register above, which is only a quick running sum of whatever rows happen to be visible there right now. Set each account's starting balance under Manage Budget. Transactions with no bank account tagged land in their own "Unassigned" window at the end so you can find and reclass them.</div>
+        </div>
       </div>
-      <p class="hint">Each bank account below gets its own window with a true running balance -- seeded from that account's own starting balance, walking its full transaction history in order, exactly what you'd check line-by-line against a real bank statement. That's different from the Balance column up in the Check Register above, which is only a quick running sum of whatever rows happen to be visible there right now. Set each account's starting balance under Categories &amp; Budgets. Transactions with no bank account tagged land in their own "Unassigned" window at the end so you can find and reclass them.</p>
       <div id="bankReconciliationWrap"></div>
     </div>
   </section>
@@ -1330,33 +1382,35 @@
       <button type="button" class="secondary" id="backfillBankAccountsBtn">Apply category defaults to untagged transactions</button>
     </div>
 
-    <div class="card" id="transferCard">
-      <h2>Transfer between accounts</h2>
-      <p class="hint" style="margin-top:0;">Moving money between two of your own bank accounts -- checking to savings, say -- isn't spending, so it's never filed under a category. Pick where it's coming from and going to and this logs both sides at once: a withdrawal in the From account's own Check Register / reconciliation window, and a deposit in the To account's, so both balances stay accurate without entering it twice. Editing the amount or date on either side afterward updates the other side to match; deleting either one deletes both.</p>
-      <form class="inline-form" id="transferForm">
+    <div class="card">
+      <h2>Savings goals <span class="muted">e.g. emergency fund, a car, a trip</span></h2>
+      <form class="inline-form" id="goalForm">
         <div class="field">
-          <label for="transferDate">Date</label>
-          <input type="date" id="transferDate" required>
-        </div>
-        <div class="field">
-          <label for="transferFrom">From</label>
-          <select id="transferFrom" required></select>
+          <label for="goalName">Name</label>
+          <input type="text" id="goalName" placeholder="e.g. Emergency fund" required>
         </div>
         <div class="field">
-          <label for="transferTo">To</label>
-          <select id="transferTo" required></select>
+          <label for="goalTarget">Target amount</label>
+          <input type="number" id="goalTarget" step="0.01" min="0.01" placeholder="0.00" required>
         </div>
         <div class="field">
-          <label for="transferAmount">Amount</label>
-          <input type="number" id="transferAmount" step="0.01" min="0.01" placeholder="0.00" required>
+          <label for="goalCurrent">Already saved <span class="muted">(optional)</span></label>
+          <input type="number" id="goalCurrent" step="0.01" min="0" placeholder="0.00">
         </div>
-        <div class="field" style="flex:1; min-width:160px;">
-          <label for="transferNote">Note <span class="muted">(optional)</span></label>
-          <input type="text" id="transferNote" placeholder="Optional">
+        <div class="field">
+          <label for="goalColor">Color</label>
+          <input type="color" id="goalColor" value="#1baf7a">
         </div>
-        <button type="submit" class="primary" id="transferSubmitBtn">Add transfer</button>
+        <div class="field">
+          <label for="goalCategory">Link to category <span class="muted">(optional)</span></label>
+          <select id="goalCategory"><option value="">No linked category</option></select>
+        </div>
+        <input type="hidden" id="goalEditId">
+        <button type="submit" class="primary" id="goalSubmitBtn">Add goal</button>
+        <button type="button" class="secondary" id="goalCancelEdit" style="display:none;">Cancel</button>
       </form>
-      <div id="transferHintWrap"></div>
+      <p class="hint" style="margin-top:8px;">Track money you're setting aside for something specific, separate from bills and debt. Use <strong>Add money</strong> to log a contribution directly on a goal, or link a goal to a category (e.g. "Savings") so every Check Register or CC Register transaction filed under that category counts toward it automatically -- its running total folds into "already saved" above, and every matching transaction is listed under that goal so you can see exactly what added up to it.</p>
+      <div id="savingsGoalsWrap" style="margin-top:14px;"></div>
     </div>
   </section>
 
@@ -1373,7 +1427,7 @@
 
     <div class="card">
       <h2>Spending by category</h2>
-      <p class="hint" style="margin-top:0;">Same month as above. For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. To reorder your categories, head to Categories &amp; Budgets -- the order you set there applies everywhere (this list and dropdowns).</p>
+      <p class="hint" style="margin-top:0;">Same month as above. For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. To reorder your categories, head to Manage Budget -- the order you set there applies everywhere (this list and dropdowns).</p>
       <div id="categoryChart"></div>
     </div>
   </section>
@@ -1411,7 +1465,16 @@
 
     <div class="register-shell">
       <div class="register-toolbar">
-        <h2>CC Register <span class="muted" id="ccRegisterCount"></span></h2>
+        <div class="register-toolbar-title">
+          <h2>CC Register <span class="muted" id="ccRegisterCount"></span></h2>
+          <div class="info-popover">
+            <button type="button" class="info-popover-btn" id="ccRegisterHintBtn" aria-expanded="false" aria-controls="ccRegisterHintPanel">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              Important instructions
+            </button>
+            <div class="info-popover-panel hint" id="ccRegisterHintPanel" role="note">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above. <strong>Uncleared rows always sink to the bottom</strong> of whatever order the ledger's currently sorted in, so an unreconciled charge never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</div>
+          </div>
+        </div>
         <div class="register-filters">
           <label class="register-filter-daterange">From <input type="date" id="ccFilterFrom" aria-label="From date"></label>
           <label class="register-filter-daterange">To <input type="date" id="ccFilterTo" aria-label="To date"></label>
@@ -1420,7 +1483,6 @@
           <button type="button" class="secondary" id="ccClearFilters">Clear filters</button>
         </div>
       </div>
-      <p class="hint register-hint">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above. <strong>Uncleared rows always sink to the bottom</strong> of whatever order the ledger's currently sorted in, so an unreconciled charge never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</p>
       <div id="ccRegisterWrap" class="register-scroll"></div>
     </div>
   </section>
@@ -2040,7 +2102,7 @@
   }
 
   // A category's color is whatever was explicitly picked for it (in the
-  // Categories & Budgets form); categories that have never had a color
+  // Manage Budget form); categories that have never had a color
   // chosen fall back to the original automatic assignment -- the first 8
   // (by creation order) each get their own color from a fixed palette,
   // everything after that shares a neutral gray.
@@ -2542,6 +2604,51 @@
     applyTheme();
     showToast("Theme: " + next);
   });
+
+  // ---------- info popovers ("Important instructions") ----------
+  // The long explanatory paragraph each register/card used to show
+  // permanently now lives behind a small "Important instructions" button
+  // instead, so it doesn't take up space until you actually want it. Click
+  // to open, click the button again (or anywhere outside the panel, or
+  // press Escape) to close it. One listener setup per instance -- wiring a
+  // new one is just another setupInfoPopover(btnId, panelId) call below.
+  function setupInfoPopover(btnId, panelId) {
+    var btn = document.getElementById(btnId);
+    var panel = document.getElementById(panelId);
+    if (!btn || !panel) return;
+    function close() {
+      panel.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    }
+    function open() {
+      // Only one popover open at a time -- closing any others avoids stray
+      // panels left open elsewhere on the page (especially once several
+      // registers each have their own).
+      document.querySelectorAll(".info-popover-panel.open").forEach(function(p) {
+        if (p !== panel) {
+          p.classList.remove("open");
+          var otherBtn = document.querySelector('[aria-controls="' + p.id + '"]');
+          if (otherBtn) otherBtn.setAttribute("aria-expanded", "false");
+        }
+      });
+      panel.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+    }
+    btn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      if (panel.classList.contains("open")) close(); else open();
+    });
+    document.addEventListener("click", function(e) {
+      if (panel.classList.contains("open") && !panel.contains(e.target) && e.target !== btn) close();
+    });
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" && panel.classList.contains("open")) close();
+    });
+  }
+  setupInfoPopover("transferHintBtn", "transferHintPanel");
+  setupInfoPopover("registerHintBtn", "registerHintPanel");
+  setupInfoPopover("reconciliationHintBtn", "reconciliationHintPanel");
+  setupInfoPopover("ccRegisterHintBtn", "ccRegisterHintPanel");
 
   // ---------- category select population ----------
 
@@ -3344,7 +3451,7 @@
 
   // The main Check Register's "Beginning balance" used to be a single number
   // you typed by hand, entirely separate from each bank account's own
-  // starting balance (Categories & Budgets) -- which meant the two could
+  // starting balance (Manage Budget) -- which meant the two could
   // silently drift apart (the classic "why doesn't my total match" bug).
   // Once you have any bank accounts set up, this instead ALWAYS equals the
   // sum of their individual starting balances, so there's only ever one
@@ -4249,13 +4356,13 @@
       ? (' <span class="muted">(' + escapeHtml(filteredBankAccount.name) + '\'s own starting balance)</span>')
       : (autoSummedOpening ? ' <span class="muted">(= sum of your bank accounts)</span>' : '');
     var openingAmountTitle = filteredBankAccount
-      ? "This account's own starting balance (Categories & Budgets) -- so this filtered view always reconciles with its own reconciliation window below. Edit it there."
-      : 'Automatically the sum of your bank accounts\' own starting balances (Categories & Budgets) -- edit them there so this can never drift out of sync';
+      ? "This account's own starting balance (Manage Budget) -- so this filtered view always reconciles with its own reconciliation window below. Edit it there."
+      : 'Automatically the sum of your bank accounts\' own starting balances (Manage Budget) -- edit them there so this can never drift out of sync';
     var openingAmountCell = autoSummedOpening
       ? '<span class="register-opening-amount register-opening-auto" title="' + openingAmountTitle + '">' + fmtMoney(openingBalanceVal) + '</span>'
       : '<input type="number" class="register-opening-amount" id="regOpeningAmount" step="0.01" value="' + openingBalanceVal + '">';
     var openingDateCell = filteredBankAccount
-      ? '<span class="muted" title="This account\'s own as-of date -- edit it in Categories & Budgets">' + (openingDateVal || "all history") + '</span>'
+      ? '<span class="muted" title="This account\'s own as-of date -- edit it in Manage Budget">' + (openingDateVal || "all history") + '</span>'
       : '<input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '">';
     var openingRowHtml = hideOpeningRow ? "" :
       '<tr class="register-txn-main register-opening-row">' +
@@ -6641,8 +6748,28 @@
   // own field, and typing in either one is kept in sync with the other so
   // it behaves like one continuous search box regardless of which you're
   // looking at.
+  // Closing a <dialog> restores focus to whatever element had focus right
+  // before showModal() was called -- here, that's always headerSearchInput,
+  // since that's what triggers the open in the first place. Without this
+  // flag, that focus-restoration re-fires headerSearchInput's own "focus"
+  // listener below, which immediately reopens the dialog it was just told
+  // to close (Close button appearing to do nothing, or the dialog flashing
+  // shut and instantly back open). Every path that closes the dialog --
+  // the Close button, Escape/cancel, clicking a result row -- sets this
+  // right before the dialog actually closes so that restored focus is
+  // ignored; it's cleared once the "close" event confirms the dialog is
+  // actually shut.
+  var suppressHeaderSearchReopen = false;
   if (headerSearchInput) {
-    headerSearchInput.addEventListener("focus", function() {
+    // Native focus-restoration on close leaves the DOM focus right back on
+    // headerSearchInput (see above), so a second click on it right after
+    // closing does NOT re-fire "focus" -- it never lost focus in the first
+    // place, from the browser's perspective. "click" fires on every click
+    // regardless of prior focus state, so it's what actually reopens the
+    // dialog on a second click; "focus" alone still covers Tab-ing into
+    // the box with a keyboard.
+    function openHeaderSearch() {
+      if (suppressHeaderSearchReopen) return;
       if (!searchDialog.open) {
         headerSearchInput.value = "";
         searchInput.value = "";
@@ -6650,7 +6777,9 @@
         searchDialog.showModal();
       }
       setTimeout(function() { searchInput.focus(); }, 50);
-    });
+    }
+    headerSearchInput.addEventListener("focus", openHeaderSearch);
+    headerSearchInput.addEventListener("click", openHeaderSearch);
     headerSearchInput.addEventListener("input", function() {
       searchInput.value = headerSearchInput.value;
       renderSearchResults(headerSearchInput.value);
@@ -6661,9 +6790,18 @@
     // starting a fresh search on the next click.
     searchDialog.addEventListener("close", function() {
       headerSearchInput.value = "";
+      suppressHeaderSearchReopen = false;
+    });
+    // Escape closes a <dialog> natively (fires "cancel" then "close")
+    // without going through either close() call below, so it needs its
+    // own guard set here, synchronously, before the browser's default
+    // close-and-restore-focus behavior runs.
+    searchDialog.addEventListener("cancel", function() {
+      suppressHeaderSearchReopen = true;
     });
   }
   document.getElementById("searchClose").addEventListener("click", function() {
+    suppressHeaderSearchReopen = true;
     searchDialog.close();
   });
   searchInput.addEventListener("input", function() {
@@ -6747,6 +6885,7 @@
 
     wrap.querySelectorAll(".search-result-row").forEach(function(row) {
       row.addEventListener("click", function() {
+        suppressHeaderSearchReopen = true;
         searchDialog.close();
         jumpToRegisterRow(row.dataset.searchId, row.dataset.searchType);
       });
@@ -6922,7 +7061,7 @@
     });
   }
 
-  // Drag-to-reorder for the Categories & Budgets table, via each row's grip
+  // Drag-to-reorder for the Manage Budget table, via each row's grip
   // handle. Built on Pointer Events (not the HTML5 drag-and-drop API) so the
   // same code works with mouse, touch, and pen. Only the dragged row actually
   // moves (following the pointer); everything else just gets a thin
@@ -7464,10 +7603,13 @@
     renderDueTodayPanel();
     renderUpcomingPaymentsPanel();
     renderPaycheckCardsRow(todayMonthKey);
-    // A goal linked to a category pulls its running total straight from
-    // state.expenses, so it needs to stay in step with every place that
-    // already calls renderDashboard() after an expense is added, edited,
-    // deleted, or recategorized -- same as the panels above.
+    // Savings goals live on the Manage Budget tab now, not here -- but a
+    // goal linked to a category pulls its running total straight from
+    // state.expenses, so it still needs to stay in step with every place
+    // that already calls renderDashboard() after an expense is added,
+    // edited, deleted, or recategorized, same as the panels above. This
+    // just keeps that (currently offscreen, if you're not on that tab)
+    // card from ever going stale -- harmless to re-render if hidden.
     renderSavingsGoals();
   }
 

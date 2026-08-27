@@ -11,24 +11,35 @@ for exactly how that works.
 ## Features
 
 - **Sidebar navigation** — the tabs live in a left-hand sidebar on wider
-  screens; on phones it tucks away behind a menu (☰) button in the header
-  and slides out as a drawer, so the app has room to breathe no matter the
-  screen size
+  screens, its colored background running the full height of the page no
+  matter how long the page is; on phones it tucks away behind a menu (☰)
+  button in the header and slides out as a drawer, so the app has room to
+  breathe no matter the screen size. **Log out** lives at the bottom of
+  the sidebar, below a divider under Settings, rather than as an icon up
+  in the header
 - Log one-time expenses and payments with a date, amount, category, and
   note, right from the **Check Register** tab — recurring bills live on
   their own Recurring tab instead
 - Log income with a date, amount, source (salary, freelance, etc.), and
   note — also right from the **Check Register** tab, alongside expenses,
   since the two are so closely tied together
+- **Important instructions** — the long explanatory note that used to sit
+  permanently under each register's heading (Check Register, Bank account
+  reconciliation, CC Register, Transfer between accounts) now lives behind
+  a small "Important instructions" button instead, so it's there when you
+  need a reminder of how a field works without taking up space the rest of
+  the time. Click it to open, click it again (or click anywhere outside, or
+  press Escape) to close it — opening one automatically closes any other
+  that's already open
 - Set a monthly budget per category and see progress bars (with an "over
   budget" warning) on the **Budget vs. Actual** tab. The first 8 categories
   you create get their own chart color automatically; pick your own color
   for any category at any time — it shows up everywhere that category does
   (charts, the calendar, expense lists, and more). **Reorder categories
-  right in the Categories & Budgets table** — drag the handle on the left
+  right in the Manage Budget table** — drag the handle on the left
   of any row, and the new order applies everywhere (the Dashboard, Budget
   vs. actual, and every category dropdown)
-- **Categories & Budgets table is directly editable** — change a
+- **Manage Budget table is directly editable** — change a
   category's color, name, monthly budget, or default bank account right
   in the table (color saves the moment you pick one; the rest save when
   you click away or press Enter), no need to open the form and scroll up.
@@ -69,8 +80,19 @@ for exactly how that works.
   on a different date each cycle — e.g. every other Friday) — for
   biweekly, just give it any date you know it landed on and future/past
   occurrences are calculated from there
-- Dashboard with income, spending, and net totals for the month, plus three
-  panels:
+- Dashboard with income, spending, and net totals for the month, a
+  **"Spending by category" donut chart**, plus three panels:
+  - **Spending by category** — a donut chart of this month's actual
+    spending, broken out by category, with a legend listing each
+    category's dollar amount and share of the total, and the month's grand
+    total in the center. Reuses the exact same numbers and colors as
+    everywhere else this app shows a category total, so it always matches
+    Budget vs. Actual and the category table. Click a slice or its legend
+    row to open the same breakdown dialog you'd get from Budget vs. Actual
+    — every transaction that makes up that total. A category sitting at
+    $0 (nothing logged) or negative (net credited back this month, from a
+    reclassed deposit or a CC return) doesn't get a slice; if nothing's
+    been logged under a category yet this month, the chart just says so
   - **Recent transactions** — the last 7 Check Register entries (expenses
     and income together) from the current month, as of today
   - **Due today & past due** — recurring bills (not everyday spending) due
@@ -114,9 +136,12 @@ for exactly how that works.
   budget, red means over); categories with no budget set are just compared
   to each other, so one big category no longer makes every other bar look
   emptier than it really is. This view is read-only — reorder categories
-  from the Categories & Budgets table instead (see above)
-- Savings goals — set aside money for something specific (an emergency
-  fund, a trip, a car), separate from bills and budgets. Give it a name,
+  from the Manage Budget table instead (see above)
+- **Savings goals** live on the **Manage Budget** tab, alongside categories
+  and bank accounts, not on the Dashboard — the Dashboard stays limited to
+  the stat cards and transaction panels above. Set aside money for
+  something specific (an emergency fund, a trip, a car), separate from
+  bills and budgets. Give it a name,
   target amount, and starting balance; log **Add money** each time you set
   more aside (or a negative amount to pull some back out); the progress bar
   fills as you go and turns green with a "goal reached!" note once you hit
@@ -160,7 +185,7 @@ for exactly how that works.
   originally logged. Mutually exclusive with a savings withdrawal on the
   same deposit — a deposit is regular income, a goal withdrawal, or a
   category reclass, never more than one
-- **Search** (magnifying-glass icon, top right) — find any expense or
+- **Search** (the search box centered in the header) — find any expense or
   income entry by note, source, category, amount, or date, no matter what
   month it's in or whether it's been assigned to a paycheck yet. Every
   result has a **Where** badge — **Check Register** or **CC Register** —
@@ -284,7 +309,7 @@ for exactly how that works.
     category (Groceries, Insurance, ...) is what you spent on; a bank
     account is which real account the money moved through (Chase
     Checking, a savings account, whatever you actually bank with). Manage
-    the list under **Categories & Budgets** — name, an optional
+    the list under **Manage Budget** — name, an optional
     **starting balance**, and an optional **as of** date, the same shape a
     credit card gets — then tag any Check Register row with one from its
     own **Bank** dropdown and use the filter above to see just that
@@ -306,7 +331,7 @@ for exactly how that works.
     seeded from the account's own starting balance and (optionally) an "as
     of" date, exactly like a credit card's ledger. Set an account's
     starting balance and, if you don't want everything counted all the way
-    back, an as-of date under **Categories & Budgets** — anything dated
+    back, an as-of date under **Manage Budget** — anything dated
     before that as-of date shows a **—** instead of a balance and doesn't
     count toward the running total, since the seed already reflects
     everything up to that point. Each window has its own **From/To**
@@ -342,7 +367,7 @@ for exactly how that works.
     window's From/To range also re-opens it on that range's last page
   - **Applying category defaults to untagged transactions.** If you had
     expenses or income logged before bank accounts existed (or before you
-    started tagging them), a button under **Categories & Budgets** — "Apply
+    started tagging them), a button under **Manage Budget** — "Apply
     category defaults to untagged transactions" — does a one-time sweep:
     any expense with no bank account and no credit card, whose category has
     a **default bank account** set, gets tagged with it; same for income
@@ -355,7 +380,8 @@ for exactly how that works.
     window
   - **Transferring money between your own bank accounts** — checking to
     savings, say — isn't spending, so there's a dedicated **Transfer between
-    accounts** card under **Categories & Budgets** (shown once you have at
+    accounts** card at the top of the **Check Register** tab, right above
+    the register itself (shown once you have at
     least two bank accounts) instead of forcing it through a category. Pick
     a date, a **From** account, a **To** account, an amount, and an optional
     note, and it logs both sides at once: a withdrawal in the From
@@ -383,14 +409,14 @@ for exactly how that works.
     IS a real savings goal's actual money — an actual "Ally Savings" account
     you're using as your Emergency Fund, say, not just a virtual bucket.
     Pick it from the **Linked savings goal** field on the "Add account" form
-    or the Bank accounts table's own column (Categories & Budgets). Once
+    or the Bank accounts table's own column (Manage Budget). Once
     linked, any **Transfer** touching that account automatically counts
     toward the goal too, using the exact same mechanics a manual goal
     contribution/withdrawal already uses: transferring money *into* a
     goal-linked account tags that leg with the goal's own linked category,
     so it counts as a **contribution** (the goal still needs its own
-    category link set up on the Dashboard for this to actually register —
-    the transfer form warns you with a toast if it doesn't yet); transferring
+    category link set up on the Manage Budget tab for this to actually
+    register — the transfer form warns you with a toast if it doesn't yet); transferring
     money *out of* one tags the deposit leg with the goal's id, so it counts
     as a **withdrawal**. A transfer between two different goal-linked
     accounts applies both at once — a withdrawal from one goal and a
@@ -401,7 +427,7 @@ for exactly how that works.
     breaking anything
   - **Categories can have a default bank account**, so you don't have to
     pick one by hand on every single transaction. Set it in the "Add a
-    category" form or right in the **Categories & Budgets** table's own
+    category" form or right in the **Manage Budget** table's own
     Bank account column — then the moment you pick that category on the
     Check Register's blank new-transaction row, its Bank field pre-fills
     to match (still changeable before you add it). Recategorizing an
