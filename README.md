@@ -429,7 +429,15 @@ for exactly how that works.
     where it comes from); to change it, edit the individual accounts'
     starting balances in the **Bank accounts** table instead. Only falls
     back to a plain, manually-typed number if you haven't added any bank
-    accounts yet
+    accounts yet. If some of those accounts also have their own **as of**
+    date set (see Bank accounts below), the combined running balance
+    respects each account's own date individually rather than one shared
+    cutoff — a transaction dated before ITS account's own as-of date is
+    already baked into that account's starting balance, so it's excluded
+    from the running total here too (shown as **—**), exactly like it is in
+    that account's own reconciliation window below. That's what makes the
+    combined total actually reconcile with the sum of every individual
+    account window, even when accounts don't all share the same as-of date
   - **Pure bank activity only.** A credit card charge doesn't touch your
     checking account the moment you make it, so it never shows up here or
     counts against this running balance — it only lives on the **CC
@@ -510,7 +518,12 @@ for exactly how that works.
   Dashboard's paycheck row — as of today, specifically; a charge or payment
   dated in the future (e.g. one early-logged from the Paycheck Planner)
   stays visible in the ledger below but doesn't move the balance until its
-  date actually arrives. Log a transaction into the ledger below it the
+  date actually arrives. Right below that row (and the compact card list
+  under it), a **Total Credit Card Debt** line adds up every card's own
+  current balance into one number — so you're not left mentally adding up
+  each card's tile yourself to see where you stand overall. A card sitting
+  in credit (you overpaid it) still contributes its real negative balance
+  to that total, same as it would if you added them up by hand. Log a transaction into the ledger below it the
   same way you would in the Check Register — pick the card it goes on, and
   the row underneath it lets you set the real spending **category** (e.g.
   Shopping), so a card charge still counts toward that category's budget.
@@ -540,7 +553,18 @@ for exactly how that works.
   this tab. Since a payment isn't spending, it never has a category — the
   Category field is simply absent for payment rows (both existing rows
   and the blank add-row), whether the payment came from the Check
-  Register or was entered directly here. It also has its own filter row
+  Register or was entered directly here. The one exception: a payment
+  entered directly on the CC Register gets a **"Return credit to"** field
+  instead of a blank Category field — for a merchant return/refund (money
+  coming back for something you bought, not real cash you paid down). Pick
+  the category the original charge used and that amount is credited back
+  to it (shown as a negative line on Budget vs. Actual and in that
+  category's own drill-down, tagged "(returned)"), so a returned purchase
+  doesn't sit there permanently overstating what you actually spent. The
+  card's own balance still drops exactly like an ordinary payment either
+  way — this only affects the category side. Leave it as **"Not a
+  return"** (the default) for a real payment and nothing changes from
+  before. It also has its own filter row
   — From/To date range, a specific card, and a specific category — so a
   big ledger is easy to narrow down, and the running **Balance** column
   recalculates per card from exactly what's visible, same as the Check

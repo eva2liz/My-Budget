@@ -452,6 +452,8 @@
   }
   .register-toolbar h2 { margin: 0; font-size: 15px; font-weight: 600; }
   .register-sum-line { margin: -2px 0 8px; font-size: 12.5px; }
+  .cc-total-debt { margin: 10px 0 4px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 14px; }
+  .cc-total-debt strong { font-size: 15px; }
   .register-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .register-filters input, .register-filters select {
     font-family: inherit; font-size: 13px; padding: 6px 10px;
@@ -1281,6 +1283,7 @@
       <p class="hint" style="margin-top:0;">Each card keeps its own running balance, separate from your spending categories. Log a transaction below with its real category (e.g. Shopping) <em>and</em> the card it went on — a charge adds to that card's balance, a payment brings it down. Already recording card payments in the Check Register? Pick <strong>Pay down: &lt;card&gt;</strong> there instead of a category and it'll show up here automatically. Leave <strong>As of</strong> blank when adding a card so every transaction you've already logged for it counts toward the balance — only set a date there if you specifically want the running balance to start fresh from that point on (anything dated earlier won't show a balance).</p>
       <div id="ccCardsWrap"></div>
       <div id="ccCardListWrap"></div>
+      <div id="ccTotalDebtWrap"></div>
       <form class="inline-form" id="ccCardForm">
         <div class="field">
           <label for="ccCardName">Card name</label>
@@ -3283,6 +3286,18 @@
     var placeholder = includePlaceholder
       ? '<option value=""' + (selectedId ? '' : ' selected') + ' disabled>Select…</option>'
       : '';
+    return placeholder + state.categories.map(function(c) {
+      return '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+    }).join("");
+  }
+
+  // Options for a CC PAYMENT's optional "returnCategoryId" (see
+  // totalsForMonth/openCategoryDrillDialog) -- lets a payment-typed row say
+  // "this is actually a merchant return, not real cash paid down, credit it
+  // back to whatever category the original purchase used." Defaults to "Not
+  // a return" (blank/null) so an ordinary real payment is unaffected.
+  function returnCategoryOptionsFor(selectedId) {
+    var placeholder = '<option value=""' + (selectedId ? '' : ' selected') + '>Not a return</option>';
     return placeholder + state.categories.map(function(c) {
       return '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
     }).join("");
@@ -5779,7 +5794,22 @@
   function renderBalances() {
     renderCCCards();
     renderCCCardList();
+    renderCCTotalDebt();
     renderCCLedger();
+  }
+
+  // A single running total across every credit card's own current balance
+  // (see computeCreditCardBalance) -- shown right below the card list so
+  // there's one number for "how much do I owe across everything," not just
+  // per-card tiles you'd have to add up yourself. A card sitting in credit
+  // (you overpaid it) still contributes its real negative balance here,
+  // same as it would if you were adding these up by hand.
+  function renderCCTotalDebt() {
+    var wrap = document.getElementById("ccTotalDebtWrap");
+    if (!wrap) return;
+    if (!state.creditCards.length) { wrap.innerHTML = ""; return; }
+    var total = state.creditCards.reduce(function(s, cc) { return s + computeCreditCardBalance(cc).currentBalance; }, 0);
+    wrap.innerHTML = '<div class="cc-total-debt">Total Credit Card Debt: <strong class="' + (total > 0 ? "variance-over" : "") + '">' + fmtMoney(total) + '</strong></div>';
   }
 
   // The row of per-card balance cards at the top -- same visual pattern as
@@ -5952,23 +5982,33 @@
         ? '<span class="muted" title="' + (row.upcoming ? "Dated after today -- hasn’t posted yet, so it’s not reflected in the balance" : "Dated before this card’s balance anchor") + '">' + (row.upcoming ? "upcoming" : "—") + '</span>'
         : fmtMoney(row.balance);
       var linkedTag = linked ? ' <span class="muted" title="Entered via the Check Register, expense form, or a recurring “Pay down” item">· via Check Register</span>' : "";
+      var returnCat = e.returnCategoryId ? categoryById(e.returnCategoryId) : null;
+      var returnTypeTag = returnCat
+        ? ' <span class="muted" title="Credited back to ' + escapeHtml(returnCat.name) + ' -- see the row below">(return)</span>'
+        : "";
 
       bodyHtml += '<tr class="register-txn-main' + rowClass + '">' +
         '<td class="reg-col-date"><input type="date" class="register-inline-date" data-cc-date="' + e.id + '" value="' + e.date + '"></td>' +
         '<td><input type="text" class="register-inline-text" data-cc-note="' + e.id + '" value="' + escapeHtml(e.note || "") + '" placeholder="Payee / description">' + linkedTag + '</td>' +
         '<td class="cc-col-card">' + cardLabel + '</td>' +
-        '<td class="cc-col-type">' + typeLabel + '</td>' +
+        '<td class="cc-col-type">' + typeLabel + returnTypeTag + '</td>' +
         '<td class="num ' + amtClass + '"><span class="cc-amt-sign">' + amtSign + '</span><input type="number" class="register-inline-amount" data-cc-amount="' + e.id + '" value="' + e.amount + '" step="0.01" min="0"></td>' +
         '<td class="reg-col-clr"><input type="checkbox" class="row-checkbox" data-cc-cleared="' + e.id + '"' + (e.cleared ? ' checked' : '') + '></td>' +
         '<td class="num reg-col-balance">' + balanceCell + '</td>' +
       '</tr>';
 
-      // A payment isn't spending, so it doesn't get a Category field at all
-      // here -- only a charge does. Switching Type back to "charge" below
-      // brings the Category field back (re-rendered on change, see the
-      // data-cc-type handler).
-      var categoryField = isPayment ? "" :
-        '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>';
+      // A payment isn't spending, so it doesn't get a real Category field --
+      // only a charge does. Switching Type back to "charge" below brings the
+      // Category field back (re-rendered on change, see the data-cc-type
+      // handler). Instead, a payment gets an optional "Return credit to"
+      // field -- for a merchant return/refund (not real cash paid down),
+      // picking the category the original charge used credits that amount
+      // back to it, so it isn't left permanently overstated (see
+      // totalsForMonth/openCategoryDrillDialog). Left as "Not a return" by
+      // default, so an ordinary real payment behaves exactly as before.
+      var categoryField = isPayment
+        ? '<span>Return credit to <select class="register-inline-select" data-cc-return-category="' + e.id + '" title="If this payment is actually a merchant return/refund -- not real cash paid down -- pick the category the original charge used. That amount is credited back so the category is no longer overstated. Leave as Not a return for a real payment.">' + returnCategoryOptionsFor(e.returnCategoryId) + '</select></span>'
+        : '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>';
       // Same auto-link as the Check Register's detail row -- a recurring
       // card autopay/minimum-payment template typed in here directly gets
       // tied back to its bill automatically (see autoLinkToRecurringBill).
@@ -6003,6 +6043,7 @@
       '</tr>' +
       '<tr class="register-txn-detail register-new-row"><td></td><td colspan="6"><div class="register-detail-inline">' +
         '<span id="ccNewCategoryField">Category <select id="ccNewCategory">' + categoryOptionsFor(null, true) + '</select></span>' +
+        '<span id="ccNewReturnCategoryField" style="display:none;">Return credit to <select id="ccNewReturnCategory" title="If this payment is actually a merchant return/refund -- not real cash paid down -- pick the category the original charge used. Leave as Not a return for a real payment.">' + returnCategoryOptionsFor(null) + '</select></span>' +
         '<span class="reg-detail-actions"><button type="button" class="primary" id="ccNewAdd">Add transaction</button></span>' +
       '</div></td></tr>';
 
@@ -6140,8 +6181,11 @@
         ex.debtType = sel.value;
         // A payment doesn't have a category -- clear it so switching a
         // charge to a payment here matches what picking "Pay down: <card>"
-        // does everywhere else in the app.
+        // does everywhere else in the app. Switching the other way (payment
+        // back to charge), clear any "return credit to" link instead -- a
+        // charge is real spending in its own right, not a return of one.
         if (sel.value === "payment") ex.categoryId = null;
+        else ex.returnCategoryId = null;
         var autoLinked = autoLinkToRecurringBill(ex);
         saveState();
         renderBalances();
@@ -6150,6 +6194,19 @@
         renderCategories();
         renderPaycheckPlanner();
         showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it") : "Updated");
+      });
+    });
+    wrap.querySelectorAll("[data-cc-return-category]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccReturnCategory; });
+        if (!ex) return;
+        ex.returnCategoryId = sel.value || null;
+        saveState();
+        renderBalances();
+        renderDashboard();
+        renderExpenses();
+        renderCategories();
+        showToast(ex.returnCategoryId ? "Marked as a return -- credited back to that category" : "No longer marked as a return");
       });
     });
     wrap.querySelectorAll("[data-cc-del]").forEach(function(b) {
@@ -6168,12 +6225,17 @@
     });
 
     // A payment doesn't have a category, so the Category field only shows
-    // up in the blank add-row while "Charge" is selected.
+    // up in the blank add-row while "Charge" is selected -- its optional
+    // "Return credit to" counterpart shows only for "Payment" instead (see
+    // the data-cc-return-category handler above).
     var ccNewTypeEl = document.getElementById("ccNewType");
     var ccNewCategoryFieldEl = document.getElementById("ccNewCategoryField");
+    var ccNewReturnCategoryFieldEl = document.getElementById("ccNewReturnCategoryField");
     function updateCcNewCategoryVisibility() {
-      if (!ccNewTypeEl || !ccNewCategoryFieldEl) return;
-      ccNewCategoryFieldEl.style.display = ccNewTypeEl.value === "payment" ? "none" : "";
+      if (!ccNewTypeEl) return;
+      var isPay = ccNewTypeEl.value === "payment";
+      if (ccNewCategoryFieldEl) ccNewCategoryFieldEl.style.display = isPay ? "none" : "";
+      if (ccNewReturnCategoryFieldEl) ccNewReturnCategoryFieldEl.style.display = isPay ? "" : "none";
     }
     updateCcNewCategoryVisibility();
     if (ccNewTypeEl) ccNewTypeEl.addEventListener("change", updateCcNewCategoryVisibility);
@@ -6186,6 +6248,8 @@
       var amount = parseFloat(document.getElementById("ccNewAmount").value);
       var cleared = document.getElementById("ccNewCleared").checked;
       var categoryId = type === "payment" ? null : (document.getElementById("ccNewCategory").value || null);
+      var returnCategoryEl = document.getElementById("ccNewReturnCategory");
+      var returnCategoryId = (type === "payment" && returnCategoryEl) ? (returnCategoryEl.value || null) : null;
 
       if (!date) { showToast("Pick a date first"); return; }
       if (!cardId) { showToast("Pick a credit card"); return; }
@@ -6195,7 +6259,7 @@
       var newCcExpense = {
         id: uid(), date: date, amount: amount, categoryId: categoryId, note: desc,
         paycheckId: null, paid: false, cleared: cleared,
-        creditCardId: cardId, debtType: type
+        creditCardId: cardId, debtType: type, returnCategoryId: returnCategoryId
       };
       state.expenses.push(newCcExpense);
       // A card payment typed straight into the quick-add row gets the same
@@ -6209,7 +6273,7 @@
       renderExpenses();
       renderCategories();
       showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it")
-        : (type === "payment" ? "Payment added" : "Charge added"));
+        : (type === "payment" ? (returnCategoryId ? "Return recorded -- credited back to that category" : "Payment added") : "Charge added"));
     }
 
     var ccAddBtn = document.getElementById("ccNewAdd");
@@ -6603,6 +6667,19 @@
       if (monthKeyOf(inc.date) !== monthKey) return;
       totals[inc.reclassCategoryId] = (totals[inc.reclassCategoryId] || 0) - inc.amount;
     });
+    // A CC payment marked "Return credit to: <category>" (see
+    // returnCategoryOptionsFor) is the same idea, one register over: a
+    // merchant refund isn't real cash paid down (that's what an ordinary
+    // payment is), it's the original charge getting reversed -- so it comes
+    // back OUT of whatever category that charge was filed under, same as a
+    // reclassed deposit does. The payment itself still reduces the card's
+    // own balance exactly like any other payment (see computeCreditCardBalance
+    // /applyCCRunningBalance) -- this only affects the category side.
+    state.expenses.forEach(function(e) {
+      if (!e.returnCategoryId) return;
+      if (monthKeyOf(e.date) !== monthKey) return;
+      totals[e.returnCategoryId] = (totals[e.returnCategoryId] || 0) - e.amount;
+    });
     return totals;
   }
 
@@ -6842,10 +6919,11 @@
   // Answers "what exactly makes up this number" -- every expense dated in
   // the given month under the given category, regardless of which paycheck
   // (if any) it's assigned to, PLUS any deposit reclassed against this same
-  // category (see incomeSourceOptionsFor/totalsForMonth) shown as a
-  // negative line so the total here always matches the one on Budget vs.
-  // Actual. This is the ground truth behind every total on the dashboard:
-  // if a category ever looks off, this is where to check.
+  // category (see incomeSourceOptionsFor/totalsForMonth) and any CC payment
+  // marked as a return credited back to it (see returnCategoryOptionsFor),
+  // each shown as a negative line so the total here always matches the one
+  // on Budget vs. Actual. This is the ground truth behind every total on the
+  // dashboard: if a category ever looks off, this is where to check.
   function openCategoryDrillDialog(catId, monthKey) {
     var cat = categoryById(catId);
     var expenseRows = state.expenses.filter(function(e) { return e.categoryId === catId && monthKeyOf(e.date) === monthKey; })
@@ -6856,7 +6934,11 @@
       .map(function(inc) {
         return { kind: "reclass", id: inc.id, date: inc.date, note: inc.source, amount: -inc.amount };
       });
-    var rows = expenseRows.concat(reclassRows).sort(function(a,b) { return a.date.localeCompare(b.date); });
+    var returnRows = state.expenses.filter(function(e) { return e.returnCategoryId === catId && monthKeyOf(e.date) === monthKey; })
+      .map(function(e) {
+        return { kind: "return", id: e.id, date: e.date, note: e.note, amount: -e.amount };
+      });
+    var rows = expenseRows.concat(reclassRows).concat(returnRows).sort(function(a,b) { return a.date.localeCompare(b.date); });
     document.getElementById("categoryDrillTitle").textContent = (cat ? cat.name : "(deleted category)") + " — " + monthLabel(monthKey);
     var total = rows.reduce(function(s,r){ return s + r.amount; }, 0);
     document.getElementById("categoryDrillSummary").textContent = rows.length + " transaction" + (rows.length === 1 ? "" : "s") + " totaling " + fmtMoney(total) + ".";
@@ -6869,6 +6951,14 @@
           return '<tr>' +
             '<td>' + escapeHtml(r.date) + '</td>' +
             '<td class="drill-note-cell" data-drill-edit="' + r.id + '" data-drill-kind="income" tabindex="0" role="button" title="Click to edit this deposit">' + escapeHtml(r.note || "(no note)") + ' <span class="muted">(reclassed deposit)</span></td>' +
+            '<td class="num variance-under">' + fmtMoney(r.amount) + '</td>' +
+            '<td><span class="muted">—</span></td>' +
+          '</tr>';
+        }
+        if (r.kind === "return") {
+          return '<tr>' +
+            '<td>' + escapeHtml(r.date) + '</td>' +
+            '<td class="drill-note-cell" data-drill-edit="' + r.id + '" data-drill-kind="expense" tabindex="0" role="button" title="Click to edit this CC payment">' + escapeHtml(r.note || "(no note)") + ' <span class="muted">(returned)</span></td>' +
             '<td class="num variance-under">' + fmtMoney(r.amount) + '</td>' +
             '<td><span class="muted">—</span></td>' +
           '</tr>';
