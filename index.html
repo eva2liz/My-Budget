@@ -1292,7 +1292,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
               Important instructions
             </button>
-            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category.</div>
+            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category. Depositing one paycheck partly into checking and partly into savings? Use a deposit row's <strong>Split</strong> button (next to Delete) to divide it into two linked deposits with the amount and bank account you choose for each — same idea as splitting a bill across two paychecks on the Paycheck Planner.</div>
           </div>
         </div>
         <div class="register-filters">
@@ -1472,7 +1472,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
               Important instructions
             </button>
-            <div class="info-popover-panel hint" id="ccRegisterHintPanel" role="note">Type a new charge or payment into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above. <strong>Uncleared rows always sink to the bottom</strong> of whatever order the ledger's currently sorted in, so an unreconciled charge never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</div>
+            <div class="info-popover-panel hint" id="ccRegisterHintPanel" role="note">Type a new charge, payment, or credit into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending; a <strong>credit</strong> is money the card issuer gives back directly — a rewards redemption, a statement credit, a goodwill adjustment — it reduces the balance just like a payment but never touches a bank account, so it never shows up on the Check Register the way a payment does. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above. <strong>Uncleared rows always sink to the bottom</strong> of whatever order the ledger's currently sorted in, so an unreconciled charge never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</div>
           </div>
         </div>
         <div class="register-filters">
@@ -1647,6 +1647,36 @@
     <div class="dialog-actions">
       <button type="button" class="secondary" id="splitCancel">Cancel</button>
       <button type="button" class="primary" id="splitConfirm">Split</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="depositSplitDialog">
+  <div class="dialog-body">
+    <h3>Split this deposit across two bank accounts</h3>
+    <p class="hint" id="depositSplitDialogSummary" style="margin-top:0;"></p>
+    <div class="inline-form" style="margin-bottom:0;">
+      <div class="field">
+        <label for="depositSplitAmountA">Amount to account A</label>
+        <input type="number" id="depositSplitAmountA" step="0.01" min="0.01">
+      </div>
+      <div class="field">
+        <label for="depositSplitBankA">Bank account A</label>
+        <select id="depositSplitBankA"></select>
+      </div>
+      <div class="field">
+        <label for="depositSplitAmountB">Amount to account B</label>
+        <input type="number" id="depositSplitAmountB" step="0.01" min="0.01">
+      </div>
+      <div class="field">
+        <label for="depositSplitBankB">Bank account B</label>
+        <select id="depositSplitBankB"></select>
+      </div>
+    </div>
+    <p class="hint" id="depositSplitDialogError" style="color:var(--critical); display:none;"></p>
+    <div class="dialog-actions">
+      <button type="button" class="secondary" id="depositSplitCancel">Cancel</button>
+      <button type="button" class="primary" id="depositSplitConfirm">Split</button>
     </div>
   </div>
 </dialog>
@@ -2163,16 +2193,24 @@
     var asOf = cc.balanceAsOf || "0000-00-00";
     var todayStr = todayISO();
     var relevant = state.expenses.filter(function(e) { return e.creditCardId === cc.id && e.date >= asOf && e.date <= todayStr; });
-    var totalCharges = relevant.filter(function(e) { return e.debtType !== "payment"; })
+    var totalCharges = relevant.filter(function(e) { return e.debtType !== "payment" && e.debtType !== "credit"; })
                                 .reduce(function(s,e){ return s + e.amount; }, 0);
     var totalPayments = relevant.filter(function(e) { return e.debtType === "payment"; })
                                  .reduce(function(s,e){ return s + e.amount; }, 0);
+    // A "credit" is money the card issuer gives back directly -- a rewards
+    // redemption, a statement credit, a goodwill adjustment -- as opposed to
+    // a real payment out of a bank account (debtType === "payment"). It
+    // reduces the balance exactly like a payment does, it's just tracked
+    // separately here so the two are never confused with each other.
+    var totalCredits = relevant.filter(function(e) { return e.debtType === "credit"; })
+                                .reduce(function(s,e){ return s + e.amount; }, 0);
     var startingBalance = cc.startingBalance || 0;
     return {
       startingBalance: startingBalance,
       totalCharges: totalCharges,
       totalPayments: totalPayments,
-      currentBalance: startingBalance + totalCharges - totalPayments
+      totalCredits: totalCredits,
+      currentBalance: startingBalance + totalCharges - totalPayments - totalCredits
     };
   }
 
@@ -2234,7 +2272,7 @@
         row.balance = null; row.upcoming = true;
         return;
       }
-      runningByCard[cardId] += (e.debtType === "payment") ? -e.amount : e.amount;
+      runningByCard[cardId] += (e.debtType === "payment" || e.debtType === "credit") ? -e.amount : e.amount;
       row.balance = runningByCard[cardId];
       row.upcoming = false;
     });
@@ -2309,7 +2347,7 @@
     switch (key) {
       case "date": return e.date;
       case "card": var cc = creditCardById(e.creditCardId); return (cc ? cc.name : "").toLowerCase();
-      case "type": return e.debtType === "payment" ? 1 : 0;
+      case "type": return e.debtType === "payment" ? 2 : (e.debtType === "credit" ? 1 : 0);
       case "amount": return e.amount;
       case "cleared": return e.cleared ? 1 : 0;
       default: return "";
@@ -3272,6 +3310,101 @@
     cancelBtn.addEventListener("click", onCancel);
   }
 
+  // ---------- SPLIT A DEPOSIT ACROSS TWO BANK ACCOUNTS ----------
+  // Same idea as splitting a bill across paychecks above, just for the
+  // other side of the register: a single deposit (a paycheck that direct-
+  // deposits partly into checking and partly into savings, say) divides
+  // into two linked income rows -- same date/source/note, amounts that add
+  // up to the original -- each tagged to its own bank account instead of
+  // its own paycheck. They share a splitGroupId purely so the UI can label
+  // them "(split)" (see buildRegisterRows), same as the expense side;
+  // nothing else treats them specially, so every existing total just adds
+  // the two rows up like any other income. Doesn't apply to a transfer's
+  // deposit leg -- that row never gets a Split button in the first place
+  // (see renderCheckRegister), since it's already tied to one specific
+  // "from" account by definition, nothing to divide.
+  function openDepositSplitDialog(incomeId) {
+    var inc = state.income.find(function(x){ return x.id === incomeId; });
+    if (!inc) return;
+    var dlg = document.getElementById("depositSplitDialog");
+    document.getElementById("depositSplitDialogSummary").textContent =
+      inc.date + " · " + (inc.source || "?") + (inc.note ? " · " + inc.note : "") + " · total " + fmtMoney(inc.amount);
+    document.getElementById("depositSplitDialogError").style.display = "none";
+
+    var half = Math.round((inc.amount / 2) * 100) / 100;
+    var amountA = document.getElementById("depositSplitAmountA");
+    var amountB = document.getElementById("depositSplitAmountB");
+    amountA.value = half.toFixed(2);
+    amountB.value = (inc.amount - half).toFixed(2);
+
+    var bankA = document.getElementById("depositSplitBankA");
+    var bankB = document.getElementById("depositSplitBankB");
+    bankA.innerHTML = bankAccountOptionsFor(inc.bankAccountId);
+    bankB.innerHTML = bankAccountOptionsFor(null);
+
+    function syncFromA() {
+      var a = parseFloat(amountA.value);
+      if (isNaN(a) || a < 0 || a > inc.amount) return;
+      amountB.value = (inc.amount - a).toFixed(2);
+    }
+    function syncFromB() {
+      var b = parseFloat(amountB.value);
+      if (isNaN(b) || b < 0 || b > inc.amount) return;
+      amountA.value = (inc.amount - b).toFixed(2);
+    }
+    amountA.addEventListener("input", syncFromA);
+    amountB.addEventListener("input", syncFromB);
+
+    dlg.showModal();
+
+    function cleanup() {
+      dlg.close();
+      amountA.removeEventListener("input", syncFromA);
+      amountB.removeEventListener("input", syncFromB);
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+    }
+    function onCancel() { cleanup(); }
+    function onConfirm() {
+      var a = parseFloat(amountA.value);
+      var b = parseFloat(amountB.value);
+      var errEl = document.getElementById("depositSplitDialogError");
+      if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) {
+        errEl.textContent = "Both amounts must be greater than 0.";
+        errEl.style.display = "block";
+        return;
+      }
+      if (Math.abs((a + b) - inc.amount) > 0.01) {
+        errEl.textContent = "Those two amounts need to add up to " + fmtMoney(inc.amount) + " (currently " + fmtMoney(a + b) + ").";
+        errEl.style.display = "block";
+        return;
+      }
+      var bankAccountA = bankA.value || null;
+      var bankAccountB = bankB.value || null;
+      var groupId = inc.splitGroupId || uid();
+
+      inc.amount = Math.round(a * 100) / 100;
+      inc.bankAccountId = bankAccountA;
+      inc.splitGroupId = groupId;
+
+      state.income.push({
+        id: uid(), date: inc.date, amount: Math.round(b * 100) / 100, source: inc.source,
+        color: inc.color, note: inc.note, cleared: inc.cleared, imported: false,
+        linkedGoalId: inc.linkedGoalId || null, reclassCategoryId: inc.reclassCategoryId || null,
+        recurringId: inc.recurringId || null, bankAccountId: bankAccountB, splitGroupId: groupId
+      });
+
+      saveState();
+      cleanup();
+      refreshAfterRegisterChange();
+      showToast("Deposit split across two bank accounts");
+    }
+    var confirmBtn = document.getElementById("depositSplitConfirm");
+    var cancelBtn = document.getElementById("depositSplitCancel");
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+  }
+
   function toggleExpensePaid(id) {
     var ex = state.expenses.find(function(x){ return x.id === id; });
     if (!ex) return;
@@ -3382,7 +3515,8 @@
         kind: "income", id: inc.id, date: inc.date, desc: inc.source || "",
         amount: Math.abs(inc.amount), cleared: !!inc.cleared, imported: !!inc.imported,
         linkedGoalId: inc.linkedGoalId || null, reclassCategoryId: inc.reclassCategoryId || null,
-        bankAccountId: inc.bankAccountId || null, transferId: inc.transferId || null
+        bankAccountId: inc.bankAccountId || null, transferId: inc.transferId || null,
+        splitGroupId: inc.splitGroupId || null
       });
     });
     rows.sort(function(a, b) {
@@ -3670,6 +3804,10 @@
       var payCard = creditCardById(creditCardId);
       return "Pay down: " + (payCard ? payCard.name : "(deleted card)");
     }
+    if (creditCardId && debtType === "credit") {
+      var creditCard = creditCardById(creditCardId);
+      return "Credit: " + (creditCard ? creditCard.name : "(deleted card)");
+    }
     if (categoryId) return "(deleted category)";
     return "(needs a category)";
   }
@@ -3716,6 +3854,11 @@
   // Register row that also shows up as a linked entry on the CC Register;
   // everything else (plain expenses, all income) is Check Register only.
   function expenseSourceInfo(ex) {
+    if (ex.creditCardId && ex.debtType === "credit") {
+      var creditCard2 = creditCardById(ex.creditCardId);
+      var creditLabel = "CC Register" + (creditCard2 ? " · " + creditCard2.name : "");
+      return { label: "CC Register", detail: creditLabel, title: creditLabel + " -- a credit from the card issuer, not a bank transaction, so it never appears on the Check Register.", cls: "source-tag-cc" };
+    }
     if (ex.creditCardId && ex.debtType !== "payment") {
       var chargeCard = creditCardById(ex.creditCardId);
       var ccLabel = "CC Register" + (chargeCard ? " · " + chargeCard.name : "");
@@ -4301,10 +4444,18 @@
           ? '<span class="muted" title="Both sides of a transfer are logged automatically -- delete this row to undo the whole transfer, not just this half">From: Transfer from ' + escapeHtml(transferPeerAccountName(r.transferId, "income")) +
             (transferWithdrawalGoal ? ' <span class="muted">(withdrawn from ' + escapeHtml(transferWithdrawalGoal.name) + ')</span>' : '') + '</span>'
           : '<span>From <select class="register-inline-select" data-reg-income-source="' + r.id + '">' + incomeSourceOptionsFor(r.linkedGoalId, true, r.reclassCategoryId) + '</select></span>';
+        // Splitting a deposit divides it into two linked income rows -- same
+        // date/source/note, amounts that add up to the original -- each
+        // tagged to its own bank account, same idea as splitting a bill
+        // across two paychecks (see openSplitDialog). Doesn't apply to a
+        // transfer's own deposit leg -- that's already tied to a single
+        // specific "from" account by definition, nothing to divide.
+        var depositSplitBtn = r.transferId ? '' : '<button class="row-btn" data-reg-deposit-split="' + r.id + '">Split</button>';
         detailInner =
           incSourceField +
           incBankField +
           '<span class="reg-detail-actions">' +
+            depositSplitBtn +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="income">Delete</button>' +
           '</span>';
       }
@@ -4579,6 +4730,9 @@
     });
     wrap.querySelectorAll("[data-reg-split]").forEach(function(b) {
       b.addEventListener("click", function() { openSplitDialog(b.dataset.regSplit); });
+    });
+    wrap.querySelectorAll("[data-reg-deposit-split]").forEach(function(b) {
+      b.addEventListener("click", function() { openDepositSplitDialog(b.dataset.regDepositSplit); });
     });
     wrap.querySelectorAll("[data-reg-del]").forEach(function(b) {
       b.addEventListener("click", function() {
@@ -6185,9 +6339,17 @@
       var cc = creditCardById(e.creditCardId);
       var cardLabel = cc ? escapeHtml(cc.name) : '<span class="muted">(deleted card)</span>';
       var isPayment = e.debtType === "payment";
-      var typeLabel = isPayment ? "Payment" : "Charge";
-      var amtSign = isPayment ? "-" : "+";
-      var amtClass = isPayment ? "variance-under" : "variance-over";
+      // A "credit" is money the card issuer gives back directly -- a
+      // rewards redemption, a statement credit, a price-protection or
+      // goodwill adjustment -- as opposed to a real cash payment out of a
+      // bank account. It reduces the card's balance exactly like a payment
+      // does, but (unlike a payment) never shows up as a Check Register row
+      // -- see buildRegisterRows/expenseSourceInfo -- since no bank account
+      // was ever actually touched.
+      var isCredit = e.debtType === "credit";
+      var typeLabel = isPayment ? "Payment" : (isCredit ? "Credit" : "Charge");
+      var amtSign = (isPayment || isCredit) ? "-" : "+";
+      var amtClass = (isPayment || isCredit) ? "variance-under" : "variance-over";
       var linked = !!e.viaAccountPicker;
       var rowClass = linked ? " cc-row-linked" : (idx % 2 === 1 ? " register-stripe" : "");
       if (isHighlightedTxn(e.id, "expense")) rowClass += " register-row-search-highlight";
@@ -6221,7 +6383,9 @@
       // default, so an ordinary real payment behaves exactly as before.
       var categoryField = isPayment
         ? '<span>Return credit to <select class="register-inline-select" data-cc-return-category="' + e.id + '" title="If this payment is actually a merchant return/refund -- not real cash paid down -- pick the category the original charge used. That amount is credited back so the category is no longer overstated. Leave as Not a return for a real payment.">' + returnCategoryOptionsFor(e.returnCategoryId) + '</select></span>'
-        : '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>';
+        : (isCredit
+            ? '<span class="muted" style="align-self:center;">No category -- credited directly by the card issuer, not tied to any purchase</span>'
+            : '<span>Category <select class="register-inline-select" data-cc-category="' + e.id + '">' + categoryOptionsFor(e.categoryId, true) + '</select></span>');
       // Same auto-link as the Check Register's detail row -- a recurring
       // card autopay/minimum-payment template typed in here directly gets
       // tied back to its bill automatically (see autoLinkToRecurringBill).
@@ -6236,8 +6400,9 @@
         categoryField +
         '<span>Card <select class="register-inline-select" data-cc-card="' + e.id + '">' + creditCardOptionsFor(e.creditCardId) + '</select></span>' +
         '<span>Type <select class="register-inline-select" data-cc-type="' + e.id + '">' +
-          '<option value="charge"' + (!isPayment ? ' selected' : '') + '>Charge (adds to balance)</option>' +
+          '<option value="charge"' + (!isPayment && !isCredit ? ' selected' : '') + '>Charge (adds to balance)</option>' +
           '<option value="payment"' + (isPayment ? ' selected' : '') + '>Payment (reduces balance)</option>' +
+          '<option value="credit"' + (isCredit ? ' selected' : '') + '>Credit (reduces balance, no bank account)</option>' +
         '</select></span>' +
         ccRecurringField +
         '<span class="reg-detail-actions"><button class="row-btn danger" data-cc-del="' + e.id + '">Delete</button></span>';
@@ -6249,7 +6414,7 @@
         '<td class="reg-col-date"><input type="date" id="ccNewDate" value="' + todayISO() + '"></td>' +
         '<td><input type="text" id="ccNewDesc" placeholder="Payee / description"></td>' +
         '<td class="cc-col-card"><select id="ccNewCard">' + creditCardOptionsFor(null, true) + '</select></td>' +
-        '<td class="cc-col-type"><select id="ccNewType"><option value="charge">Charge</option><option value="payment">Payment</option></select></td>' +
+        '<td class="cc-col-type"><select id="ccNewType"><option value="charge">Charge</option><option value="payment">Payment</option><option value="credit">Credit</option></select></td>' +
         '<td class="num"><input type="number" id="ccNewAmount" placeholder="Amount" step="0.01" min="0"></td>' +
         '<td class="reg-col-clr"><input type="checkbox" id="ccNewCleared"></td>' +
         '<td class="num reg-col-balance muted">—</td>' +
@@ -6392,13 +6557,14 @@
         var ex = state.expenses.find(function(x) { return x.id === sel.dataset.ccType; });
         if (!ex) return;
         ex.debtType = sel.value;
-        // A payment doesn't have a category -- clear it so switching a
-        // charge to a payment here matches what picking "Pay down: <card>"
-        // does everywhere else in the app. Switching the other way (payment
-        // back to charge), clear any "return credit to" link instead -- a
-        // charge is real spending in its own right, not a return of one.
-        if (sel.value === "payment") ex.categoryId = null;
-        else ex.returnCategoryId = null;
+        // A payment or a credit doesn't have a category -- clear it so
+        // switching a charge to either here matches what picking "Pay
+        // down: <card>" does everywhere else in the app for a payment.
+        // Switching to charge instead, clear any "return credit to" link --
+        // a charge is real spending in its own right, not a return of one
+        // (and a credit never has one to begin with).
+        if (sel.value === "payment" || sel.value === "credit") ex.categoryId = null;
+        if (sel.value !== "payment") ex.returnCategoryId = null;
         var autoLinked = autoLinkToRecurringBill(ex);
         saveState();
         renderBalances();
@@ -6437,17 +6603,19 @@
       });
     });
 
-    // A payment doesn't have a category, so the Category field only shows
-    // up in the blank add-row while "Charge" is selected -- its optional
-    // "Return credit to" counterpart shows only for "Payment" instead (see
-    // the data-cc-return-category handler above).
+    // A payment or a credit doesn't have a category, so the Category field
+    // only shows up in the blank add-row while "Charge" is selected -- the
+    // "Return credit to" field shows only for "Payment" instead (see the
+    // data-cc-return-category handler above); "Credit" shows neither, since
+    // it's money from the card issuer, not tied to any purchase.
     var ccNewTypeEl = document.getElementById("ccNewType");
     var ccNewCategoryFieldEl = document.getElementById("ccNewCategoryField");
     var ccNewReturnCategoryFieldEl = document.getElementById("ccNewReturnCategoryField");
     function updateCcNewCategoryVisibility() {
       if (!ccNewTypeEl) return;
+      var isChargeType = ccNewTypeEl.value === "charge";
       var isPay = ccNewTypeEl.value === "payment";
-      if (ccNewCategoryFieldEl) ccNewCategoryFieldEl.style.display = isPay ? "none" : "";
+      if (ccNewCategoryFieldEl) ccNewCategoryFieldEl.style.display = isChargeType ? "" : "none";
       if (ccNewReturnCategoryFieldEl) ccNewReturnCategoryFieldEl.style.display = isPay ? "" : "none";
     }
     updateCcNewCategoryVisibility();
@@ -6460,7 +6628,7 @@
       var type = document.getElementById("ccNewType").value;
       var amount = parseFloat(document.getElementById("ccNewAmount").value);
       var cleared = document.getElementById("ccNewCleared").checked;
-      var categoryId = type === "payment" ? null : (document.getElementById("ccNewCategory").value || null);
+      var categoryId = (type === "payment" || type === "credit") ? null : (document.getElementById("ccNewCategory").value || null);
       var returnCategoryEl = document.getElementById("ccNewReturnCategory");
       var returnCategoryId = (type === "payment" && returnCategoryEl) ? (returnCategoryEl.value || null) : null;
 
@@ -6486,7 +6654,8 @@
       renderExpenses();
       renderCategories();
       showToast(autoLinked ? ("Linked to " + autoLinked.name + " automatically -- merged with the reminder already logged for it")
-        : (type === "payment" ? (returnCategoryId ? "Return recorded -- credited back to that category" : "Payment added") : "Charge added"));
+        : (type === "payment" ? (returnCategoryId ? "Return recorded -- credited back to that category" : "Payment added")
+          : (type === "credit" ? "Credit added -- balance reduced, no bank account affected" : "Charge added")));
     }
 
     var ccAddBtn = document.getElementById("ccNewAdd");
@@ -6903,8 +7072,14 @@
     state.expenses.forEach(function(e) {
       // A credit card payment isn't new spending -- it's paying down a
       // balance that was already counted as spending when the charge
-      // happened -- so it's excluded here to avoid double-counting.
-      if (e.creditCardId && e.debtType === "payment") return;
+      // happened -- so it's excluded here to avoid double-counting. Same
+      // reasoning for a "credit" (money the card issuer gives back
+      // directly -- rewards, a statement credit, a goodwill adjustment) --
+      // it reduces the balance but was never itself spending, and it never
+      // carries a categoryId in the first place (see commitNewCCRow), so
+      // this is mostly a belt-and-suspenders guard against a stray
+      // totals[null] bucket.
+      if (e.creditCardId && (e.debtType === "payment" || e.debtType === "credit")) return;
       // A plain transfer's withdrawal leg isn't spending -- it's your own
       // money moving to your own other account (see createTransfer), with
       // categoryId left null so it would only ever land in a stray
@@ -7670,14 +7845,17 @@
       // bank transaction (Check Register) that also shows up linked on the
       // CC Register -- so it's included as soon as either box is checked,
       // same rule the on-screen "Where" badge uses (see expenseSourceInfo).
-      var isCharge = e.creditCardId && e.debtType !== "payment";
+      // A credit (money the card issuer gives back directly) is CC-Register-
+      // only too, same as a charge -- it never touches a bank account.
+      var isCharge = e.creditCardId && e.debtType !== "payment" && e.debtType !== "credit";
       var isPayment = e.creditCardId && e.debtType === "payment";
-      var included = isCharge ? includeCC : (isPayment ? (includeCheck || includeCC) : includeCheck);
+      var isCredit = e.creditCardId && e.debtType === "credit";
+      var included = (isCharge || isCredit) ? includeCC : (isPayment ? (includeCheck || includeCC) : includeCheck);
       if (!included) return;
       var registerLabel = expenseSourceInfo(e).label;
-      var typeLabel = isCharge ? "Charge" : "Payment";
+      var typeLabel = isCharge ? "Charge" : (isCredit ? "Credit" : "Payment");
       var signedAmount = isCharge ? e.amount : -e.amount;
-      var bankLabel = isCharge ? "" : (bankAccountById(e.bankAccountId) ? bankAccountById(e.bankAccountId).name : "");
+      var bankLabel = (isCharge || isCredit) ? "" : (bankAccountById(e.bankAccountId) ? bankAccountById(e.bankAccountId).name : "");
       rows.push([e.date, typeLabel, registerLabel, accountLabelFor(e.categoryId, e.creditCardId, e.debtType, e.transferId), e.note || "", signedAmount.toFixed(2), bankLabel]);
     });
     if (includeCheck) {
@@ -7796,19 +7974,20 @@
     }
     var rows = [FULL_CSV_HEADERS];
     state.expenses.forEach(function(e) {
-      var isCharge = !!(e.creditCardId && e.debtType !== "payment");
+      var isCharge = !!(e.creditCardId && e.debtType !== "payment" && e.debtType !== "credit");
       var isPayment = !!(e.creditCardId && e.debtType === "payment");
-      var included = isCharge ? includeCC : (isPayment ? (includeCheck || includeCC) : includeCheck);
+      var isCredit = !!(e.creditCardId && e.debtType === "credit");
+      var included = (isCharge || isCredit) ? includeCC : (isPayment ? (includeCheck || includeCC) : includeCheck);
       if (!included) return;
-      var type = isCharge ? "Card Charge" : (isPayment ? "Card Payment" : "Expense");
-      var cat = !isPayment ? categoryById(e.categoryId) : null;
+      var type = isCharge ? "Card Charge" : (isPayment ? "Card Payment" : (isCredit ? "Card Credit" : "Expense"));
+      var cat = (!isPayment && !isCredit) ? categoryById(e.categoryId) : null;
       var card = e.creditCardId ? creditCardById(e.creditCardId) : null;
-      var bank = !isCharge ? bankAccountById(e.bankAccountId) : null;
+      var bank = (!isCharge && !isCredit) ? bankAccountById(e.bankAccountId) : null;
       var recTemplate = e.recurringId ? recurringById(e.recurringId) : null;
       rows.push([
-        e.id, isCharge ? "CC Register" : "Check Register", type, e.date, e.note || "",
+        e.id, (isCharge || isCredit) ? "CC Register" : "Check Register", type, e.date, e.note || "",
         cat ? cat.name : "", bank ? bank.name : "", card ? card.name : "",
-        Math.abs(e.amount).toFixed(2), e.cleared ? "Yes" : "", (!isCharge && e.paid) ? "Yes" : "",
+        Math.abs(e.amount).toFixed(2), e.cleared ? "Yes" : "", (!isCharge && !isCredit && e.paid) ? "Yes" : "",
         recTemplate ? recTemplate.name : "", e.paycheckId || "", e.splitGroupId || "", e.transferId || "", ""
       ]);
     });
@@ -7828,7 +8007,7 @@
           inc.id, "Check Register", "Deposit", inc.date, inc.source || "",
           "", bank ? bank.name : "", "",
           Math.abs(inc.amount).toFixed(2), inc.cleared ? "Yes" : "", "",
-          recTemplate ? recTemplate.name : "", "", "", inc.transferId || "", goalReclass
+          recTemplate ? recTemplate.name : "", "", inc.splitGroupId || "", inc.transferId || "", goalReclass
         ]);
       });
     }
@@ -7879,8 +8058,9 @@
           var isIncomeRow = type === "deposit";
           var isCharge = type === "card charge";
           var isPayment = type === "card payment";
+          var isCredit = type === "card credit";
           var isExpense = type === "expense";
-          if (!isIncomeRow && !isCharge && !isPayment && !isExpense) { skippedBad++; return; }
+          if (!isIncomeRow && !isCharge && !isPayment && !isCredit && !isExpense) { skippedBad++; return; }
 
           var existing = isIncomeRow
             ? state.income.some(function(x) { return x.id === rowId; })
@@ -7913,21 +8093,21 @@
               note: "", color: "#1baf7a", cleared: cleared, imported: false,
               linkedGoalId: linkedGoalId, reclassCategoryId: reclassCategoryId,
               bankAccountId: bank ? bank.id : null, recurringId: recIncTemplate ? recIncTemplate.id : null,
-              transferId: transferRef
+              splitGroupId: splitRef, transferId: transferRef
             });
           } else {
             var recTemplate = findByNameCI(state.recurring, col("Recurring"));
             state.expenses.push({
               id: rowId, date: date, amount: amount,
-              categoryId: (!isPayment && cat) ? cat.id : null,
+              categoryId: (!isPayment && !isCredit && cat) ? cat.id : null,
               note: desc || "", paycheckId: paycheckRef,
-              paid: !isCharge && csvTruthy(col("Paid")),
+              paid: !isCharge && !isCredit && csvTruthy(col("Paid")),
               cleared: cleared, imported: false, categoryGuessed: false,
               splitGroupId: splitRef, recurringId: recTemplate ? recTemplate.id : null,
-              creditCardId: (isCharge || isPayment) ? (card ? card.id : null) : null,
-              debtType: isPayment ? "payment" : null,
+              creditCardId: (isCharge || isPayment || isCredit) ? (card ? card.id : null) : null,
+              debtType: isPayment ? "payment" : (isCredit ? "credit" : null),
               viaAccountPicker: isPayment,
-              bankAccountId: !isCharge ? (bank ? bank.id : null) : null,
+              bankAccountId: (!isCharge && !isCredit) ? (bank ? bank.id : null) : null,
               transferId: transferRef
             });
           }
@@ -7970,11 +8150,14 @@
     var includeCheck = document.getElementById("resetIncludeCheck").checked;
     var includeCC = document.getElementById("resetIncludeCC").checked;
     if (!includeCheck && !includeCC) { showToast("Pick at least one register to erase"); return; }
-    var label = includeCheck && includeCC ? "the Check Register AND the CC Register (every expense, deposit, payment, and charge)"
-      : includeCheck ? "the Check Register (every expense, deposit, and card payment -- card charge history stays)"
-      : "the CC Register (every card charge -- your cards, and any payments already logged, stay)";
+    var label = includeCheck && includeCC ? "the Check Register AND the CC Register (every expense, deposit, payment, charge, and credit)"
+      : includeCheck ? "the Check Register (every expense, deposit, and card payment -- card charge/credit history stays)"
+      : "the CC Register (every card charge and credit -- your cards, and any payments already logged, stay)";
     confirmDialog("Erase " + label + "? This cannot be undone. Export a backup first if you're not sure.", "Erase").then(function(ok) {
       if (!ok) return;
+      // Named "isCharge" for brevity, but really means "CC-Register-only
+      // row" -- true for both a charge and a credit, since neither ever
+      // touches the Check Register (only a real payment does).
       var isCharge = function(e) { return !!(e.creditCardId && e.debtType !== "payment"); };
       if (includeCheck) {
         state.expenses = state.expenses.filter(isCharge);

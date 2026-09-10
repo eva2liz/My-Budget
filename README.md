@@ -190,9 +190,9 @@ for exactly how that works.
   month it's in or whether it's been assigned to a paycheck yet. Every
   result has a **Where** badge — **Check Register** or **CC Register** —
   so you can tell at a glance which table it actually lives in (a credit
-  card charge only ever lives on the CC Register; a card payment is a real
-  bank transaction, so it's a Check Register row that also shows up
-  linked on the CC Register — hover the badge for the specifics). Click a
+  card charge or credit only ever lives on the CC Register; a card payment
+  is a real bank transaction, so it's a Check Register row that also shows
+  up linked on the CC Register — hover the badge for the specifics). Click a
   result to jump straight to it — no edit panel in the way — landing you
   on the right tab (Check Register or CC Register) with that row lit up in
   a light red/pink highlight so it's easy to spot, and it's already
@@ -528,6 +528,19 @@ for exactly how that works.
     (in the planner or the Check Register) to divide it into two linked
     entries — same date, category, and note — with the amount and paycheck
     you choose for each; they always add back up to the original total
+  - The same idea works in reverse for a deposit that lands split across
+    two bank accounts (a paycheck with direct deposit partly into checking,
+    partly into savings, say). Every deposit row in the Check Register gets
+    its own **Split** button (next to Delete) — pick the amount and bank
+    account for each half and it divides into two linked deposits, same
+    date, source, and note, that always add back up to the original total.
+    Both halves are tagged **(split)** so it's clear at a glance they're two
+    pieces of one deposit, not two separate ones — same tag a split bill
+    gets, and same as there, nothing else treats them specially: every
+    existing total (income this month, a linked goal or category reclass,
+    the running balance) just adds the two rows up like any other deposit.
+    Doesn't apply to a transfer's own deposit leg, since that's already
+    tied to one specific account by definition
   - A recurring bill can have a **default paycheck** set on its template
     (in the Recurring tab) so it auto-assigns itself every time it's due
     — just note that this ties it to one specific paycheck entry, so
@@ -553,9 +566,18 @@ for exactly how that works.
   same way you would in the Check Register — pick the card it goes on, and
   the row underneath it lets you set the real spending **category** (e.g.
   Shopping), so a card charge still counts toward that category's budget.
-  Mark it a **charge** (adds to the card's balance) or a **payment**
+  Mark it a **charge** (adds to the card's balance), a **payment**
   (reduces it, and isn't counted as spending since it's just paying down a
-  balance you already counted when you charged it). Older data from the
+  balance you already counted when you charged it), or a **credit** —
+  money the card issuer gives back directly (a rewards redemption, a
+  statement credit, a goodwill adjustment). A credit reduces the card's
+  balance exactly like a payment, but it has no bank account behind it and
+  never shows up on the Check Register the way a payment does — unlike a
+  payment, it can never be entered from the Check Register, only directly
+  here. It also has no category (it isn't spending) and no "Return credit
+  to" field (it isn't tied to any specific past purchase), so both those
+  fields are simply absent for a credit row, same as they're absent for a
+  payment's category. Older data from the
   previous "mark a category as a loan or credit card" feature migrates
   automatically into its own card the first time you open the app after
   updating. Recording a card payment from the **Check Register** instead?
@@ -648,15 +670,17 @@ for exactly how that works.
   same words the app itself uses on screen — **Payment** for money leaving
   the Check Register (a plain expense or a card payment), **Deposit** for
   income (or **Deposit (reclass)** for one reclassed against a category —
-  see above), and **Charge** for a CC Register charge — and the **Amount**
-  column is signed to match: negative for a Payment, positive for a
-  Deposit or a Charge (mirroring how a charge adds to what a card owes,
-  the same +charge/-payment math the card balance itself uses). That means
+  see above), **Charge** for a CC Register charge, and **Credit** for a CC
+  Register credit (money the card issuer gives back directly) — and the
+  **Amount** column is signed to match: negative for a Payment or a Credit,
+  positive for a Deposit or a Charge (mirroring how a charge adds to what a
+  card owes and a credit reduces it, the same +charge/-payment/-credit math
+  the card balance itself uses). That means
   the column sums correctly and reads at a glance in Excel — no more
   opening every row to tell a payment from a deposit. A **Bank Account**
   column trails everything else with whatever name you tagged that row
-  with (blank if you didn't, and always blank for a CC Register charge,
-  since that's a credit card, not a bank account) — handy for splitting
+  with (blank if you didn't, and always blank for a CC Register charge or
+  credit, since neither one is a bank account) — handy for splitting
   the export by real account in Excel once you're tracking more than one
 - **Reset (Settings), with the same Check Register / CC Register split as
   export** — instead of only an all-or-nothing "Erase all data," a
@@ -664,7 +688,7 @@ for exactly how that works.
   side's transaction history, mirroring the export checkboxes right above
   it exactly. Check **Check Register** and it erases every expense,
   deposit, and card payment; check **CC Register** and it erases every card
-  charge; check both for a full transaction wipe. A card payment is a real
+  charge and credit; check both for a full transaction wipe. A card payment is a real
   bank transaction, so — unlike export, where it's included by either box —
   it's only ever erased by **Check Register**, since deleting can't include
   the same row from two different buttons. Either way, your **categories,
