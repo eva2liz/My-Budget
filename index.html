@@ -1292,7 +1292,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
               Important instructions
             </button>
-            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category. Depositing one paycheck partly into checking and partly into savings? Use a deposit row's <strong>Split</strong> button (next to Delete) to divide it into two linked deposits with the amount and bank account you choose for each — same idea as splitting a bill across two paychecks on the Paycheck Planner.</div>
+            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses, for roughly the bill's usual amount — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category. Depositing one paycheck partly into checking and partly into savings? Use a deposit row's <strong>Split</strong> button (next to Delete) to divide it into two linked deposits with the amount and bank account you choose for each — same idea as splitting a bill across two paychecks on the Paycheck Planner.</div>
           </div>
         </div>
         <div class="register-filters">
@@ -2885,26 +2885,48 @@
   }
 
   // Same "account" as far as recurring-bill matching goes -- same category
-  // (or the same card + payment-vs-charge), regardless of note, amount, or
-  // exact date, all of which can differ from the template (paid a few days
-  // early, a bit more than usual, typed under a different description).
+  // (or the same card + payment-vs-charge), regardless of note or exact
+  // date, both of which can differ from the template (paid a few days
+  // early, typed under a different description). Amount is checked
+  // separately, in autoLinkToRecurringBill below -- a category alone is too
+  // common a thing for two totally unrelated transactions to share (a
+  // catch-all category like "Other" especially), so this only narrows down
+  // WHICH recurring bill a payment could plausibly belong to, not whether
+  // it actually does.
   function accountsMatchRecurringTemplate(r, ex) {
     return (r.categoryId || null) === (ex.categoryId || null) &&
            (r.creditCardId || null) === (ex.creditCardId || null) &&
            (r.debtType || null) === (ex.debtType || null);
   }
 
+  // A real payment for the same bill can come in a bit different than its
+  // usual amount (a variable utility bill, a bit extra toward a loan) --
+  // but a totally unrelated transaction that just happens to share a
+  // category shouldn't silently absorb a bill's placeholder just because
+  // nothing else was open to compare against. Allow up to 50% off the
+  // placeholder's own expected amount, or $15 either way for small bills
+  // (whichever is more forgiving), and require an exact match on anything
+  // under $15 either way. This is deliberately loose enough to still catch
+  // "paid a bit more or less than usual," while ruling out amounts that
+  // aren't in the same ballpark at all.
+  function amountPlausibleForRecurringMatch(candidateAmount, expectedAmount) {
+    var tolerance = Math.max(expectedAmount * 0.5, 15);
+    return Math.abs(candidateAmount - expectedAmount) <= tolerance;
+  }
+
   // Looks for exactly one still-open, never-touched auto-logged placeholder
   // this month whose account matches the expense that was just added or
-  // corrected -- if there's a single unambiguous match, silently absorbs it
-  // instead of leaving two separate, unlinked entries for what's really the
-  // same real-world payment. This is what typing a recurring bill's payment
-  // straight into the register (or fixing its account afterward) used to
-  // require picking "Link to recurring bill" by hand for -- now it happens
-  // on its own. If more than one recurring bill could match (rare -- say,
-  // two bills sharing a category, both still open this month), nothing is
-  // linked automatically, since guessing wrong would be worse than leaving
-  // it alone. Returns the matched template, or null if nothing linked.
+  // corrected, and whose amount is at least plausibly the same bill (see
+  // amountPlausibleForRecurringMatch) -- if there's a single unambiguous
+  // match, silently absorbs it instead of leaving two separate, unlinked
+  // entries for what's really the same real-world payment. This is what
+  // typing a recurring bill's payment straight into the register (or fixing
+  // its account afterward) used to require picking "Link to recurring bill"
+  // by hand for -- now it happens on its own. If more than one recurring
+  // bill could match (rare -- say, two bills sharing a category and a
+  // similar amount, both still open this month), nothing is linked
+  // automatically, since guessing wrong would be worse than leaving it
+  // alone. Returns the matched template, or null if nothing linked.
   function autoLinkToRecurringBill(ex) {
     if (ex.recurringId) return null;
     var mk = monthKeyOf(ex.date);
@@ -2913,7 +2935,8 @@
       if (!accountsMatchRecurringTemplate(r, ex)) return;
       var placeholder = state.expenses.find(function(e) {
         return e.recurringId === r.id && e.id !== ex.id && (e.occurrenceMonth || monthKeyOf(e.date)) === mk &&
-               !e.paid && !e.cleared && e.note === (r.name + " (recurring)");
+               !e.paid && !e.cleared && e.note === (r.name + " (recurring)") &&
+               amountPlausibleForRecurringMatch(ex.amount, e.amount);
       });
       if (placeholder) matches.push({ template: r, placeholder: placeholder });
     });
@@ -2928,10 +2951,44 @@
     return matches[0].template;
   }
 
+  // ---------- split-deposit paycheck grouping ----------
+  // openDepositSplitDialog divides one deposit into two (or more, if split
+  // again) separate income rows sharing one splitGroupId -- exactly right
+  // for the register/bank-account bookkeeping, but a recurring PAYCHECK
+  // still needs to look and behave like exactly one paycheck everywhere
+  // it's planned against (the Paychecks tab, Dashboard's "This month's
+  // paychecks" row, every Paycheck dropdown) -- nobody wants to assign
+  // bills against "half a paycheck," or see it show up as two separate
+  // paychecks with the same date. These helpers pick one canonical
+  // "primary" row per group -- whichever one comes first in state.income,
+  // which is always the original row from before the split, since
+  // splitting mutates it in place and only ever pushes the new half after
+  // it -- and total up the group's real combined amount, so every
+  // paycheck-facing view can key off the primary row's id (same id bills
+  // were already assigned against, nothing to migrate) and this total
+  // instead of reading inc.amount directly.
+  function splitIncomeGroupMembers(splitGroupId) {
+    if (!splitGroupId) return [];
+    return state.income.filter(function(inc) { return inc.splitGroupId === splitGroupId; });
+  }
+  function primaryIncomeIdForSplitGroup(splitGroupId) {
+    var members = splitIncomeGroupMembers(splitGroupId);
+    return members.length ? members[0].id : null;
+  }
+  function isPrimarySplitIncome(inc) {
+    return !inc.splitGroupId || primaryIncomeIdForSplitGroup(inc.splitGroupId) === inc.id;
+  }
+  // The real total behind a paycheck -- just inc.amount, unless it's been
+  // split, in which case it's every linked piece added back together.
+  function paycheckTotalAmount(inc) {
+    if (!inc.splitGroupId) return inc.amount;
+    return splitIncomeGroupMembers(inc.splitGroupId).reduce(function(s, m) { return s + m.amount; }, 0);
+  }
+
   function paycheckLabel(inc) {
     var d = new Date(inc.date + "T00:00:00");
     var short = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    return short + " · " + inc.source + " · " + fmtMoney(inc.amount);
+    return short + " · " + inc.source + " · " + fmtMoney(paycheckTotalAmount(inc));
   }
 
   // Only income logged from a Recurring Income template is a real "paycheck"
@@ -2939,10 +2996,16 @@
   // freelance work that isn't a fixed payday) doesn't recur, so there's
   // nothing to divide it into ahead of time. Always keeps whatever is
   // already selected in the list too, even if it's a one-off, so opening a
-  // form never silently wipes out an existing assignment.
+  // form never silently wipes out an existing assignment. A split deposit's
+  // non-primary half is never offered here (see isPrimarySplitIncome) --
+  // bills are only ever assigned against the one primary id, so picking the
+  // "other half" from a dropdown would misrepresent which paycheck a bill
+  // is really coming from.
   function paycheckCandidates(selectedId) {
-    return state.income.filter(function(inc) { return !!inc.recurringId || inc.id === selectedId; })
-                        .sort(function(a, b) { return b.date.localeCompare(a.date); });
+    return state.income.filter(function(inc) {
+      if (inc.id === selectedId) return true;
+      return !!inc.recurringId && isPrimarySplitIncome(inc);
+    }).sort(function(a, b) { return b.date.localeCompare(a.date); });
   }
 
   function populatePaycheckSelect() {
@@ -4913,6 +4976,13 @@
     // See the matching guard in editExpense -- a transfer's deposit leg has
     // no real "From" to edit here either, so this jumps to its row instead.
     if (inc.transferId) { jumpToRegisterRow(inc.id, "income"); return; }
+    // Same idea for a split deposit -- this old full-panel flow only has
+    // room for one amount and one implicit bank account, so half of a split
+    // deposit (see openDepositSplitDialog) has no sensible single-form
+    // representation here either. Jump to its row in the Check Register
+    // instead, where each linked piece shows its own amount and bank
+    // account, editable right in place.
+    if (inc.splitGroupId) { jumpToRegisterRow(inc.id, "income"); return; }
     document.getElementById("registerEditPanel").style.display = "block";
     document.getElementById("incomeFormCard").style.display = "block";
     document.getElementById("expenseFormCard").style.display = "none";
@@ -4947,18 +5017,51 @@
     renderPaycheckPlanner();
   }
 
+  // The Paycheck Planner's own Cleared checkbox for a split paycheck (see
+  // openDepositSplitDialog / paycheckTotalAmount) represents the WHOLE
+  // paycheck, not one bank account's piece of it -- so unlike
+  // toggleIncomeCleared above (which the Check Register's own per-row
+  // checkbox still uses, since reconciling each bank account independently
+  // is exactly right there), this flips every linked piece together: all
+  // cleared already means uncheck all, anything less than all cleared means
+  // check all, same "not fully on yet -> make it fully on" logic the
+  // checkbox's own checked state already reflects.
+  function toggleIncomeClearedGroup(splitGroupId) {
+    var members = splitIncomeGroupMembers(splitGroupId);
+    if (!members.length) return;
+    var makeCleared = !members.every(function(m) { return m.cleared; });
+    members.forEach(function(m) { m.cleared = makeCleared; });
+    saveState();
+    renderIncome();
+    renderPaycheckPlanner();
+  }
+
   function deleteIncome(id, onDeleted) {
     var inc = state.income.find(function(x) { return x.id === id; });
     // Same pairing rule as deleteExpense above -- see its comment.
     var peerExpense = inc && inc.transferId ? state.expenses.find(function(e) { return e.transferId === inc.transferId; }) : null;
+    // A split deposit only ever means anything as a whole paycheck (see
+    // paycheckTotalAmount/openDepositSplitDialog) -- deleting just one piece
+    // and leaving the other(s) behind would strand them as a random
+    // leftover deposit with no obvious source, and the Paycheck Planner
+    // would still show the group's old combined total using whatever's
+    // left. So deleting any one piece takes every linked piece down with
+    // it, confirmed once, up front, for all of them (never applies
+    // alongside a transfer -- a transfer leg never gets a Split button).
+    var splitSiblings = (!peerExpense && inc && inc.splitGroupId)
+      ? splitIncomeGroupMembers(inc.splitGroupId).filter(function(m) { return m.id !== id; })
+      : [];
     var msg = peerExpense
       ? "Delete this transfer? This removes both the deposit and its matching withdrawal."
-      : "Delete this income entry? Any expenses assigned to it will become unassigned.";
+      : splitSiblings.length
+        ? "Delete this split deposit? This removes all " + (splitSiblings.length + 1) + " linked pieces (total " + fmtMoney(paycheckTotalAmount(inc)) + "), not just this one."
+        : "Delete this income entry? Any expenses assigned to it will become unassigned.";
     confirmDialog(msg).then(function(ok) {
       if (!ok) return;
-      state.income = state.income.filter(function(x){ return x.id !== id; });
+      var idsToRemove = [id].concat(splitSiblings.map(function(m) { return m.id; }));
+      state.income = state.income.filter(function(x){ return idsToRemove.indexOf(x.id) === -1; });
       if (peerExpense) state.expenses = state.expenses.filter(function(x) { return x.id !== peerExpense.id; });
-      state.expenses.forEach(function(e) { if (e.paycheckId === id) e.paycheckId = null; });
+      state.expenses.forEach(function(e) { if (idsToRemove.indexOf(e.paycheckId) !== -1) e.paycheckId = null; });
       saveState();
       renderIncome();
       renderExpenses();
@@ -4966,7 +5069,7 @@
       renderCalendar();
       populatePaycheckSelect();
       renderPaycheckPlanner();
-      showToast(peerExpense ? "Transfer deleted" : "Income entry deleted");
+      showToast(peerExpense ? "Transfer deleted" : (splitSiblings.length ? "Split deposit deleted" : "Income entry deleted"));
       if (onDeleted) onDeleted();
     });
   }
@@ -5460,11 +5563,15 @@
     // "paycheck" block here -- a one-off deposit doesn't recur, so there's
     // nothing to plan bills against ahead of time. Still shown if it already
     // has bills assigned to it from before this behavior existed, so nothing
-    // already planned quietly disappears.
+    // already planned quietly disappears. A split deposit's non-primary
+    // half never gets its own block (see isPrimarySplitIncome) -- the
+    // primary block below shows the combined total instead, so a paycheck
+    // that happens to land across two bank accounts still reads as one
+    // paycheck here, not two.
     var incomes = state.income.filter(function(inc) {
       if (monthKeyOf(inc.date) !== monthKey) return false;
-      if (inc.recurringId) return true;
-      return state.expenses.some(function(e) { return e.paycheckId === inc.id; });
+      var isPaycheckTracked = !!inc.recurringId || state.expenses.some(function(e) { return e.paycheckId === inc.id; });
+      return isPaycheckTracked && isPrimarySplitIncome(inc);
     }).sort(function(a,b) { return a.date.localeCompare(b.date); });
 
     // Recurring paychecks that haven't been logged yet this month — same idea
@@ -5517,9 +5624,14 @@
 
       var assignedTotal = assigned.reduce(function(s,e){ return s + e.amount; }, 0) +
                            scheduled.reduce(function(s,p){ return s + p.template.amount; }, 0);
-      var leftover = inc.amount - assignedTotal;
+      var totalAmount = paycheckTotalAmount(inc);
+      var leftover = totalAmount - assignedTotal;
       var d = new Date(inc.date + "T00:00:00");
       var dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      var splitMembers = splitIncomeGroupMembers(inc.splitGroupId);
+      var splitTitleTag = splitMembers.length > 1
+        ? ' <span class="muted" title="Split across ' + splitMembers.length + ' bank accounts -- see the Check Register for each piece">(split across ' + splitMembers.length + ' accounts)</span>'
+        : '';
 
       var assignedRowsHtml = assigned.map(function(e) {
         var cat = categoryById(e.categoryId);
@@ -5588,13 +5700,16 @@
         '<div class="paycheck-header">' +
           '<div style="display:flex; align-items:center;">' +
             '<button type="button" class="paycheck-toggle" data-pc-toggle="' + inc.id + '" title="' + toggleTitle + '" aria-expanded="' + (!isCollapsed) + '">' + (isCollapsed ? "▸" : "▾") + '</button>' +
-            '<span class="pc-title">' + escapeHtml(inc.source) + '</span><span class="pc-date">' + escapeHtml(dateLabel) + '</span>' +
+            '<span class="pc-title">' + escapeHtml(inc.source) + '</span><span class="pc-date">' + escapeHtml(dateLabel) + '</span>' + splitTitleTag +
           '</div>' +
           '<div style="display:flex; align-items:center; gap:12px;">' +
             '<span class="paycheck-summary-compact muted">Assigned ' + fmtMoney(assignedTotal) + ' · Left ' + fmtMoney(leftover) + '</span>' +
-            '<div class="pc-amount">' + fmtMoney(inc.amount) + '</div>' +
+            '<div class="pc-amount">' + fmtMoney(totalAmount) + '</div>' +
             '<label style="display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-secondary); cursor:pointer;">' +
-              '<input type="checkbox" class="row-checkbox" data-inc-cleared="' + inc.id + '"' + (inc.cleared ? ' checked' : '') + '> Cleared</label>' +
+              (splitMembers.length > 1
+                ? '<input type="checkbox" class="row-checkbox" data-inc-cleared-group="' + inc.splitGroupId + '"' + (splitMembers.every(function(m){ return m.cleared; }) ? ' checked' : '') + ' title="Marks every linked piece of this split paycheck cleared or uncleared together">'
+                : '<input type="checkbox" class="row-checkbox" data-inc-cleared="' + inc.id + '"' + (inc.cleared ? ' checked' : '') + '>') +
+              ' Cleared</label>' +
             '<button class="row-btn" data-inc-edit="' + inc.id + '">Edit</button>' +
             '<button class="row-btn danger" data-inc-del="' + inc.id + '">Delete</button>' +
           '</div>' +
@@ -5651,6 +5766,7 @@
     wrap.querySelectorAll("[data-pc-paid]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpensePaid(b.dataset.pcPaid); }); });
     wrap.querySelectorAll("[data-pc-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleExpenseCleared(b.dataset.pcCleared); }); });
     wrap.querySelectorAll("[data-inc-cleared]").forEach(function(b) { b.addEventListener("change", function(){ toggleIncomeCleared(b.dataset.incCleared); }); });
+    wrap.querySelectorAll("[data-inc-cleared-group]").forEach(function(b) { b.addEventListener("change", function(){ toggleIncomeClearedGroup(b.dataset.incClearedGroup); }); });
     wrap.querySelectorAll("[data-inc-edit]").forEach(function(b) { b.addEventListener("click", function(){ editIncome(b.dataset.incEdit); }); });
     wrap.querySelectorAll("[data-inc-del]").forEach(function(b) { b.addEventListener("click", function(){ deleteIncome(b.dataset.incDel); }); });
     wrap.querySelectorAll("[data-split]").forEach(function(b) { b.addEventListener("click", function(){ openSplitDialog(b.dataset.split); }); });
@@ -7444,11 +7560,14 @@
   function renderPaycheckCardsRow(monthKey) {
     var wrap = document.getElementById("paycheckCardsWrap");
     // Same rule as the planner: only recurring paychecks (or a one-off that
-    // already has bills assigned to it from before this existed) show up.
+    // already has bills assigned to it from before this existed) show up --
+    // and same as there, a split deposit's non-primary half never gets its
+    // own card (see isPrimarySplitIncome); the primary card shows the
+    // combined total instead.
     var rows = state.income.filter(function(inc) {
       if (monthKeyOf(inc.date) !== monthKey) return false;
-      if (inc.recurringId) return true;
-      return state.expenses.some(function(e) { return e.paycheckId === inc.id; });
+      var isPaycheckTracked = !!inc.recurringId || state.expenses.some(function(e) { return e.paycheckId === inc.id; });
+      return isPaycheckTracked && isPrimarySplitIncome(inc);
     }).sort(function(a,b) { return a.date.localeCompare(b.date); });
     if (rows.length === 0) {
       wrap.innerHTML = '<div class="empty-state">No paychecks logged for ' + monthLabel(monthKey) + ' yet.</div>';
@@ -7458,13 +7577,14 @@
     var cards = rows.map(function(inc, i) {
       var assigned = state.expenses.filter(function(e) { return e.paycheckId === inc.id; })
                                     .reduce(function(s,e){ return s + e.amount; }, 0);
-      var leftover = inc.amount - assigned;
-      var pct = inc.amount > 0 ? Math.min(100, (assigned / inc.amount) * 100) : 0;
+      var totalAmount = paycheckTotalAmount(inc);
+      var leftover = totalAmount - assigned;
+      var pct = totalAmount > 0 ? Math.min(100, (assigned / totalAmount) * 100) : 0;
       var tone = tones[i % tones.length];
       return '<div class="pg-card cal-clickable" data-paycheck-drill="' + inc.id + '" tabindex="0" style="--pg-accent:' + tone + ';" title="Click to see the bills assigned to this paycheck">' +
         '<div class="pg-card-title">' + escapeHtml(inc.source) + '</div>' +
         '<div class="pg-card-date">' + escapeHtml(inc.date) + '</div>' +
-        '<div class="pg-card-amount">' + fmtMoney(inc.amount) + '</div>' +
+        '<div class="pg-card-amount">' + fmtMoney(totalAmount) + '</div>' +
         '<div class="track"><div class="fill' + (pct >= 100 ? ' overflow' : '') + '" style="width:' + pct + '%; background:' + tone + ';"></div></div>' +
         '<div class="pg-card-meta"><span>' + fmtMoney(assigned) + ' assigned</span><span class="' + (leftover < 0 ? "variance-over" : "variance-under") + '">' + fmtMoney(leftover) + ' left</span></div>' +
       '</div>';
@@ -7650,11 +7770,12 @@
     if (!inc) return;
     var rows = state.expenses.filter(function(e) { return e.paycheckId === incomeId; })
                               .sort(function(a,b) { return a.date.localeCompare(b.date); });
+    var totalAmount = paycheckTotalAmount(inc);
     document.getElementById("paycheckDrillTitle").textContent = inc.source + " — " + inc.date;
     var assignedTotal = rows.reduce(function(s,e){ return s + e.amount; }, 0);
-    var leftover = inc.amount - assignedTotal;
+    var leftover = totalAmount - assignedTotal;
     document.getElementById("paycheckDrillSummary").textContent =
-      "Income " + fmtMoney(inc.amount) + " · " + rows.length + " bill" + (rows.length === 1 ? "" : "s") +
+      "Income " + fmtMoney(totalAmount) + " · " + rows.length + " bill" + (rows.length === 1 ? "" : "s") +
       " assigned totaling " + fmtMoney(assignedTotal) + " · Leftover " + fmtMoney(leftover) + ".";
     var wrap = document.getElementById("paycheckDrillWrap");
     if (rows.length === 0) {
