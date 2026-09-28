@@ -1188,6 +1188,10 @@
             <label for="incLinkedGoal">From <span class="muted">(optional)</span></label>
             <select id="incLinkedGoal"><option value="">Regular income</option></select>
           </div>
+          <div class="field" id="incPaycheckField">
+            <label for="incPaycheck">Link to paycheck <span class="muted">(optional)</span></label>
+            <select id="incPaycheck"><option value="">None</option></select>
+          </div>
           <div class="field" style="flex:1; min-width:160px;">
             <label for="incNote">Note</label>
             <input type="text" id="incNote" placeholder="Optional">
@@ -1292,7 +1296,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
               Important instructions
             </button>
-            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses, for roughly the bill's usual amount — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category. Depositing one paycheck partly into checking and partly into savings? Use a deposit row's <strong>Split</strong> button (next to Delete) to divide it into two linked deposits with the amount and bank account you choose for each — same idea as splitting a bill across two paychecks on the Paycheck Planner.</div>
+            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Deposit rows get the same field for the same reason — a reimbursement, a reclassed refund, a one-off gift — anything you'd like tied to a particular payday shows up under that paycheck's own linked-deposits list in the Paycheck Planner. The only deposit that doesn't get this field is one that's itself a logged paycheck, since a paycheck can't link to itself. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses, for roughly the bill's usual amount — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category. Depositing one paycheck partly into checking and partly into savings? Use a deposit row's <strong>Split</strong> button (next to Delete) to divide it into two linked deposits with the amount and bank account you choose for each — same idea as splitting a bill across two paychecks on the Paycheck Planner.</div>
           </div>
         </div>
         <div class="register-filters">
@@ -1429,6 +1433,12 @@
       <h2>Spending by category</h2>
       <p class="hint" style="margin-top:0;">Same month as above. For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. To reorder your categories, head to Manage Budget -- the order you set there applies everywhere (this list and dropdowns).</p>
       <div id="categoryChart"></div>
+    </div>
+
+    <div class="card">
+      <h2>Income</h2>
+      <p class="hint" style="margin-top:0;">Same month as above. Each recurring paycheck compares what was expected to land against what's actually been logged so far -- red means short, green means received in full (or more). "Other income" bundles everything that doesn't come from a recurring template: one-off deposits, reimbursements, reclassed refunds, and the like.</p>
+      <div id="incomeVsActualWrap" class="table-scroll"></div>
     </div>
   </section>
 
@@ -2985,6 +2995,16 @@
     return splitIncomeGroupMembers(inc.splitGroupId).reduce(function(s, m) { return s + m.amount; }, 0);
   }
 
+  // Deposits earmarked against this paycheck (its own Paycheck field on the
+  // Check Register row) -- a reimbursement, a reclassed refund, a one-off
+  // gift landing alongside this payday. Used everywhere a paycheck's
+  // "leftover" is computed, so that number always means the same thing
+  // whether you're looking at the Planner, the Dashboard, or the drill-down.
+  function linkedDepositsTotalFor(incomeId) {
+    return state.income.filter(function(inc) { return inc.paycheckId === incomeId; })
+                        .reduce(function(s, inc) { return s + inc.amount; }, 0);
+  }
+
   function paycheckLabel(inc) {
     var d = new Date(inc.date + "T00:00:00");
     var short = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -3009,7 +3029,7 @@
   }
 
   function populatePaycheckSelect() {
-    ["expPaycheck", "recPaycheck"].forEach(function(id) {
+    ["expPaycheck", "recPaycheck", "incPaycheck"].forEach(function(id) {
       var sel = document.getElementById(id);
       var prev = sel.value;
       sel.innerHTML = paycheckOptionsFor(prev || null);
@@ -3454,7 +3474,8 @@
         id: uid(), date: inc.date, amount: Math.round(b * 100) / 100, source: inc.source,
         color: inc.color, note: inc.note, cleared: inc.cleared, imported: false,
         linkedGoalId: inc.linkedGoalId || null, reclassCategoryId: inc.reclassCategoryId || null,
-        recurringId: inc.recurringId || null, bankAccountId: bankAccountB, splitGroupId: groupId
+        recurringId: inc.recurringId || null, bankAccountId: bankAccountB, splitGroupId: groupId,
+        paycheckId: inc.paycheckId || null
       });
 
       saveState();
@@ -3579,7 +3600,8 @@
         amount: Math.abs(inc.amount), cleared: !!inc.cleared, imported: !!inc.imported,
         linkedGoalId: inc.linkedGoalId || null, reclassCategoryId: inc.reclassCategoryId || null,
         bankAccountId: inc.bankAccountId || null, transferId: inc.transferId || null,
-        splitGroupId: inc.splitGroupId || null
+        splitGroupId: inc.splitGroupId || null, recurringId: inc.recurringId || null,
+        paycheckId: inc.paycheckId || null
       });
     });
     rows.sort(function(a, b) {
@@ -4450,7 +4472,7 @@
         // one-off expense doesn't have a recurring amount to divide up the
         // same way.
         var pcTrackable = !!(r.recurringId || r.paycheckId);
-        var pcField = '<span>Paycheck <select class="register-inline-select" data-reg-paycheck="' + r.id + '">' + paycheckOptionsFor(r.paycheckId) + '</select></span>';
+        var pcField = '<span>Paycheck <select class="register-inline-select" data-reg-paycheck="' + r.id + '" data-reg-kind="expense">' + paycheckOptionsFor(r.paycheckId) + '</select></span>';
         var splitBtn = pcTrackable ? '<button class="row-btn" data-reg-split="' + r.id + '">Split</button>' : '';
         // A transaction typed straight into the register gets tied back to
         // a matching Recurring-tab bill automatically (see
@@ -4514,9 +4536,20 @@
         // transfer's own deposit leg -- that's already tied to a single
         // specific "from" account by definition, nothing to divide.
         var depositSplitBtn = r.transferId ? '' : '<button class="row-btn" data-reg-deposit-split="' + r.id + '">Split</button>';
+        // The Paycheck field shows on a deposit the same way it shows on
+        // every expense row above -- entirely optional, just a way to
+        // earmark this deposit (a reimbursement, a reclassed refund, a
+        // one-off gift) as belonging to a particular paycheck's pay period.
+        // Doesn't apply to a transfer's own deposit leg (nothing to earmark,
+        // same reasoning as the expense side), or to a deposit that IS
+        // itself a tracked paycheck (see paycheckCandidates) -- a paycheck
+        // doesn't link to itself.
+        var incPcField = (r.transferId || r.recurringId) ? '' :
+          '<span>Paycheck <select class="register-inline-select" data-reg-paycheck="' + r.id + '" data-reg-kind="income">' + paycheckOptionsFor(r.paycheckId) + '</select></span>';
         detailInner =
           incSourceField +
           incBankField +
+          incPcField +
           '<span class="reg-detail-actions">' +
             depositSplitBtn +
             '<button class="row-btn danger" data-reg-del="' + r.id + '" data-reg-kind="income">Delete</button>' +
@@ -4753,9 +4786,10 @@
 
     wrap.querySelectorAll("[data-reg-paycheck]").forEach(function(sel) {
       sel.addEventListener("change", function() {
-        var ex = state.expenses.find(function(x) { return x.id === sel.dataset.regPaycheck; });
-        if (!ex) return;
-        ex.paycheckId = sel.value || null;
+        var list = sel.dataset.regKind === "income" ? state.income : state.expenses;
+        var row = list.find(function(x) { return x.id === sel.dataset.regPaycheck; });
+        if (!row) return;
+        row.paycheckId = sel.value || null;
         saveState();
         refreshAfterRegisterChange();
         showToast("Paycheck updated");
@@ -4841,7 +4875,7 @@
       } else {
         if (!desc) { showToast("Enter a payee/description for this deposit"); return; }
         var incomeSourceValue = document.getElementById("regNewIncomeSource").value;
-        var newIncome = { id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared, linkedGoalId: null, reclassCategoryId: null, bankAccountId: bankAccountValue };
+        var newIncome = { id: uid(), date: date, amount: deposit, source: desc, color: "#1baf7a", note: "", cleared: cleared, linkedGoalId: null, reclassCategoryId: null, bankAccountId: bankAccountValue, paycheckId: null };
         applyIncomeSourceValue(newIncome, incomeSourceValue);
         state.income.push(newIncome);
         showToast(newIncome.linkedGoalId ? "Withdrawal logged" : incomeSourceToastLabel(newIncome, "Income added"));
@@ -4919,17 +4953,19 @@
     var note = document.getElementById("incNote").value.trim();
     var cleared = document.getElementById("incCleared").checked;
     var linkedGoalValue = document.getElementById("incLinkedGoal").value;
+    var paycheckId = document.getElementById("incPaycheck").value || null;
     if (!date || isNaN(amount) || amount < 0 || !source) return;
 
     if (editId) {
       var inc = state.income.find(function(x){ return x.id === editId; });
       if (inc) {
         inc.date = date; inc.amount = amount; inc.source = source; inc.color = color; inc.note = note; inc.cleared = cleared;
+        if (!inc.recurringId) inc.paycheckId = paycheckId;
         applyIncomeSourceValue(inc, linkedGoalValue);
       }
       showToast("Income updated");
     } else {
-      var newIncome = { id: uid(), date: date, amount: amount, source: source, color: color, note: note, cleared: cleared, linkedGoalId: null, reclassCategoryId: null };
+      var newIncome = { id: uid(), date: date, amount: amount, source: source, color: color, note: note, cleared: cleared, linkedGoalId: null, reclassCategoryId: null, paycheckId: paycheckId };
       applyIncomeSourceValue(newIncome, linkedGoalValue);
       state.income.push(newIncome);
       showToast("Income added");
@@ -4959,6 +4995,8 @@
     document.getElementById("incNote").value = "";
     document.getElementById("incCleared").checked = false;
     document.getElementById("incLinkedGoal").value = "";
+    document.getElementById("incPaycheck").value = "";
+    document.getElementById("incPaycheckField").style.display = "flex";
     document.getElementById("incomeFormTitle").textContent = "Add income";
     document.getElementById("incomeSubmitBtn").textContent = "Add income";
     document.getElementById("incomeCancelEdit").style.display = "none";
@@ -5000,6 +5038,14 @@
     populateIncomeGoalSelect();
     document.getElementById("incLinkedGoal").value = inc.linkedGoalId ? "goal:" + inc.linkedGoalId
       : (inc.reclassCategoryId ? "cat:" + inc.reclassCategoryId : "");
+    populatePaycheckSelect();
+    document.getElementById("incPaycheck").value = inc.paycheckId || "";
+    // Same reasoning as expPaycheckField's own guard -- a deposit that IS
+    // itself a tracked paycheck (came from a Recurring Income template)
+    // can't sensibly be earmarked against another paycheck, so this field
+    // is hidden for those. Every other deposit (a reclass, a reimbursement,
+    // a one-off gift) can be earmarked, so it always shows for them.
+    document.getElementById("incPaycheckField").style.display = inc.recurringId ? "none" : "flex";
     document.getElementById("incomeFormTitle").textContent = "Edit income";
     document.getElementById("incomeSubmitBtn").textContent = "Save changes";
     document.getElementById("incomeCancelEdit").style.display = "inline-block";
@@ -5062,6 +5108,7 @@
       state.income = state.income.filter(function(x){ return idsToRemove.indexOf(x.id) === -1; });
       if (peerExpense) state.expenses = state.expenses.filter(function(x) { return x.id !== peerExpense.id; });
       state.expenses.forEach(function(e) { if (idsToRemove.indexOf(e.paycheckId) !== -1) e.paycheckId = null; });
+      state.income.forEach(function(inc2) { if (idsToRemove.indexOf(inc2.paycheckId) !== -1) inc2.paycheckId = null; });
       saveState();
       renderIncome();
       renderExpenses();
@@ -5624,8 +5671,16 @@
 
       var assignedTotal = assigned.reduce(function(s,e){ return s + e.amount; }, 0) +
                            scheduled.reduce(function(s,p){ return s + p.template.amount; }, 0);
+      // Deposits earmarked against this paycheck (see the Paycheck field on
+      // a deposit's own Check Register row) -- a reimbursement, a reclassed
+      // refund, a one-off gift that landed alongside this payday. These ADD
+      // to what's available this pay period, the mirror image of assigned
+      // bills subtracting from it.
+      var linkedDeposits = state.income.filter(function(inc2) { return inc2.paycheckId === inc.id; })
+                                        .sort(function(a,b) { return a.date.localeCompare(b.date); });
+      var linkedDepositsTotal = linkedDeposits.reduce(function(s, dep) { return s + dep.amount; }, 0);
       var totalAmount = paycheckTotalAmount(inc);
-      var leftover = totalAmount - assignedTotal;
+      var leftover = totalAmount + linkedDepositsTotal - assignedTotal;
       var d = new Date(inc.date + "T00:00:00");
       var dateLabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
       var splitMembers = splitIncomeGroupMembers(inc.splitGroupId);
@@ -5668,6 +5723,27 @@
         : '<div class="table-scroll"><table><thead><tr><th class="check-cell">Paid</th><th class="check-cell">Cleared</th><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
           assignedRowsHtml + scheduledRowsHtml +
           '</tbody></table></div>';
+
+      var linkedDepositsRowsHtml = linkedDeposits.map(function(dep) {
+        var depSplitMembers = splitIncomeGroupMembers(dep.splitGroupId);
+        var depClearedCell = depSplitMembers.length > 1
+          ? '<input type="checkbox" class="row-checkbox" data-inc-cleared-group="' + dep.splitGroupId + '"' + (depSplitMembers.every(function(m){ return m.cleared; }) ? ' checked' : '') + ' title="Marks every linked piece of this split deposit cleared or uncleared together">'
+          : '<input type="checkbox" class="row-checkbox" data-inc-cleared="' + dep.id + '"' + (dep.cleared ? ' checked' : '') + '>';
+        var depTag = dep.reclassCategoryId ? ' <span class="muted">(reclass)</span>' : (dep.splitGroupId ? ' <span class="muted">(split)</span>' : '');
+        return '<tr>' +
+          '<td class="check-cell">' + depClearedCell + '</td>' +
+          '<td>' + escapeHtml(dep.date) + '</td>' +
+          '<td>' + escapeHtml(dep.source || "") + depTag + '</td>' +
+          '<td class="num">' + fmtMoney(dep.amount) + '</td>' +
+          '<td class="actions-cell"><button class="row-btn" data-inc-edit="' + dep.id + '">Edit</button> <button class="row-btn" data-inc-unassign="' + dep.id + '">Unassign</button> <button class="row-btn danger" data-inc-del="' + dep.id + '">Delete</button></td>' +
+        '</tr>';
+      }).join("");
+
+      var linkedDepositsSection = linkedDeposits.length
+        ? '<div class="table-scroll" style="margin-top:10px;"><table><thead><tr><th class="check-cell">Cleared</th><th>Date</th><th>Source</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
+          linkedDepositsRowsHtml +
+          '</tbody></table></div>'
+        : '';
 
       var assignOptions = unassigned.map(function(e) {
         var label = e.date + " · " + accountLabelFor(e.categoryId, e.creditCardId, e.debtType, e.transferId) + (e.note ? " · " + e.note : "") + " · " + fmtMoney(e.amount);
@@ -5716,8 +5792,10 @@
         '</div>' +
         '<div class="paycheck-body"' + (isCollapsed ? ' style="display:none;"' : '') + '>' +
           rows +
+          linkedDepositsSection +
           '<div class="paycheck-summary-row">' +
             '<span>Assigned: ' + fmtMoney(assignedTotal) + '</span>' +
+            (linkedDeposits.length ? '<span>Extra deposits: +' + fmtMoney(linkedDepositsTotal) + '</span>' : '') +
             '<span class="leftover ' + (leftover < 0 ? "variance-over" : "variance-under") + '">Leftover to spend: ' + fmtMoney(leftover) + '</span>' +
           '</div>' +
           '<div class="paycheck-assign-row">' +
@@ -5775,6 +5853,17 @@
         var ex = state.expenses.find(function(x){ return x.id === b.dataset.unassign; });
         if (!ex) return;
         ex.paycheckId = null;
+        saveState();
+        renderExpenses();
+        renderIncome();
+        renderPaycheckPlanner();
+      });
+    });
+    wrap.querySelectorAll("[data-inc-unassign]").forEach(function(b) {
+      b.addEventListener("click", function() {
+        var inc2 = state.income.find(function(x){ return x.id === b.dataset.incUnassign; });
+        if (!inc2) return;
+        inc2.paycheckId = null;
         saveState();
         renderExpenses();
         renderIncome();
@@ -7253,6 +7342,76 @@
                         .reduce(function(s, inc) { return s + inc.amount; }, 0);
   }
 
+  // Income's mirror of totalsForMonth's expense-by-category breakdown, for
+  // the Budget vs. Actual tab's own Income card. One row per recurring
+  // income template (a paycheck source, e.g. "AW", "LSM") comparing what
+  // was expected to land this month (the template's amount times however
+  // many occurrences are due) against what actually got logged, plus a
+  // single "Other income" bucket for everything that didn't come from a
+  // template -- one-off deposits, reimbursements, reclassed refunds -- since
+  // those have no expected amount to compare against. A transfer's deposit
+  // leg is excluded, same as incomeForMonth above -- it's not new income.
+  function incomeTotalsForMonth(monthKey) {
+    var rows = [];
+    var otherActual = 0;
+    var accountedIds = {};
+    state.recurringIncome.forEach(function(r) {
+      var occurrences = recurringIncomeOccurrencesInMonth(r, monthKey).filter(Boolean);
+      var expected = occurrences.length * r.amount;
+      var actualRows = state.income.filter(function(inc) { return inc.recurringId === r.id && monthKeyOf(inc.date) === monthKey; });
+      actualRows.forEach(function(inc) { accountedIds[inc.id] = true; });
+      var actual = actualRows.reduce(function(s, inc) { return s + inc.amount; }, 0);
+      if (expected > 0 || actual > 0) rows.push({ id: r.id, name: r.name, expected: expected, actual: actual });
+    });
+    state.income.forEach(function(inc) {
+      if (accountedIds[inc.id] || inc.transferId) return;
+      if (monthKeyOf(inc.date) !== monthKey) return;
+      otherActual += inc.amount;
+    });
+    return { rows: rows, otherActual: otherActual };
+  }
+
+  function renderIncomeVsActualTable(monthKey) {
+    var wrap = document.getElementById("incomeVsActualWrap");
+    var data = incomeTotalsForMonth(monthKey);
+    if (data.rows.length === 0 && data.otherActual === 0) {
+      wrap.innerHTML = '<div class="empty-state">No income logged or scheduled for this month yet.</div>';
+      return;
+    }
+    var totalExpected = 0, totalActual = 0;
+    var rowsHtml = data.rows.map(function(r) {
+      totalExpected += r.expected;
+      totalActual += r.actual;
+      var variance = r.actual - r.expected;
+      var short = r.expected > 0 && r.actual < r.expected;
+      return '<tr>' +
+        '<td>' + escapeHtml(r.name) + '</td>' +
+        '<td class="num">' + (r.expected > 0 ? fmtMoney(r.expected) : '—') + '</td>' +
+        '<td class="num">' + fmtMoney(r.actual) + '</td>' +
+        '<td class="num ' + (short ? 'variance-over' : (r.expected > 0 ? 'variance-under' : '')) + '">' + (r.expected > 0 ? fmtMoney(variance) : '—') + '</td>' +
+      '</tr>';
+    }).join("");
+    if (data.otherActual !== 0) {
+      totalActual += data.otherActual;
+      rowsHtml += '<tr>' +
+        '<td><span class="muted">Other income (one-off deposits, refunds, reclasses)</span></td>' +
+        '<td class="num">—</td>' +
+        '<td class="num">' + fmtMoney(data.otherActual) + '</td>' +
+        '<td class="num">—</td>' +
+      '</tr>';
+    }
+    var html = '<table class="summary-table"><thead><tr>' +
+      '<th>Source</th><th class="num">Expected</th><th class="num">Actual</th><th class="num">Difference</th>' +
+      '</tr></thead><tbody>' + rowsHtml + '</tbody>' +
+      '<tfoot><tr>' +
+        '<td>Total</td>' +
+        '<td class="num">' + (totalExpected > 0 ? fmtMoney(totalExpected) : '—') + '</td>' +
+        '<td class="num">' + fmtMoney(totalActual) + '</td>' +
+        '<td class="num">' + (totalExpected > 0 ? fmtMoney(totalActual - totalExpected) : '—') + '</td>' +
+      '</tr></tfoot></table>';
+    wrap.innerHTML = html;
+  }
+
   function renderStatTiles(monthKey, totals) {
     var totalSpent = Object.keys(totals).reduce(function(s,k){ return s + totals[k]; }, 0);
     var totalIncome = incomeForMonth(monthKey);
@@ -7578,8 +7737,9 @@
       var assigned = state.expenses.filter(function(e) { return e.paycheckId === inc.id; })
                                     .reduce(function(s,e){ return s + e.amount; }, 0);
       var totalAmount = paycheckTotalAmount(inc);
-      var leftover = totalAmount - assigned;
-      var pct = totalAmount > 0 ? Math.min(100, (assigned / totalAmount) * 100) : 0;
+      var availableTotal = totalAmount + linkedDepositsTotalFor(inc.id);
+      var leftover = availableTotal - assigned;
+      var pct = availableTotal > 0 ? Math.min(100, (assigned / availableTotal) * 100) : 0;
       var tone = tones[i % tones.length];
       return '<div class="pg-card cal-clickable" data-paycheck-drill="' + inc.id + '" tabindex="0" style="--pg-accent:' + tone + ';" title="Click to see the bills assigned to this paycheck">' +
         '<div class="pg-card-title">' + escapeHtml(inc.source) + '</div>' +
@@ -7771,11 +7931,14 @@
     var rows = state.expenses.filter(function(e) { return e.paycheckId === incomeId; })
                               .sort(function(a,b) { return a.date.localeCompare(b.date); });
     var totalAmount = paycheckTotalAmount(inc);
+    var linkedDepositsTotal = linkedDepositsTotalFor(incomeId);
     document.getElementById("paycheckDrillTitle").textContent = inc.source + " — " + inc.date;
     var assignedTotal = rows.reduce(function(s,e){ return s + e.amount; }, 0);
-    var leftover = totalAmount - assignedTotal;
+    var leftover = totalAmount + linkedDepositsTotal - assignedTotal;
     document.getElementById("paycheckDrillSummary").textContent =
-      "Income " + fmtMoney(totalAmount) + " · " + rows.length + " bill" + (rows.length === 1 ? "" : "s") +
+      "Income " + fmtMoney(totalAmount) +
+      (linkedDepositsTotal ? " + " + fmtMoney(linkedDepositsTotal) + " in linked deposits" : "") + " · " +
+      rows.length + " bill" + (rows.length === 1 ? "" : "s") +
       " assigned totaling " + fmtMoney(assignedTotal) + " · Leftover " + fmtMoney(leftover) + ".";
     var wrap = document.getElementById("paycheckDrillWrap");
     if (rows.length === 0) {
@@ -7920,6 +8083,7 @@
     var totals = totalsForMonth(monthKey);
     renderBudgetVsActualTable(monthKey, totals);
     renderCategoryChart(monthKey, totals, { targetId: "categoryChart", readOnly: true });
+    renderIncomeVsActualTable(monthKey);
   }
 
   // ---------- SETTINGS ----------
@@ -8128,7 +8292,7 @@
           inc.id, "Check Register", "Deposit", inc.date, inc.source || "",
           "", bank ? bank.name : "", "",
           Math.abs(inc.amount).toFixed(2), inc.cleared ? "Yes" : "", "",
-          recTemplate ? recTemplate.name : "", "", inc.splitGroupId || "", inc.transferId || "", goalReclass
+          recTemplate ? recTemplate.name : "", inc.paycheckId || "", inc.splitGroupId || "", inc.transferId || "", goalReclass
         ]);
       });
     }
@@ -8214,7 +8378,7 @@
               note: "", color: "#1baf7a", cleared: cleared, imported: false,
               linkedGoalId: linkedGoalId, reclassCategoryId: reclassCategoryId,
               bankAccountId: bank ? bank.id : null, recurringId: recIncTemplate ? recIncTemplate.id : null,
-              splitGroupId: splitRef, transferId: transferRef
+              splitGroupId: splitRef, transferId: transferRef, paycheckId: paycheckRef
             });
           } else {
             var recTemplate = findByNameCI(state.recurring, col("Recurring"));
@@ -8241,6 +8405,12 @@
         state.expenses.forEach(function(e) {
           if (e.paycheckId && !state.income.some(function(inc) { return inc.id === e.paycheckId; })) {
             e.paycheckId = null;
+            unresolvedLinks++;
+          }
+        });
+        state.income.forEach(function(inc) {
+          if (inc.paycheckId && !state.income.some(function(x) { return x.id === inc.paycheckId; })) {
+            inc.paycheckId = null;
             unresolvedLinks++;
           }
         });
