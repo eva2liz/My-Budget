@@ -218,12 +218,18 @@ for exactly how that works.
   **Payee** to group every transaction with the same payee together
   alphabetically (click again to reverse), click the **✓** column to bring
   cleared items to the top, or **P** to bring paid items to the top. Click
-  **Date** to go back to plain chronological order. The **Balance** column
-  itself is no longer a sortable column — it recalculates instead: it's
-  always a running total of exactly the rows currently on screen, added up
-  top to bottom in whatever order they're displayed, so it stays reconcilable
-  against a bank statement no matter how you've filtered or sorted (see the
-  filter note below)
+  **Date** to sort chronologically — it defaults to **newest first**, so
+  the transaction you just logged is right at the top instead of scrolled
+  all the way down at the bottom; click it again to flip to oldest first.
+  The **Balance** column itself is no longer a sortable column — for any
+  sort other than Date it recalculates as a running total of exactly the
+  rows currently on screen, added up top to bottom in whatever order
+  they're displayed, so it stays reconcilable against a bank statement no
+  matter how you've filtered or sorted (see the filter note below). Sorted
+  by **Date** specifically (either direction), Balance is always your true
+  running account total — computed in real chronological order behind the
+  scenes regardless of which direction you're viewing it in, so newest-first
+  never shows a wrong number
   - **Uncleared rows always sink to the bottom**, no matter which column
     the table's currently sorted by (Date, Payee, whatever) — so an
     unreconciled transaction never sits in the middle of the list
@@ -241,11 +247,14 @@ for exactly how that works.
   wide on purpose, and only the register itself scrolls (top to bottom) —
   the page never scrolls sideways, no matter how many transactions you have
   - **No separate "Add income"/"Add expense" cards** — type a new
-    transaction straight into the blank line at the bottom: date, payee,
-    an amount in either **Payment** or **Deposit**, a **category**, and
-    optionally a **bank account** (see below). Assigning it to a paycheck
-    is entirely optional and happens after adding it, right on its own
-    row — see below
+    transaction straight into the blank line right at the top (just under
+    Beginning balance), so you never have to scroll down to add one: date,
+    payee, an amount in either **Payment** or **Deposit**, a **category**,
+    and optionally a **bank account** (see below). Assigning it to a
+    paycheck is entirely optional and happens after adding it, right on its
+    own row — see below. Everything below that entry row shows newest
+    first, so what you just logged (and whatever happened most recently)
+    is right there too, with no scrolling to find it
   - Every existing transaction's top line shows date, payee, payment or
     deposit, a **cleared** checkbox, a **paid** checkbox (expenses only —
     income doesn't have a "paid" state), and balance; the muted line right
@@ -349,22 +358,18 @@ for exactly how that works.
     already-cleared list from your bank statement, and an uncleared row
     buried in the middle of that (in date order or otherwise) just gets in
     the way. Check a row off as cleared and it jumps up to join the rest;
-    uncheck it and it drops back down among the uncleared ones. The
-    **Balance** column always adds up to exactly what's on screen, top to
-    bottom, in the order shown — so once cleared rows are grouped above
-    uncleared ones, the running total follows that same grouped order
-    (cleared rows first, then uncleared), seeded from the true balance as of
-    right before your From date. It's never a sum of only what's on the
-    current page, though — Prev/Next just pages through that same running
-    total, 7 rows at a time. **Each window opens on its last page by
-    default** — your most recent transactions — instead of starting back at
-    page 1 every time the app loads or re-renders, so you're not stuck
-    clicking Next repeatedly just to see what you logged today. It keeps
-    tracking "latest" automatically (a freshly-added transaction shows up
-    right away, even pushing the page count up) until you click Prev to look
-    at older ones, at which point it stays put where you left it; click
-    Next back to the true last page and it resumes auto-tracking. Changing a
-    window's From/To range also re-opens it on that range's last page
+    uncheck it and it drops back down among the uncleared ones. Within each
+    of those two groups, rows show **newest first**. The **Balance** column
+    always reflects each row's own true running total — computed in real
+    chronological order behind the scenes, seeded from the true balance as
+    of right before your From date — it just *displays* in the
+    cleared-then-uncleared, newest-first order described above, so the
+    number next to any row is always correct regardless of where it lands
+    on screen. **Each window opens on page 1 by default**, which (since
+    everything's newest-first now) is already your most recent activity —
+    no more auto-jumping to a "last page" to find it. Page through older
+    batches with **&larr; Newer / Older &rarr;**, 7 rows at a time; changing
+    a window's From/To range re-opens it back on page 1
   - **Applying category defaults to untagged transactions.** If you had
     expenses or income logged before bank accounts existed (or before you
     started tagging them), a button under **Manage Budget** — "Apply
@@ -506,7 +511,12 @@ for exactly how that works.
     assign row, while still showing the assigned/leftover totals and the
     paycheck amount right in the header, so it's easy to skim past
     paychecks you've already sorted out without losing sight of the
-    numbers that matter
+    numbers that matter. **A paycheck auto-collapses once every assigned
+    bill is both Paid and Cleared** (and nothing's still pending), so a
+    fully-handled payday tucks itself away automatically — one with
+    anything still unchecked, or a bill that hasn't been logged yet, stays
+    expanded. Click the arrow yourself at any point to override that for
+    the rest of your session, whichever direction you want
   - Recurring bills that haven't come due yet still show up here as
     "pending" options you can assign ahead of time, with a **Log now**
     button to record them early if you want them off your plate
@@ -552,20 +562,22 @@ for exactly how that works.
     the current month's dropdown rather than disappearing.)
 - **CC Register**: track what you owe on each credit card completely
   separately from what you spend it on. Add a card (name, starting balance,
-  as-of date) at the top of the **CC Register** tab, where a row of cards
-  shows every card's current balance at a glance, styled like the
-  Dashboard's paycheck row — as of today, specifically; a charge or payment
-  dated in the future (e.g. one early-logged from the Paycheck Planner)
-  stays visible in the ledger below but doesn't move the balance until its
-  date actually arrives. Right below that row (and the compact card list
-  under it), a **Total Credit Card Debt** line adds up every card's own
+  as-of date) at the top of the **CC Register** tab, where a compact list —
+  **Your credit cards** — shows every card's current balance at a glance,
+  as of today specifically; a charge or payment dated in the future (e.g.
+  one early-logged from the Paycheck Planner) stays visible in the ledger
+  below but doesn't move the balance until its date actually arrives. Right
+  below that list, a **Total Credit Card Debt** line adds up every card's own
   current balance into one number — so you're not left mentally adding up
-  each card's tile yourself to see where you stand overall. A card sitting
+  each card yourself to see where you stand overall. A card sitting
   in credit (you overpaid it) still contributes its real negative balance
-  to that total, same as it would if you added them up by hand. Log a transaction into the ledger below it the
-  same way you would in the Check Register — pick the card it goes on, and
-  the row underneath it lets you set the real spending **category** (e.g.
-  Shopping), so a card charge still counts toward that category's budget.
+  to that total, same as it would if you added them up by hand. Log a
+  transaction into the ledger below it the same way you would in the Check
+  Register — type it into the blank entry row right at the top (same
+  newest-first convention as the Check Register, so you never scroll down
+  to log one or to see your most recent charges) — pick the card it goes
+  on, and the row underneath it lets you set the real spending **category**
+  (e.g. Shopping), so a card charge still counts toward that category's budget.
   Mark it a **charge** (adds to the card's balance), a **payment**
   (reduces it, and isn't counted as spending since it's just paying down a
   balance you already counted when you charged it), or a **credit** —

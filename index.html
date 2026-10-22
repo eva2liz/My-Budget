@@ -769,8 +769,6 @@
 
   /* CC Register: a row of per-card balance cards, styled like the
      Dashboard's paycheck cards, plus a compact list of existing cards. */
-  #ccCardsWrap { margin-bottom: 16px; }
-  #ccCardsWrap:empty { display: none; }
   .cc-card-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 12px; }
   .cc-card-list:empty { display: none; }
   .cc-card-list-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--gridline); font-size: 13.5px; }
@@ -1296,7 +1294,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
               Important instructions
             </button>
-            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row at the bottom — just pick a category. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Deposit rows get the same field for the same reason — a reimbursement, a reclassed refund, a one-off gift — anything you'd like tied to a particular payday shows up under that paycheck's own linked-deposits list in the Paycheck Planner. The only deposit that doesn't get this field is one that's itself a logged paycheck, since a paycheck can't link to itself. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses, for roughly the bill's usual amount — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category. Depositing one paycheck partly into checking and partly into savings? Use a deposit row's <strong>Split</strong> button (next to Delete) to divide it into two linked deposits with the amount and bank account you choose for each — same idea as splitting a bill across two paychecks on the Paycheck Planner.</div>
+            <div class="info-popover-panel hint" id="registerHintPanel" role="note">Type a new transaction into the blank row right at the top (just under Beginning balance) — just pick a category. Rows below it show newest first, so you never have to scroll down to add one or see what just happened. Paying down a credit card? Pick <strong>Pay down: &lt;card&gt;</strong> instead of a category — it'll show up on the CC Register tab automatically, no need to enter it twice. Bank imports land here flagged with <span class="register-flag-x" aria-hidden="true">&#10007;</span> until reviewed. Every field is editable right on the row — date, description, amount, category, bank account, cleared, paid, and paycheck — nothing opens a separate panel; each change saves the moment you leave the field or press Enter. The italic <strong>Beginning balance</strong> row at the top isn't a transaction — click its date or amount to set it directly, and every balance below adjusts to match. A <strong>Paycheck</strong> field shows up on every expense's row — entirely optional, just a way to earmark a one-off expense (an extra card payment, say) against whichever paycheck it's meant to come out of, same as a bill from the Recurring tab. Deposit rows get the same field for the same reason — a reimbursement, a reclassed refund, a one-off gift — anything you'd like tied to a particular payday shows up under that paycheck's own linked-deposits list in the Paycheck Planner. The only deposit that doesn't get this field is one that's itself a logged paycheck, since a paycheck can't link to itself. Typed a recurring bill straight into the register instead of waiting for it to auto-log? Just pick the same category (and card/type, if it's a card payment) the bill normally uses, for roughly the bill's usual amount — it's linked to the bill automatically, and the reminder that was already logged for it quietly disappears. You'll see a <strong>Linked to &lt;bill&gt;</strong> tag on the row when that happens, with an <strong>Unlink</strong> button in case it ever guesses wrong. (Jumping in from Search, the Dashboard, or elsewhere still opens the full edit panel — that's just for finding your way here quickly.) <strong>Uncleared rows always sink to the bottom</strong> of whatever order the table's currently sorted in, so an unreconciled item never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place. Got more than one real bank account feeding this register? Tag each row with a <strong>Bank account</strong> (manage the list under Manage Budget) and use the filter above to pull up just one — its Balance recalculates from only that account's visible rows, same as filtering by category. Depositing one paycheck partly into checking and partly into savings? Use a deposit row's <strong>Split</strong> button (next to Delete) to divide it into two linked deposits with the amount and bank account you choose for each — same idea as splitting a bill across two paychecks on the Paycheck Planner.</div>
           </div>
         </div>
         <div class="register-filters">
@@ -1319,7 +1317,7 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             Important instructions
           </button>
-          <div class="info-popover-panel hint" id="reconciliationHintPanel" role="note">Each bank account below gets its own window with a true running balance -- seeded from that account's own starting balance, walking its full transaction history in order, exactly what you'd check line-by-line against a real bank statement. That's different from the Balance column up in the Check Register above, which is only a quick running sum of whatever rows happen to be visible there right now. Set each account's starting balance under Manage Budget. Transactions with no bank account tagged land in their own "Unassigned" window at the end so you can find and reclass them.</div>
+          <div class="info-popover-panel hint" id="reconciliationHintPanel" role="note">Each bank account below gets its own window with a true running balance -- seeded from that account's own starting balance, walking its full transaction history in order, exactly what you'd check line-by-line against a real bank statement. Rows show newest first, cleared ones on top and still-uncleared ones sunk to the bottom -- use <strong>&larr; Newer</strong> / <strong>Older &rarr;</strong> to page through a window's history. Set each account's starting balance under Manage Budget. Transactions with no bank account tagged land in their own "Unassigned" window at the end so you can find and reclass them.</div>
         </div>
       </div>
       <div id="bankReconciliationWrap"></div>
@@ -1430,12 +1428,6 @@
     </div>
 
     <div class="card">
-      <h2>Spending by category</h2>
-      <p class="hint" style="margin-top:0;">Same month as above. For a category with a budget, the bar fills toward its own budget -- full means right at budget, red means over. Categories with no budget set are just compared to each other. To reorder your categories, head to Manage Budget -- the order you set there applies everywhere (this list and dropdowns).</p>
-      <div id="categoryChart"></div>
-    </div>
-
-    <div class="card">
       <h2>Income</h2>
       <p class="hint" style="margin-top:0;">Same month as above. Each recurring paycheck compares what was expected to land against what's actually been logged so far -- red means short, green means received in full (or more). "Other income" bundles everything that doesn't come from a recurring template: one-off deposits, reimbursements, reclassed refunds, and the like.</p>
       <div id="incomeVsActualWrap" class="table-scroll"></div>
@@ -1447,7 +1439,6 @@
     <div class="card">
       <h2>Your credit cards</h2>
       <p class="hint" style="margin-top:0;">Each card keeps its own running balance, separate from your spending categories. Log a transaction below with its real category (e.g. Shopping) <em>and</em> the card it went on — a charge adds to that card's balance, a payment brings it down. Already recording card payments in the Check Register? Pick <strong>Pay down: &lt;card&gt;</strong> there instead of a category and it'll show up here automatically. Leave <strong>As of</strong> blank when adding a card so every transaction you've already logged for it counts toward the balance — only set a date there if you specifically want the running balance to start fresh from that point on (anything dated earlier won't show a balance).</p>
-      <div id="ccCardsWrap"></div>
       <div id="ccCardListWrap"></div>
       <div id="ccTotalDebtWrap"></div>
       <form class="inline-form" id="ccCardForm">
@@ -1482,7 +1473,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
               Important instructions
             </button>
-            <div class="info-popover-panel hint" id="ccRegisterHintPanel" role="note">Type a new charge, payment, or credit into the blank row at the bottom — pick the card it goes on, then the row underneath it to set the real spending category. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending; a <strong>credit</strong> is money the card issuer gives back directly — a rewards redemption, a statement credit, a goodwill adjustment — it reduces the balance just like a payment but never touches a bank account, so it never shows up on the Check Register the way a payment does. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above. <strong>Uncleared rows always sink to the bottom</strong> of whatever order the ledger's currently sorted in, so an unreconciled charge never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</div>
+            <div class="info-popover-panel hint" id="ccRegisterHintPanel" role="note">Type a new charge, payment, or credit into the blank row right at the top — pick the card it goes on, then the row underneath it to set the real spending category. Rows below it show newest first, so there's no scrolling needed to log one or see recent activity. A <strong>charge</strong> counts as spending in that category and increases the card's balance; a <strong>payment</strong> just pays the card down and isn't counted as spending; a <strong>credit</strong> is money the card issuer gives back directly — a rewards redemption, a statement credit, a goodwill adjustment — it reduces the balance just like a payment but never touches a bank account, so it never shows up on the Check Register the way a payment does. Every field on an existing row — Date, Description, Amount, and (underneath it) Category/Card/Type — is editable right in place, no separate panel; click Delete to remove it. A payment that matches a recurring card bill (same card and type) links to it automatically, absorbing the reminder already logged for it — you'll see a <strong>Linked to &lt;bill&gt;</strong> tag with an <strong>Unlink</strong> button in case it ever guesses wrong. Rows tinted <span style="background:rgba(74,114,214,0.18); padding:1px 5px; border-radius:4px;">light blue</span> were entered via the Check Register, expense form, or a recurring <strong>Pay down</strong> item, not directly on this tab. A transaction dated after today shows <strong>upcoming</strong> instead of a balance — it isn't reflected in the card's current balance until that date arrives, matching the "Current balance" card above. <strong>Uncleared rows always sink to the bottom</strong> of whatever order the ledger's currently sorted in, so an unreconciled charge never sits in the middle of the list throwing off the balance you're checking against — check a row off <strong>cleared</strong> and it drops right back into its normal place.</div>
           </div>
         </div>
         <div class="register-filters">
@@ -2341,16 +2332,15 @@
     if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  // Ascending by date, same default as the Check Register's own
-  // registerSort -- oldest at top, today's entries at the bottom next to
-  // the blank add-row, so a newly-added transaction lands right where you
-  // typed it instead of jumping to the top of the table.
-  var ccRegisterSort = { key: "date", dir: 1 };
+  // Descending by date, same default as the Check Register's own
+  // registerSort -- newest at top, right next to the blank add-row, so
+  // there's no scrolling needed to log a new charge or see recent activity.
+  var ccRegisterSort = { key: "date", dir: -1 };
   // No "balance" entry -- Balance is no longer an independently-sortable
   // column (see applyCCRunningBalance): its numbers are computed FROM the
   // current sort order, so sorting BY it would be circular.
   var CC_REGISTER_SORT_DEFAULT_DIR = {
-    date: 1, card: 1, type: 1, amount: 1, cleared: -1
+    date: -1, card: 1, type: 1, amount: 1, cleared: -1
   };
   function ccRegisterSortValue(row, key) {
     var e = row.expense;
@@ -4018,15 +4008,17 @@
 
   // Click-a-column-title-to-sort state for the Check Register. Lives outside
   // renderCheckRegister (not in `state`, not persisted) so it survives
-  // re-renders during this session but always starts back at plain
-  // chronological order (the same order buildRegisterRows/the running
-  // balance are computed in) on a fresh page load.
-  var registerSort = { key: "date", dir: 1 };
+  // re-renders during this session but always starts back at the same
+  // default (newest first) on a fresh page load. Date descending is the
+  // default so the most recent activity -- and the blank add-row right
+  // below it -- is at the top, with no scrolling needed to log a new
+  // transaction or see what just happened.
+  var registerSort = { key: "date", dir: -1 };
   // No "balance" entry -- Balance is no longer an independently-sortable
   // column (see applyRunningBalance): its numbers are computed FROM the
   // current sort order, so sorting BY it would be circular.
   var REGISTER_SORT_DEFAULT_DIR = {
-    date: 1, payee: 1, payment: 1, cleared: -1, paid: -1, deposit: 1
+    date: -1, payee: 1, payment: 1, cleared: -1, paid: -1, deposit: 1
   };
   function registerSortValue(r, key) {
     switch (key) {
@@ -4046,14 +4038,18 @@
   // other order) throws the running balance you're checking against off.
   // The moment a row gets checked off as cleared it drops back into its
   // normal place among the rest, in whatever order is currently active
-  // (plain date order by default). This is a pure DISPLAY grouping, same
-  // as any other column sort -- it never touches the balance column
-  // itself, which is always the true running total computed in real date
-  // order regardless of how the table is currently sorted (see
-  // buildRegisterRows). Explicitly sorting BY the ✓ column itself is the
-  // one exception: that's already a deliberate cleared/uncleared grouping
-  // the user asked for by clicking that header, so it's left as a plain
-  // single-column sort instead of stacking another cleared grouping on
+  // (newest-first date order by default). This is a pure DISPLAY grouping;
+  // when sorted by Date specifically, the Balance column is always the true
+  // running total computed in real chronological order regardless of this
+  // grouping or which direction (newest- or oldest-first) is showing -- see
+  // the chronological-copy handling in renderCheckRegister, right where
+  // applyRunningBalance is called. Sorted by anything else, Balance is just
+  // a running sum of whatever's visible in that order (see the column's own
+  // tooltip) -- there's no meaningful "true" order to fall back to there.
+  // Explicitly sorting BY the ✓ column itself is the one exception to the
+  // uncleared-sinks-last rule: that's already a deliberate cleared/uncleared
+  // grouping the user asked for by clicking that header, so it's left as a
+  // plain single-column sort instead of stacking another cleared grouping on
   // top of it.
   function sortRegisterRows(rows) {
     var key = registerSort.key, dir = registerSort.dir;
@@ -4109,13 +4105,11 @@
   function reconciliationStateFor(key) {
     if (!reconciliationState[key]) {
       var range = currentMonthRange();
-      // autoLatest: true means this window should always open on its LAST
-      // page (its most recent transactions) rather than the first -- see the
-      // autoLatest handling in renderBankReconciliation and the Prev/Next
-      // handlers below. It stays true until the user pages backward away
-      // from the latest page, and flips back on automatically the moment
-      // they page (or a new transaction pushes them) back to the last page.
-      reconciliationState[key] = { from: range.from, to: range.to, page: 0, autoLatest: true };
+      // Rows within each window display newest-first (see renderBankReconciliation),
+      // so page 0 already shows the most recent activity -- no "always jump
+      // to the last page" mechanic needed anymore; Prev/Next just walks
+      // toward progressively older batches from there.
+      reconciliationState[key] = { from: range.from, to: range.to, page: 0 };
     }
     return reconciliationState[key];
   }
@@ -4163,31 +4157,27 @@
       // group still keeps its own chronological order internally.
       visibleRows.sort(function(a, b) { return (a.cleared ? 0 : 1) - (b.cleared ? 0 : 1); });
 
-      // Balance is recomputed in THIS (cleared-first) order, seeded from
-      // windowSeed above -- so the number next to any row is always a true
-      // running total of exactly what's visible, top to bottom, in the exact
-      // order it's shown -- never a jump that only makes sense in a
-      // different order you can't see. Same principle the main Check
-      // Register's own Balance column already follows (see
-      // applyRunningBalance) whenever anything reorders its rows away from
-      // plain chronological order.
+      // Balance is recomputed in this (cleared-first, still chronological
+      // within each group) order, seeded from windowSeed above -- so the
+      // number next to any row is a true running total as of that row's own
+      // date, not a jump that only makes sense in a different order you
+      // can't see. Same principle the main Check Register's own Balance
+      // column follows for its Date sort (see applyRunningBalance).
       applyRunningBalance(visibleRows, windowSeed, asOfCutoff);
 
+      // Each group (cleared, then uncleared) is reversed for DISPLAY only,
+      // after its balance is already stamped above -- so every row keeps
+      // its own correct number, it's just shown newest-first within its
+      // group, same convention as the Check Register and CC Register. That
+      // also means page 0 (below) already shows the most recent activity,
+      // with no "always jump to the last page" trick needed anymore.
+      var clearedGroup = visibleRows.filter(function(r) { return r.cleared; }).reverse();
+      var unclearedGroup = visibleRows.filter(function(r) { return !r.cleared; }).reverse();
+      visibleRows = clearedGroup.concat(unclearedGroup);
+
       var totalPages = Math.max(1, Math.ceil(visibleRows.length / RECONCILIATION_PAGE_SIZE));
-      // While autoLatest is on, always land on the last page -- that's
-      // where the most recent transactions are, since rows are chronological
-      // (cleared-first within that). This re-derives every render, so a
-      // freshly-added transaction (which can push totalPages up) is shown
-      // immediately without the user having to click Next. The moment the
-      // user pages backward this turns off (see the Prev/Next handlers), and
-      // flips back on the instant they land on the true last page again.
-      if (st.autoLatest) {
-        st.page = totalPages - 1;
-      } else {
-        if (st.page > totalPages - 1) st.page = totalPages - 1;
-        if (st.page < 0) st.page = 0;
-      }
-      st.autoLatest = (st.page >= totalPages - 1);
+      if (st.page > totalPages - 1) st.page = totalPages - 1;
+      if (st.page < 0) st.page = 0;
       var pageStart = st.page * RECONCILIATION_PAGE_SIZE;
       var pageRows = visibleRows.slice(pageStart, pageStart + RECONCILIATION_PAGE_SIZE);
 
@@ -4236,9 +4226,9 @@
             '</table>' +
           '</div>' +
           '<div class="reconciliation-pager">' +
-            '<button type="button" class="secondary" data-recon-prev="' + key + '"' + (st.page <= 0 ? ' disabled' : '') + '>Prev</button>' +
+            '<button type="button" class="secondary" data-recon-prev="' + key + '" title="Newer"' + (st.page <= 0 ? ' disabled' : '') + '>&larr; Newer</button>' +
             '<span class="muted">Page ' + (st.page + 1) + ' of ' + totalPages + '</span>' +
-            '<button type="button" class="secondary" data-recon-next="' + key + '"' + (st.page >= totalPages - 1 ? ' disabled' : '') + '>Next</button>' +
+            '<button type="button" class="secondary" data-recon-next="' + key + '" title="Older"' + (st.page >= totalPages - 1 ? ' disabled' : '') + '>Older &rarr;</button>' +
           '</div>' +
         '</div>';
     });
@@ -4249,7 +4239,7 @@
       inp.addEventListener("change", function() {
         var st = reconciliationStateFor(inp.dataset.reconFrom);
         st.from = inp.value || "";
-        st.autoLatest = true; // a new range should open on ITS most recent page too
+        st.page = 0; // a new range should open on its most recent page (0) too
         renderBankReconciliation();
       });
     });
@@ -4257,17 +4247,15 @@
       inp.addEventListener("change", function() {
         var st = reconciliationStateFor(inp.dataset.reconTo);
         st.to = inp.value || "";
-        st.autoLatest = true;
+        st.page = 0;
         renderBankReconciliation();
       });
     });
     wrap.querySelectorAll("[data-recon-prev]").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var st = reconciliationStateFor(btn.dataset.reconPrev);
-        // Paging backward is an explicit "show me older ones" -- turn off
-        // autoLatest so the render above doesn't just snap back to the last
-        // page. It flips back on by itself once they're back on the last page.
-        st.autoLatest = false;
+        // Page 0 is the most recent batch (see renderBankReconciliation) --
+        // Prev steps back toward it, Next (below) steps toward older ones.
         st.page = Math.max(0, st.page - 1);
         renderBankReconciliation();
       });
@@ -4275,7 +4263,6 @@
     wrap.querySelectorAll("[data-recon-next]").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var st = reconciliationStateFor(btn.dataset.reconNext);
-        st.autoLatest = false;
         st.page = st.page + 1;
         renderBankReconciliation();
       });
@@ -4398,7 +4385,27 @@
       // as-of date didn't match it.
       asOfCutoffForBalance = combinedAsOfCutoffFor;
     }
-    applyRunningBalance(rows, seedForBalance, asOfCutoffForBalance);
+    // When sorted by Date, Balance always reflects a true running total in
+    // real chronological order -- regardless of which direction is showing
+    // (newest-first, the default, or oldest-first) and regardless of the
+    // uncleared-sinks-to-the-bottom grouping above -- by stamping it onto a
+    // separately-chronological-ordered copy first. Since each row object is
+    // shared by reference, `rows` (already reordered for display above)
+    // picks up the same .balance values without needing its own display
+    // order to BE chronological. Sorted by anything else, Balance keeps the
+    // older "sum of whatever's visible, in that exact order" behavior (see
+    // the column's own tooltip) -- there's no single "true" order to prefer
+    // there, so nothing changes for those.
+    if (registerSort.key === "date") {
+      var chronologicalRows = rows.slice().sort(function(a, b) {
+        var c = a.date.localeCompare(b.date);
+        if (c !== 0) return c;
+        return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0);
+      });
+      applyRunningBalance(chronologicalRows, seedForBalance, asOfCutoffForBalance);
+    } else {
+      applyRunningBalance(rows, seedForBalance, asOfCutoffForBalance);
+    }
 
     var countEl = document.getElementById("registerCount");
     if (countEl) {
@@ -4641,7 +4648,7 @@
       wrap.innerHTML = '<div class="empty-state">Nothing matches the current filters.</div>' +
         '<table class="register-table">' + headHtml + '<tbody>' + openingRowHtml + newRowHtml + '</tbody></table>';
     } else {
-      wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + openingRowHtml + bodyHtml + newRowHtml + '</tbody></table>';
+      wrap.innerHTML = '<table class="register-table">' + headHtml + '<tbody>' + openingRowHtml + newRowHtml + bodyHtml + '</tbody></table>';
     }
 
     var openingDateEl = document.getElementById("regOpeningDate");
@@ -4838,7 +4845,7 @@
       });
     });
 
-    // The blank line at the bottom -- QuickBooks-style: type a whole new
+    // The blank line pinned at the top -- QuickBooks-style: type a whole new
     // transaction directly into the register, no separate form to open.
     function commitNewRegisterRow() {
       var date = document.getElementById("regNewDate").value;
@@ -5671,6 +5678,14 @@
 
       var assignedTotal = assigned.reduce(function(s,e){ return s + e.amount; }, 0) +
                            scheduled.reduce(function(s,p){ return s + p.template.amount; }, 0);
+      // Whether there's nothing left to do here: every assigned bill is both
+      // Paid and Cleared, and nothing's still sitting un-logged (a pending
+      // bill with no checkboxes of its own yet). A paycheck with no bills at
+      // all isn't "handled" either -- there's nothing checked off, just
+      // nothing to show, so it stays expanded like always rather than
+      // minimizing an empty block.
+      var allHandled = (assigned.length + scheduled.length) > 0 && scheduled.length === 0 &&
+                        assigned.every(function(e) { return e.paid && e.cleared; });
       // Deposits earmarked against this paycheck (see the Paycheck field on
       // a deposit's own Check Register row) -- a reimbursement, a reclassed
       // refund, a one-off gift that landed alongside this payday. These ADD
@@ -5768,8 +5783,14 @@
       // Collapsed shows just the header line (name, date, amount, actions)
       // plus a compact Assigned/Leftover readout, so the totals that matter
       // most are still visible without expanding -- only the bill table,
-      // summary row, and assign row are what actually hide.
-      var isCollapsed = !!collapsedPaychecks[inc.id];
+      // summary row, and assign row are what actually hide. Defaults to
+      // whatever allHandled says (collapsed once every bill is paid and
+      // cleared, expanded while anything's still unchecked or un-logged) --
+      // but an explicit click on the toggle arrow always wins over that for
+      // the rest of this session, same as before, so manually peeking into a
+      // just-collapsed paycheck (or closing one you're not done with yet)
+      // sticks until the page reloads.
+      var isCollapsed = (inc.id in collapsedPaychecks) ? collapsedPaychecks[inc.id] : allHandled;
       var toggleTitle = isCollapsed ? "Expand this paycheck's activity" : "Collapse this paycheck's activity";
 
       return '<div class="paycheck-block">' +
@@ -5837,7 +5858,13 @@
     wrap.querySelectorAll("[data-pc-toggle]").forEach(function(b) {
       b.addEventListener("click", function() {
         var id = b.dataset.pcToggle;
-        collapsedPaychecks[id] = !collapsedPaychecks[id];
+        // Flips whatever's actually showing right now (aria-expanded reflects
+        // the real displayed isCollapsed value, whether that came from the
+        // auto-collapse default or an earlier explicit click) -- not just the
+        // raw override map, which can still be undefined under auto-collapse
+        // and would otherwise toggle the wrong way the first time you click.
+        var currentlyExpanded = b.getAttribute("aria-expanded") === "true";
+        collapsedPaychecks[id] = currentlyExpanded;
         renderPaycheckPlanner();
       });
     });
@@ -6364,7 +6391,6 @@
   // ---------- CC REGISTER (credit cards) ----------
 
   function renderBalances() {
-    renderCCCards();
     renderCCCardList();
     renderCCTotalDebt();
     renderCCLedger();
@@ -6382,23 +6408,6 @@
     if (!state.creditCards.length) { wrap.innerHTML = ""; return; }
     var total = state.creditCards.reduce(function(s, cc) { return s + computeCreditCardBalance(cc).currentBalance; }, 0);
     wrap.innerHTML = '<div class="cc-total-debt">Total Credit Card Debt: <strong class="' + (total > 0 ? "variance-over" : "") + '">' + fmtMoney(total) + '</strong></div>';
-  }
-
-  // The row of per-card balance cards at the top -- same visual pattern as
-  // the Dashboard's "This month's paychecks" row, just not clickable.
-  function renderCCCards() {
-    var wrap = document.getElementById("ccCardsWrap");
-    if (!wrap) return;
-    if (state.creditCards.length === 0) { wrap.innerHTML = ""; return; }
-    var cards = state.creditCards.map(function(cc) {
-      var b = computeCreditCardBalance(cc);
-      return '<div class="pg-card" style="--pg-accent:' + creditCardColor(cc) + '; cursor:default;">' +
-        '<div class="pg-card-title">' + escapeHtml(cc.name) + '</div>' +
-        '<div class="pg-card-date">Current balance</div>' +
-        '<div class="pg-card-amount ' + (b.currentBalance > 0 ? "variance-over" : "") + '">' + fmtMoney(b.currentBalance) + '</div>' +
-      '</div>';
-    }).join("");
-    wrap.innerHTML = '<div class="pg-cards-row">' + cards + '</div>';
   }
 
   // A compact list of the cards themselves, with edit/delete -- the actual
@@ -6497,7 +6506,7 @@
   }
 
   // The ledger itself -- every expense tagged with a creditCardId, styled
-  // like the Check Register (blank row at the bottom to add a new charge or
+  // like the Check Register (blank row at the top to add a new charge or
   // payment, click a description to edit or delete). A charge is real
   // spending (it needs a real category, and counts toward that category's
   // budget); a payment just pays a card down and doesn't need a category.
@@ -6524,12 +6533,27 @@
       return true;
     });
     sortCCLedgerRows(rows);
-    // Balance is computed AFTER filtering and sorting, in the exact order
-    // the rows are about to be displayed -- see applyCCRunningBalance. A
-    // category filter zeroes each card's seed, same reasoning as the Check
-    // Register's Beginning balance row being hidden in that case.
+    // When sorted by Date, each card's own running balance is always a true
+    // total in real chronological order -- same reasoning (and same fix) as
+    // the Check Register's own applyRunningBalance call: stamp it onto a
+    // separately-chronological-ordered copy first, since the uncleared-
+    // sinks-to-the-bottom grouping and the default newest-first direction
+    // would otherwise seed a card's running balance from its OWN starting
+    // balance starting at whichever row happens to be first on screen, not
+    // its true oldest one. Sorted by anything else, Balance keeps summing
+    // whatever's visible in that exact order, same as always (see the
+    // column's own tooltip).
     var ccCatFilterActive = !!catFilter;
-    applyCCRunningBalance(rows, ccCatFilterActive);
+    if (ccRegisterSort.key === "date") {
+      var ccChronologicalRows = rows.slice().sort(function(a, b) {
+        var c = a.expense.date.localeCompare(b.expense.date);
+        if (c !== 0) return c;
+        return a.expense.id < b.expense.id ? -1 : (a.expense.id > b.expense.id ? 1 : 0);
+      });
+      applyCCRunningBalance(ccChronologicalRows, ccCatFilterActive);
+    } else {
+      applyCCRunningBalance(rows, ccCatFilterActive);
+    }
 
     var countEl = document.getElementById("ccRegisterCount");
     if (countEl) {
@@ -6647,7 +6671,7 @@
       wrap.innerHTML = '<div class="empty-state">Nothing matches the current filters.</div>' +
         '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + newRowHtml + '</tbody></table>';
     } else {
-      wrap.innerHTML = '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + bodyHtml + newRowHtml + '</tbody></table>';
+      wrap.innerHTML = '<table class="register-table cc-register-table">' + headHtml + '<tbody>' + newRowHtml + bodyHtml + '</tbody></table>';
     }
 
     wrap.querySelectorAll("[data-cc-sort-key]").forEach(function(th) {
@@ -7439,64 +7463,6 @@
     }).join("");
   }
 
-  // Read-only "spending by category" bars, used on Budget vs. actual.
-  // (Category reordering itself now happens directly in the Categories &
-  // Budgets table -- see renderCategories() / enableCategoryDragReorder().)
-  function renderCategoryChart(monthKey, totals, opts) {
-    opts = opts || {};
-    var el = document.getElementById(opts.targetId || "categoryChart");
-    var cats = opts.showAll
-      ? state.categories.slice()
-      : state.categories.filter(function(c) { return (totals[c.id] || 0) > 0 || c.budget > 0; });
-    if (cats.length === 0) {
-      el.innerHTML = '<div class="empty-state">' + (opts.showAll ? "No categories yet." : "No spending yet this month.") + '</div>';
-      return;
-    }
-    // Each budgeted category's bar fills relative to ITS OWN budget --
-    // 100% width means you've spent exactly your budget, and it turns red
-    // and stays at 100% once you go over. (A row scaled against the whole
-    // month's biggest category, instead of its own budget, made a
-    // right-on-budget category look nearly empty next to a bigger one --
-    // that's the bug being fixed here.) Categories with no budget set have
-    // no "full" to reach, so those are shown relative to each other instead
-    // (scaled against whichever no-budget category spent the most this
-    // month), purely so bigger and smaller amounts are still visually
-    // distinguishable.
-    var maxUnbudgetedSpend = Math.max.apply(null, cats
-      .filter(function(c) { return !(c.budget > 0); })
-      .map(function(c) { return totals[c.id] || 0; })
-      .concat([1]));
-
-    var rows = cats.map(function(c) {
-      var spent = totals[c.id] || 0;
-      var budget = c.budget || 0;
-      var color = categoryColorHex(c.id);
-      var isOver = budget > 0 && spent > budget;
-
-      var amountsHtml = budget > 0
-        ? '<span class="amounts">' + fmtMoney(spent) + ' / ' + fmtMoney(budget) + (isOver ? ' <span class="over">over</span>' : '') + '</span>'
-        : '<span class="amounts">' + fmtMoney(spent) + '</span>';
-
-      var fillColor = isOver ? "var(--critical)" : color;
-      var fillWidth = budget > 0
-        ? Math.min(100, (spent / budget) * 100)
-        : Math.min(100, (spent / maxUnbudgetedSpend) * 100);
-      var fillClass = "fill" + (fillWidth >= 100 ? " overflow" : "");
-
-      return '<div class="budget-row" data-cat-id="' + c.id + '">' +
-        '<div class="budget-row-top">' +
-          '<span class="cat-name"><span class="swatch" style="background:' + color + '"></span>' + escapeHtml(c.name) + '</span>' +
-          amountsHtml +
-        '</div>' +
-        '<div class="track" title="' + escapeHtml(c.name) + ': ' + fmtMoney(spent) + (budget ? ' of ' + fmtMoney(budget) + ' budget (' + Math.round((spent/budget)*100) + '%)' : ' (no budget set)') + '">' +
-          '<div class="' + fillClass + '" style="width:' + fillWidth + '%; background:' + fillColor + ';"></div>' +
-        '</div>' +
-      '</div>';
-    }).join("");
-
-    el.innerHTML = rows;
-  }
-
   // Re-threads just the currently-visible (dragged) categories into their new
   // relative order while leaving any category not shown in this month's
   // chart exactly where it already was in the full list -- so reordering a
@@ -8072,17 +8038,13 @@
     renderSavingsGoals();
   }
 
-  // Budget vs. actual and "Spending by category" now share this tab's one
-  // month picker -- they used to be split across two tabs with two separate
-  // pickers (Dashboard's own "Spending by category" month), which made it
-  // easy to have them silently looking at two different months at once.
+  // Budget vs. actual and the Income card share this tab's one month picker.
   function renderBudgetVsActualTab() {
     if (!bvaMonthPicker.value) bvaMonthPicker.value = currentMonthKey();
     var monthKey = bvaMonthPicker.value;
     document.getElementById("bvaMonthLabel").textContent = "· " + monthLabel(monthKey);
     var totals = totalsForMonth(monthKey);
     renderBudgetVsActualTable(monthKey, totals);
-    renderCategoryChart(monthKey, totals, { targetId: "categoryChart", readOnly: true });
     renderIncomeVsActualTable(monthKey);
   }
 
