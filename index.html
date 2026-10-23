@@ -4615,9 +4615,24 @@
     var openingAmountCell = autoSummedOpening
       ? '<span class="register-opening-amount register-opening-auto" title="' + openingAmountTitle + '">' + fmtMoney(openingBalanceVal) + '</span>'
       : '<input type="number" class="register-opening-amount" id="regOpeningAmount" step="0.01" value="' + openingBalanceVal + '">';
+    // This date follows the exact same gating as the amount above it: once
+    // ANY bank account exists, each account's own as-of date (set under
+    // Manage Budget) is what actually feeds the balance math -- see
+    // combinedAsOfCutoffFor -- so this field becomes just as inert as the
+    // amount would be if left editable. It used to stay an editable
+    // <input type="date"> here even in the combined view (autoSummedOpening
+    // true, filteredBankAccount null), which let you "successfully" set it
+    // to any date -- including, by a stray keystroke, something like year
+    // 1 -- while it silently did nothing to any total. A single account
+    // filtered down has exactly one real as-of date to show (that
+    // account's own); the combined "all accounts" view can have several
+    // different ones at once, so there's no single date to show there --
+    // "varies per account" instead of picking one arbitrarily.
     var openingDateCell = filteredBankAccount
       ? '<span class="muted" title="This account\'s own as-of date -- edit it in Manage Budget">' + (openingDateVal || "all history") + '</span>'
-      : '<input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '">';
+      : (autoSummedOpening
+        ? '<span class="muted" title="Each bank account can have its own as-of date, set under Manage Budget -- there\'s no single one to show across all of them combined">varies per account</span>'
+        : '<input type="date" class="register-inline-date" id="regOpeningDate" value="' + openingDateVal + '">');
     var openingRowHtml = hideOpeningRow ? "" :
       '<tr class="register-txn-main register-opening-row">' +
         '<td class="reg-col-flag"></td>' +
